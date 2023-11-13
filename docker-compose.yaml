@@ -1,0 +1,9 @@
+services:
+  underwriter:
+    build:
+      context: .
+      dockerfile: dockerfile.underwriter
+    environment:
+      - PRIVATE_KEY=${PRIVATE_KEY}
+    container_name: underwriter
+    restart: unless-stopped
