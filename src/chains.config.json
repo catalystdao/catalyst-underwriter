@@ -3,6 +3,7 @@
     "chainId": "11155111",
     "name": "Sepolia",
     "rpc": "https://ethereum-sepolia.blockpi.network/v1/rpc/public",
+    "underwriterRPC": "https://ethereum-sepolia.blockpi.network/v1/rpc/public",
     "addresses": ["0x000000ED80503e3A7EA614FFB5507FD52584a1f2"]
   },
 
@@ -10,6 +11,7 @@
     "chainId": "80001",
     "name": "Mumbai",
     "rpc": "https://polygon-mumbai-bor.publicnode.com",
+    "underwriterRPC": "https://polygon-mumbai-bor.publicnode.com",
     "addresses": ["0x000000ED80503e3A7EA614FFB5507FD52584a1f2"]
   },
 
@@ -17,6 +19,7 @@
     "chainId": "84531",
     "name": "Base Goerli",
     "rpc": "https://base-goerli.g.alchemy.com/v2/HR9PTbJXT0oaLRqz-o_e2NMgOO4MUIFj",
+    "underwriterRPC": "https://base-goerli.g.alchemy.com/v2/HR9PTbJXT0oaLRqz-o_e2NMgOO4MUIFj",
     "addresses": ["0x000000ED80503e3A7EA614FFB5507FD52584a1f2"]
   },
 
@@ -24,6 +27,7 @@
     "chainId": "5001",
     "name": "Mantle",
     "rpc": "https://rpc.testnet.mantle.xyz",
+    "underwriterRPC": "https://rpc.testnet.mantle.xyz",
     "addresses": ["0x000000ED80503e3A7EA614FFB5507FD52584a1f2"]
   },
 
@@ -31,6 +35,7 @@
     "chainId": "1738",
     "name": "InEVM",
     "rpc": "https://inevm-rpc.caldera.dev",
+    "underwriterRPC": "https://inevm-rpc.caldera.dev",
     "addresses": ["0x000000ED80503e3A7EA614FFB5507FD52584a1f2"]
   },
 
@@ -38,6 +43,7 @@
     "chainId": "534351",
     "name": "Scroll Sepolia",
     "rpc": "http://archive-node.sepolia.scroll.xyz:8545",
+    "underwriterRPC": "http://archive-node.sepolia.scroll.xyz:8545",
     "addresses": ["0x000000ED80503e3A7EA614FFB5507FD52584a1f2"]
   }
 ]

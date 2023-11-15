@@ -2,6 +2,8 @@ import * as dotenv from 'dotenv';
 import { join } from 'path';
 import { Worker } from 'worker_threads';
 import { CHAINS } from './chains/chains';
+import { SendAssetEvent } from './listener/interface/sendasset-event.interface';
+import { underwrite } from './swap_underwriter';
 
 const bootstrap = () => {
   dotenv.config();
@@ -12,8 +14,8 @@ const bootstrap = () => {
         workerData: { address, chain, interval: 4000 },
       });
 
-      worker.on('message', async (obj: any) => {
-        //TODO
+      worker.on('message', async (sendAsset: SendAssetEvent) => {
+        underwrite(chain, address, sendAsset);
       });
     });
   });
