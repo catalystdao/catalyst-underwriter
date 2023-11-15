@@ -15,6 +15,7 @@
   "dependencies": {
     "@ethersproject/abi": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
+    "axios": "^1.6.2",
     "dotenv": "^16.3.1",
     "ethers": "^5.7.2",
     "pino": "^8.16.1"

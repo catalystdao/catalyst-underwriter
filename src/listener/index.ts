@@ -22,7 +22,7 @@ const bootstrap = async () => {
     try {
       endBlock = await chain.getCurrentBlock();
     } catch (error) {
-      logger.error(`Failed on getter.service endblock, error:`, error);
+      logger.error(`Failed on the event listener endblock`, error);
       await wait(interval);
       continue;
     }
@@ -44,7 +44,18 @@ const bootstrap = async () => {
       );
 
       logs.forEach(async (event) => {
-        //TODO
+        const sendAsset = {
+          channelId: event.args.channelId,
+          toVault: event.args.toVault,
+          toAccount: event.args.toAccount,
+          fromAsset: event.args.fromAsset,
+          toAssetIndex: event.args.toAssetIndex,
+          fromAmount: event.args.fromAmount,
+          minOut: event.args.minOut,
+          units: event.args.units,
+          fee: event.args.fee,
+          underwriteIncentiveX16: event.args.underwriteIncentiveX16,
+        };
       });
 
       startBlock = endBlock;
