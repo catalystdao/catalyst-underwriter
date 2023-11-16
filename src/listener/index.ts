@@ -1,4 +1,5 @@
-import { workerData } from 'worker_threads';
+import { evaulate } from 'src/evaluator';
+import { parentPort, workerData } from 'worker_threads';
 import { EvmChain } from '../chains/evm-chain';
 import { wait } from '../common/utils';
 import { Logger } from '../logger';
@@ -56,6 +57,10 @@ const bootstrap = async () => {
           fee: event.args.fee,
           underwriteIncentiveX16: event.args.underwriteIncentiveX16,
         };
+
+        const seconds = evaulate(sendAsset);
+
+        parentPort?.postMessage(sendAsset);
       });
 
       startBlock = endBlock;

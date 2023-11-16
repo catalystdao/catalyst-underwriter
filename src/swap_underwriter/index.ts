@@ -1,13 +1,27 @@
-import { EvmChain } from 'src/chains/evm-chain';
-import { Chain } from 'src/chains/interfaces/chain.interface';
-import { CatalystChainInterface } from 'src/contracts';
-import { SendAssetEvent } from 'src/listener/interface/sendasset-event.interface';
-import { Logger } from 'src/logger';
-import { prioritise } from 'src/relayer';
+import { EvmChain } from '../chains/evm-chain';
+import { Chain } from '../chains/interfaces/chain.interface';
+import { CatalystChainInterface } from '../contracts';
+import { SendAssetEvent } from '../listener/interface/sendasset-event.interface';
+import { Logger } from '../logger';
+import { prioritise } from '../relayer';
 
-const checkUnderwriterAllawence = async (contract: CatalystChainInterface) => {
-  //TODO
-  //contract.estimateGas.underwriteAndCheckConnection()
+const checkUnderwriterGasCost = async (
+  contract: CatalystChainInterface,
+  sendAsset: SendAssetEvent,
+) => {
+  const gasCost = await contract.estimateGas.underwriteAndCheckConnection(
+    'sourceIdentifier',
+    contract.address,
+    sendAsset.toVault,
+    'toAsset',
+    'U',
+    sendAsset.minOut,
+    sendAsset.toAccount,
+    sendAsset.underwriteIncentiveX16,
+    'cdata',
+  );
+
+  return gasCost;
 };
 
 export const underwrite = async (
@@ -19,7 +33,7 @@ export const underwrite = async (
   const evmChain = new EvmChain(chain, true); //Using dedicated RPC
   const contract = evmChain.getCatalystChainContract(address);
 
-  const allowence = checkUnderwriterAllawence(contract);
+  const gas = checkUnderwriterGasCost(contract, sendAsset);
 
   try {
     //TODO
