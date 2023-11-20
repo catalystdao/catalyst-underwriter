@@ -1,4 +1,4 @@
-import { SendAssetEvent } from 'src/listener/interface/sendasset-event.interface';
+import { SendAssetEvent } from '../listener/interface/sendasset-event.interface';
 
 const MIN_EARN = 0;
 const LARGE_SWAP = 0;

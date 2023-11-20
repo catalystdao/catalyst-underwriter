@@ -1,7 +1,7 @@
-import { evaulate } from 'src/evaluator';
 import { parentPort, workerData } from 'worker_threads';
 import { EvmChain } from '../chains/evm-chain';
 import { wait } from '../common/utils';
+import { evaulate } from '../evaluator';
 import { Logger } from '../logger';
 
 const bootstrap = async () => {
@@ -15,6 +15,7 @@ const bootstrap = async () => {
   );
 
   const contract = chain.getCatalystVaultEventContract(address);
+
   let startBlock = await chain.getCurrentBlock();
   await wait(interval);
 
@@ -58,9 +59,11 @@ const bootstrap = async () => {
           underwriteIncentiveX16: event.args.underwriteIncentiveX16,
         };
 
-        const seconds = evaulate(sendAsset);
-
-        parentPort?.postMessage(sendAsset);
+        if (sendAsset.underwriteIncentiveX16 > 0) {
+          const delay = evaulate(sendAsset);
+          const swap = { sendAsset, delay };
+          parentPort?.postMessage(swap);
+        }
       });
 
       startBlock = endBlock;

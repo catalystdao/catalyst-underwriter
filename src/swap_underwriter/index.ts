@@ -1,5 +1,6 @@
+import { workerData } from 'worker_threads';
 import { EvmChain } from '../chains/evm-chain';
-import { Chain } from '../chains/interfaces/chain.interface';
+import { wait } from '../common/utils';
 import { CatalystChainInterface } from '../contracts';
 import { SendAssetEvent } from '../listener/interface/sendasset-event.interface';
 import { Logger } from '../logger';
@@ -24,13 +25,15 @@ const checkUnderwriterGasCost = async (
   return gasCost;
 };
 
-export const underwrite = async (
-  chain: Chain,
-  address: string,
-  sendAsset: SendAssetEvent,
-) => {
+export const underwrite = async () => {
+  const delay = workerData.delay;
+  await wait(delay);
+
   const logger = new Logger();
-  const evmChain = new EvmChain(chain, true); //Using dedicated RPC
+  const address = workerData.address;
+  const sendAsset: SendAssetEvent = workerData.sendAsset;
+  const chain = workerData.chain;
+  const evmChain = new EvmChain(workerData.chain, true); //Using dedicated RPC
   const contract = evmChain.getCatalystChainContract(address);
 
   const gas = checkUnderwriterGasCost(contract, sendAsset);
@@ -61,3 +64,5 @@ export const underwrite = async (
     );
   }
 };
+
+underwrite();

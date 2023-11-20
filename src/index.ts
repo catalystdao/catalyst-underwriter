@@ -2,8 +2,7 @@ import * as dotenv from 'dotenv';
 import { join } from 'path';
 import { Worker } from 'worker_threads';
 import { CHAINS } from './chains/chains';
-import { SendAssetEvent } from './listener/interface/sendasset-event.interface';
-import { underwrite } from './swap_underwriter';
+import { Swap } from './swap_underwriter/interfaces/swap,interface';
 
 const bootstrap = () => {
   dotenv.config();
@@ -14,8 +13,15 @@ const bootstrap = () => {
         workerData: { address, chain, interval: 4000 },
       });
 
-      worker.on('message', async (sendAsset: SendAssetEvent) => {
-        underwrite(chain, address, sendAsset);
+      worker.on('message', async (swap: Swap) => {
+        new Worker(join(__dirname, './swap_underwriter/index.js'), {
+          workerData: {
+            address,
+            chain,
+            delay: swap.delay,
+            sendAsset: swap.sendAsset,
+          },
+        });
       });
     });
   });
