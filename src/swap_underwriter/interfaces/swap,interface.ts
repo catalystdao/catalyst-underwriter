@@ -3,4 +3,5 @@ import { SendAssetEvent } from '../../listener/interface/sendasset-event.interfa
 export interface Swap {
   sendAsset: SendAssetEvent;
   delay: number;
+  blockNumber: number;
 }

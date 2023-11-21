@@ -3,6 +3,7 @@ import { EvmChain } from '../chains/evm-chain';
 import { wait } from '../common/utils';
 import { evaulate } from '../evaluator';
 import { Logger } from '../logger';
+import { Swap } from '../swap_underwriter/interfaces/swap,interface';
 
 const bootstrap = async () => {
   const logger = new Logger();
@@ -61,8 +62,11 @@ const bootstrap = async () => {
 
         if (sendAsset.underwriteIncentiveX16 > 0) {
           const delay = evaulate(sendAsset);
-          const swap = { sendAsset, delay };
-          parentPort?.postMessage(swap);
+          if (delay) {
+            const blockNumber = event.blockNumber;
+            const swap: Swap = { sendAsset, delay, blockNumber };
+            parentPort?.postMessage(swap);
+          }
         }
       });
 

@@ -18,8 +18,7 @@ const bootstrap = () => {
           workerData: {
             address,
             chain,
-            delay: swap.delay,
-            sendAsset: swap.sendAsset,
+            swap,
           },
         });
       });

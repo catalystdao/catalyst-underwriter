@@ -11,6 +11,17 @@ export const getBountyByID = async (id: string) => {
   }
 };
 
+export const getAMBByID = async (id: string): Promise<string> => {
+  try {
+    const res = await axios.get(join(baseEndpoint, '/amb/:id'));
+    return res.data;
+  } catch (error) {
+    console.error(`Failed to get amb ${id} from the relayer`);
+  }
+
+  return '';
+};
+
 export const getAllBounties = async () => {
   try {
     const res = await axios.get(join(baseEndpoint, '/bounties'));

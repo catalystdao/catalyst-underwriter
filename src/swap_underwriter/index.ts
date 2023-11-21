@@ -1,65 +1,54 @@
 import { workerData } from 'worker_threads';
 import { EvmChain } from '../chains/evm-chain';
+import { Chain } from '../chains/interfaces/chain.interface';
 import { wait } from '../common/utils';
-import { CatalystChainInterface } from '../contracts';
 import { SendAssetEvent } from '../listener/interface/sendasset-event.interface';
 import { Logger } from '../logger';
-import { prioritise } from '../relayer';
-
-const checkUnderwriterGasCost = async (
-  contract: CatalystChainInterface,
-  sendAsset: SendAssetEvent,
-) => {
-  const gasCost = await contract.estimateGas.underwriteAndCheckConnection(
-    'sourceIdentifier',
-    contract.address,
-    sendAsset.toVault,
-    'toAsset',
-    'U',
-    sendAsset.minOut,
-    sendAsset.toAccount,
-    sendAsset.underwriteIncentiveX16,
-    'cdata',
-  );
-
-  return gasCost;
-};
+import { getAMBByID, prioritise } from '../relayer';
+import { Swap } from './interfaces/swap,interface';
+import { getMessageIdentifier } from './utils';
 
 export const underwrite = async () => {
-  const delay = workerData.delay;
+  const swap: Swap = workerData.swap;
+  const delay = swap.delay;
   await wait(delay);
 
   const logger = new Logger();
-  const address = workerData.address;
-  const sendAsset: SendAssetEvent = workerData.sendAsset;
-  const chain = workerData.chain;
-  const evmChain = new EvmChain(workerData.chain, true); //Using dedicated RPC
-  const contract = evmChain.getCatalystChainContract(address);
+  const sendAsset: SendAssetEvent = swap.sendAsset;
+  const address: string = workerData.address;
+  const chain: Chain = workerData.chain;
+  const evmChain = new EvmChain(chain, true); //Using dedicated RPC
+  const catalystChainContract = evmChain.getCatalystChainContract(address);
+  const catalystVaultContract = evmChain.getCatalystVaultContract(address);
 
-  const gas = checkUnderwriterGasCost(contract, sendAsset);
+  const messageIdentifier = getMessageIdentifier(sendAsset, swap.blockNumber);
 
   try {
-    //TODO
-    const tx = await contract.underwriteAndCheckConnection(
-      'sourceIdentifier',
-      address,
-      sendAsset.toVault,
-      'toAsset',
-      'U',
-      sendAsset.minOut,
-      sendAsset.toAccount,
-      sendAsset.underwriteIncentiveX16,
-      'cdata',
+    const toAsset = await catalystVaultContract._tokenIndexing(
+      sendAsset.toAssetIndex,
+    );
+    const callData = await getAMBByID(messageIdentifier);
+
+    const tx = await catalystChainContract.underwriteAndCheckConnection(
+      chain.chainId, //sourceIdentifier
+      address, //fromVault
+      sendAsset.toVault, //targetVault
+      toAsset, //toAsset
+      sendAsset.units, //U
+      sendAsset.minOut, //minOut
+      sendAsset.toAccount, //toAccount
+      sendAsset.underwriteIncentiveX16, //underwriteIncentiveX16
+      callData, //cdata
     );
 
-    prioritise(sendAsset.channelId);
+    prioritise(messageIdentifier);
 
     logger.info(
       `Successfully called underwrite with txHash ${tx.hash} on ${chain.name} chain`,
     );
   } catch (error) {
     logger.error(
-      `Failed to underwrite swap ${sendAsset.channelId} on ${chain.name} chain`,
+      `Failed to underwrite swap ${messageIdentifier} on ${chain.name} chain`,
       error,
     );
   }

@@ -2,6 +2,7 @@ import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { Wallet } from 'ethers';
 import {
   CatalystChainInterface__factory,
+  CatalystVaultCommon__factory,
   CatalystVaultEvents__factory,
 } from '../contracts';
 import { Chain } from './interfaces/chain.interface';
@@ -41,6 +42,15 @@ export class EvmChain {
    */
   getCatalystChainContract(address: string) {
     return CatalystChainInterface__factory.connect(address, this.signer);
+  }
+
+  /**
+   * Used to underwrite a swap
+   * @param address CatalystChain address for the appropriate chain
+   * @returns Signer
+   */
+  getCatalystVaultContract(address: string) {
+    return CatalystVaultCommon__factory.connect(address, this.provider);
   }
 
   /**
