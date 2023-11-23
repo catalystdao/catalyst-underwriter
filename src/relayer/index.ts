@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { join } from 'path';
+import { AMB } from './interfaces/amb.interface';
 
 const baseEndpoint = process.env.RELAYER_ENDPOINT!;
 
@@ -11,15 +12,14 @@ export const getBountyByID = async (id: string) => {
   }
 };
 
-export const getAMBByID = async (id: string): Promise<string> => {
+export const getAMBByID = async (id: string): Promise<AMB | undefined> => {
   try {
-    const res = await axios.get(join(baseEndpoint, '/amb/:id'));
+    const res = await axios.get<AMB>(join(baseEndpoint, '/amb/:id'));
+
     return res.data;
   } catch (error) {
     console.error(`Failed to get amb ${id} from the relayer`);
   }
-
-  return '';
 };
 
 export const getAllBounties = async () => {

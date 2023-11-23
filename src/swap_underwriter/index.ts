@@ -1,4 +1,6 @@
 import { workerData } from 'worker_threads';
+import { getChainByID } from '../chains/chains';
+import { ChainID } from '../chains/enums/chainid.enum';
 import { EvmChain } from '../chains/evm-chain';
 import { Chain } from '../chains/interfaces/chain.interface';
 import { wait } from '../common/utils';
@@ -18,7 +20,6 @@ export const underwrite = async () => {
   const address: string = workerData.address;
   const chain: Chain = workerData.chain;
   const evmChain = new EvmChain(chain, true); //Using dedicated RPC
-  const catalystChainContract = evmChain.getCatalystChainContract(address);
   const catalystVaultContract = evmChain.getCatalystVaultContract(address);
 
   const messageIdentifier = getMessageIdentifier(sendAsset, swap.blockNumber);
@@ -29,23 +30,29 @@ export const underwrite = async () => {
     );
     const callData = await getAMBByID(messageIdentifier);
 
-    const tx = await catalystChainContract.underwriteAndCheckConnection(
-      chain.chainId, //sourceIdentifier
-      address, //fromVault
-      sendAsset.toVault, //targetVault
-      toAsset, //toAsset
-      sendAsset.units, //U
-      sendAsset.minOut, //minOut
-      sendAsset.toAccount, //toAccount
-      sendAsset.underwriteIncentiveX16, //underwriteIncentiveX16
-      callData, //cdata
-    );
+    if (callData) {
+      const chain = getChainByID(callData.destinationChain as ChainID);
+      const evmChain = new EvmChain(chain, true); //Using dedicated RPC
+      const catalystChainContract = evmChain.getCatalystChainContract(address);
 
-    prioritise(messageIdentifier);
+      const tx = await catalystChainContract.underwriteAndCheckConnection(
+        chain.chainId, //sourceIdentifier
+        address, //fromVault
+        sendAsset.toVault, //targetVault
+        toAsset, //toAsset
+        sendAsset.units, //U
+        sendAsset.minOut, //minOut
+        sendAsset.toAccount, //toAccount
+        sendAsset.underwriteIncentiveX16, //underwriteIncentiveX16
+        callData.payload, //cdata
+      );
 
-    logger.info(
-      `Successfully called underwrite with txHash ${tx.hash} on ${chain.name} chain`,
-    );
+      prioritise(messageIdentifier);
+
+      logger.info(
+        `Successfully called underwrite with txHash ${tx.hash} on ${chain.name} chain`,
+      );
+    }
   } catch (error) {
     logger.error(
       `Failed to underwrite swap ${messageIdentifier} on ${chain.name} chain`,
