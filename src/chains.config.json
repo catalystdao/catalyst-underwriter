@@ -13,29 +13,5 @@
     "rpc": "https://polygon-mumbai-bor.publicnode.com",
     "underwriterRPC": "https://polygon-mumbai-bor.publicnode.com",
     "addresses": ["0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d"]
-  },
-
-  {
-    "chainId": "5001",
-    "name": "Mantle",
-    "rpc": "https://rpc.testnet.mantle.xyz",
-    "underwriterRPC": "https://rpc.testnet.mantle.xyz",
-    "addresses": ["0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d"]
-  },
-
-  {
-    "chainId": "1738",
-    "name": "InEVM",
-    "rpc": "https://inevm-rpc.caldera.dev",
-    "underwriterRPC": "https://inevm-rpc.caldera.dev",
-    "addresses": ["0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d"]
-  },
-
-  {
-    "chainId": "534351",
-    "name": "Scroll Sepolia",
-    "rpc": "http://archive-node.sepolia.scroll.xyz:8545",
-    "underwriterRPC": "http://archive-node.sepolia.scroll.xyz:8545",
-    "addresses": ["0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d"]
   }
 ]
