@@ -5,7 +5,6 @@ import { wait } from '../common/utils';
 import { evaulate } from '../evaluator';
 import { Logger } from '../logger';
 import { Swap } from '../swap_underwriter/interfaces/swap,interface';
-import { getcdataByPayload } from '../swap_underwriter/utils';
 
 const bootstrap = async () => {
   const logger = new Logger();
@@ -18,9 +17,6 @@ const bootstrap = async () => {
   );
 
   const contract = evmChain.getCatalystVaultEventContract(chain.catalystVault);
-  const cdata = getcdataByPayload(
-    '0x00000000000000000000000000000000000000000000000000000000000000050014d62cfe83343de3bc9aad4cc38818b79cca8be501ba7c978df368e21aa4e37e14000000000000000000000000000000000000000000000000000000000000000000000000000000000000000019dc9f1c9c49b431103ba80a28c206c4a65dc80c14000000000000000000000000000000000000000000000000000000000000000000000000000000000000000019dc9f1c9c49b431103ba80a28c206c4a65dc80c000000030d400123456789abcdeffedcba9876543210',
-  );
 
   let startBlock =
     evmChain.chain.startingBlock ?? (await evmChain.getCurrentBlock());
