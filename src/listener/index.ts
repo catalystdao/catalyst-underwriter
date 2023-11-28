@@ -17,7 +17,7 @@ const bootstrap = async () => {
 
   const contract = chain.getCatalystVaultEventContract(address);
 
-  let startBlock = await chain.getCurrentBlock();
+  let startBlock = chain.chain.startingBlock ?? (await chain.getCurrentBlock());
   await wait(interval);
 
   while (true) {

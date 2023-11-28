@@ -4,4 +4,5 @@ export interface Chain {
   rpc: string;
   underwriterRPC: string;
   addresses: string[];
+  startingBlock?: number;
 }

@@ -2,16 +2,17 @@
   {
     "chainId": "11155111",
     "name": "Sepolia",
-    "rpc": "https://ethereum-sepolia.blockpi.network/v1/rpc/public",
-    "underwriterRPC": "https://ethereum-sepolia.blockpi.network/v1/rpc/public",
+    "rpc": "https://rpc.notadegen.com/eth/sepolia",
+    "underwriterRPC": "https://rpc.notadegen.com/eth/sepolia",
+    "startingBlock": 4777276,
     "addresses": ["0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d"]
   },
 
   {
     "chainId": "80001",
     "name": "Mumbai",
-    "rpc": "https://polygon-mumbai-bor.publicnode.com",
-    "underwriterRPC": "https://polygon-mumbai-bor.publicnode.com",
+    "rpc": "https://polygon-mumbai-pokt.nodies.app",
+    "underwriterRPC": "https://polygon-mumbai-pokt.nodies.app",
     "addresses": ["0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d"]
   }
 ]
