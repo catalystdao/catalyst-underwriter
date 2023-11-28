@@ -4,8 +4,7 @@
     "name": "Sepolia",
     "rpc": "https://rpc.notadegen.com/eth/sepolia",
     "underwriterRPC": "https://rpc.notadegen.com/eth/sepolia",
-    "startingBlock": 4777276,
-    "addresses": ["0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d"]
+    "catalystVault": "0x4207b55dcf38ad113c6e91721c932ccd19fd7604"
   },
 
   {
@@ -13,6 +12,6 @@
     "name": "Mumbai",
     "rpc": "https://polygon-mumbai-pokt.nodies.app",
     "underwriterRPC": "https://polygon-mumbai-pokt.nodies.app",
-    "addresses": ["0x0f1ff6216866cbad075a89a8e4cb3c7a9734df0d"]
+    "catalystVault": "0x4207b55dcf38ad113c6e91721c932ccd19fd7604"
   }
 ]

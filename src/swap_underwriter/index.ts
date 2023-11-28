@@ -8,7 +8,7 @@ import { SendAssetEvent } from '../listener/interface/sendasset-event.interface'
 import { Logger } from '../logger';
 import { getAMBByID, prioritise } from '../relayer';
 import { Swap } from './interfaces/swap,interface';
-import { getMessageIdentifier } from './utils';
+import { getMessageIdentifier, getcdataByPayload } from './utils';
 
 export const underwrite = async () => {
   const swap: Swap = workerData.swap;
@@ -17,47 +17,48 @@ export const underwrite = async () => {
 
   const logger = new Logger();
   const sendAsset: SendAssetEvent = swap.sendAsset;
-  const address: string = workerData.address;
-  const chain: Chain = workerData.chain;
-  const evmChain = new EvmChain(chain, true); //Using dedicated RPC
-  const catalystVaultContract = evmChain.getCatalystVaultContract(address);
-
+  const sourceChain: Chain = workerData.chain;
   const messageIdentifier = getMessageIdentifier(sendAsset, swap.blockNumber);
 
   try {
-    const toAsset = await catalystVaultContract._tokenIndexing(
-      sendAsset.toAssetIndex,
-    );
-    const callData = await getAMBByID(messageIdentifier);
+    const amb = await getAMBByID(messageIdentifier);
 
-    if (callData) {
-      const chain = getChainByID(callData.destinationChain as ChainID);
-      const evmChain = new EvmChain(chain, true); //Using dedicated RPC
-      const catalystChainContract = evmChain.getCatalystChainContract(address);
+    if (amb) {
+      const destChain = getChainByID(amb.destinationChain as ChainID);
+      const destEvmChain = new EvmChain(destChain, true); //Using dedicated RPC
 
-      const tx = await catalystChainContract.underwriteAndCheckConnection(
-        chain.chainId, //sourceIdentifier
-        address, //fromVault
+      const destVaultContract = destEvmChain.getCatalystVaultContract(
+        destChain.catalystVault,
+      );
+      const toAsset = await destVaultContract._tokenIndexing(
+        sendAsset.toAssetIndex,
+      );
+      const destChainInterface = await destVaultContract._chainInterface();
+      const catalystDestChainContract =
+        destEvmChain.getCatalystChainContract(destChainInterface);
+
+      const cdata = getcdataByPayload(amb.payload);
+
+      const tx = await catalystDestChainContract.underwriteAndCheckConnection(
+        sourceChain.chainId, //sourceIdentifier
+        sourceChain.catalystVault, //fromVault
         sendAsset.toVault, //targetVault
         toAsset, //toAsset
         sendAsset.units, //U
         sendAsset.minOut, //minOut
         sendAsset.toAccount, //toAccount
         sendAsset.underwriteIncentiveX16, //underwriteIncentiveX16
-        callData.payload, //cdata
+        cdata, //cdata
       );
 
       prioritise(messageIdentifier);
 
       logger.info(
-        `Successfully called underwrite with txHash ${tx.hash} on ${chain.name} chain`,
+        `Successfully called underwrite with txHash ${tx.hash} from ${sourceChain.name} chain to ${destChain.name} chain`,
       );
     }
   } catch (error) {
-    logger.error(
-      `Failed to underwrite swap ${messageIdentifier} on ${chain.name} chain`,
-      error,
-    );
+    logger.error(`Failed to underwrite swap ${messageIdentifier}`, error);
   }
 };
 

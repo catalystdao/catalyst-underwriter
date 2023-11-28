@@ -19,3 +19,7 @@ export const getMessageIdentifier = (
     ),
   );
 };
+
+export const getcdataByPayload = (payload: string): string => {
+  return payload.substring(364, payload.length);
+};

@@ -1,29 +1,35 @@
 import { parentPort, workerData } from 'worker_threads';
 import { EvmChain } from '../chains/evm-chain';
+import { Chain } from '../chains/interfaces/chain.interface';
 import { wait } from '../common/utils';
 import { evaulate } from '../evaluator';
 import { Logger } from '../logger';
 import { Swap } from '../swap_underwriter/interfaces/swap,interface';
+import { getcdataByPayload } from '../swap_underwriter/utils';
 
 const bootstrap = async () => {
   const logger = new Logger();
 
-  const interval = workerData.interval;
-  const address = workerData.address;
-  const chain = new EvmChain(workerData.chain);
+  const interval: number = workerData.interval;
+  const chain: Chain = workerData.chain;
+  const evmChain = new EvmChain(chain);
   logger.info(
-    `Collecting catalyst vault events for contract ${address} on ${chain.chain.name} Chain...`,
+    `Collecting catalyst vault events for contract ${chain.catalystVault} on ${chain.name} Chain...`,
   );
 
-  const contract = chain.getCatalystVaultEventContract(address);
+  const contract = evmChain.getCatalystVaultEventContract(chain.catalystVault);
+  const cdata = getcdataByPayload(
+    '0x00000000000000000000000000000000000000000000000000000000000000050014d62cfe83343de3bc9aad4cc38818b79cca8be501ba7c978df368e21aa4e37e14000000000000000000000000000000000000000000000000000000000000000000000000000000000000000019dc9f1c9c49b431103ba80a28c206c4a65dc80c14000000000000000000000000000000000000000000000000000000000000000000000000000000000000000019dc9f1c9c49b431103ba80a28c206c4a65dc80c000000030d400123456789abcdeffedcba9876543210',
+  );
 
-  let startBlock = chain.chain.startingBlock ?? (await chain.getCurrentBlock());
+  let startBlock =
+    evmChain.chain.startingBlock ?? (await evmChain.getCurrentBlock());
   await wait(interval);
 
   while (true) {
     let endBlock: number;
     try {
-      endBlock = await chain.getCurrentBlock();
+      endBlock = await evmChain.getCurrentBlock();
     } catch (error) {
       logger.error(`Failed on the event listener endblock`, error);
       await wait(interval);
@@ -36,7 +42,7 @@ const bootstrap = async () => {
     }
 
     logger.info(
-      `Scanning events from block ${startBlock} to ${endBlock} on ${chain.chain.name} Chain`,
+      `Scanning events from block ${startBlock} to ${endBlock} on ${evmChain.chain.name} Chain`,
     );
 
     try {

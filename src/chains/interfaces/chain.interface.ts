@@ -3,6 +3,6 @@ export interface Chain {
   name: string;
   rpc: string;
   underwriterRPC: string;
-  addresses: string[];
+  catalystVault: string;
   startingBlock?: number;
 }
