@@ -10,14 +10,21 @@ import { getAMBByID, prioritise } from '../relayer';
 import { Swap } from './interfaces/swap,interface';
 import { getMessageIdentifier, getcdataByPayload } from './utils';
 
-export const underwrite = async () => {
+const bootstrap = () => {
   const swap: Swap = workerData.swap;
+  const sourceChain: Chain = workerData.chain;
+  underwrite(swap, sourceChain);
+};
+
+export const underwrite = async (
+  swap: Swap,
+  sourceChain: Chain,
+): Promise<string | undefined> => {
   const delay = swap.delay;
   await wait(delay);
 
   const logger = new Logger();
   const sendAsset: SendAssetEvent = swap.sendAsset;
-  const sourceChain: Chain = workerData.chain;
   const messageIdentifier = getMessageIdentifier(sendAsset, swap.blockNumber);
 
   try {
@@ -56,10 +63,12 @@ export const underwrite = async () => {
       logger.info(
         `Successfully called underwrite with txHash ${tx.hash} from ${sourceChain.name} chain to ${destChain.name} chain`,
       );
+
+      return tx.hash;
     }
   } catch (error) {
     logger.error(`Failed to underwrite swap ${messageIdentifier}`, error);
   }
 };
 
-underwrite();
+bootstrap();

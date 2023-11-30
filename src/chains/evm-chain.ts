@@ -12,17 +12,23 @@ export class EvmChain {
   readonly signer: Wallet;
   readonly chain: Chain;
 
-  constructor(chain: Chain, underwriterRPC: boolean = false) {
+  constructor(
+    chain: Chain,
+    underwriterRPC: boolean = false,
+    privateKey?: string,
+  ) {
     this.chain = chain;
 
     this.provider = new StaticJsonRpcProvider(
       underwriterRPC ? this.chain.underwriterRPC : this.chain.rpc,
     );
 
-    if (!process.env.PRIVATE_KEY)
+    if (!privateKey && !process.env.PRIVATE_KEY)
       throw new Error('Underwriter private key is missing from env');
 
-    const wallet = new Wallet(process.env.PRIVATE_KEY);
+    const wallet = new Wallet(
+      privateKey ? privateKey : process.env.PRIVATE_KEY!,
+    );
     this.signer = wallet.connect(this.provider);
   }
 
@@ -45,12 +51,15 @@ export class EvmChain {
   }
 
   /**
-   * Used to underwrite a swap
-   * @param address CatalystChain address for the appropriate chain
-   * @returns Signer
+   * The Catalyst Vault
+   * @param address CatalystVault address for the appropriate chain
+   * @returns Signer/Provider
    */
-  getCatalystVaultContract(address: string) {
-    return CatalystVaultCommon__factory.connect(address, this.provider);
+  getCatalystVaultContract(address: string, useSigner?: boolean) {
+    return CatalystVaultCommon__factory.connect(
+      address,
+      useSigner ? this.signer : this.provider,
+    );
   }
 
   /**
