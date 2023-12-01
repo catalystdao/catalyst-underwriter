@@ -5,12 +5,20 @@ import { wait } from '../common/utils';
 import { evaulate } from '../evaluator';
 import { Logger } from '../logger';
 import { Swap } from '../swap_underwriter/interfaces/swap,interface';
+import { SendAssetEvent } from './interface/sendasset-event.interface';
 
-const bootstrap = async () => {
-  const logger = new Logger();
-
+const bootstrap = () => {
   const interval: number = workerData.interval;
   const chain: Chain = workerData.chain;
+  listenToSendAsset(interval, chain);
+};
+
+export const listenToSendAsset = async (
+  interval: number,
+  chain: Chain,
+  testing: boolean = false,
+): Promise<SendAssetEvent> => {
+  const logger = new Logger();
   const evmChain = new EvmChain(chain);
   logger.info(
     `Collecting catalyst vault events for contract ${chain.catalystVault} on ${chain.name} Chain...`,
@@ -61,6 +69,8 @@ const bootstrap = async () => {
           fee: event.args.fee,
           underwriteIncentiveX16: event.args.underwriteIncentiveX16,
         };
+
+        if (testing) return sendAsset;
 
         if (sendAsset.underwriteIncentiveX16 > 0) {
           const delay = evaulate(sendAsset);

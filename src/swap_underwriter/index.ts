@@ -25,6 +25,8 @@ export const underwrite = async (
 
   const logger = new Logger();
   const sendAsset: SendAssetEvent = swap.sendAsset;
+  if (sendAsset.underwriteIncentiveX16 < 0) return;
+
   const messageIdentifier = getMessageIdentifier(sendAsset, swap.blockNumber);
 
   try {

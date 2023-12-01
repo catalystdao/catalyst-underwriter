@@ -9,7 +9,7 @@
     "start": "ts-node src/index.ts",
     "start:fork": "anvil -f https://rpc.notadegen.com/eth/sepolia",
     "build": "tsc",
-    "test": "jest",
+    "test": "jest --runInBand",
     "lint": "eslint src --ext .ts --fix",
     "postinstall": "typechain --target ethers-v5 --out-dir src/contracts src/abis/*.json"
   },
