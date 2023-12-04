@@ -1,8 +1,9 @@
 import { CHAINS } from '../chains/chains';
 import { Chain } from '../chains/interfaces/chain.interface';
-import { listenToSendAsset } from '../listener';
-import { underwrite } from '../swap_underwriter';
+import { listenToSendAsset } from '../listener/listenSendAsset';
+
 import { Swap } from '../swap_underwriter/interfaces/swap,interface';
+import { underwrite } from '../swap_underwriter/underwrite';
 import { swap } from './swap';
 
 describe('Testing Underwrite', () => {

@@ -1,6 +1,7 @@
 import { CHAINS } from '../chains/chains';
 import { Chain } from '../chains/interfaces/chain.interface';
-import { listenToSendAsset } from '../listener';
+import { listenToSendAsset } from '../listener/listenSendAsset';
+
 import { swap } from './swap';
 
 describe('Testing Listener can find a swap', () => {
