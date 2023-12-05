@@ -11,9 +11,13 @@ export const listenToSendAsset = async (
   interval: number,
   chain: Chain,
   testing: boolean = false,
-): Promise<SendAssetEvent> => {
+): Promise<SendAssetEvent | undefined> => {
   const logger = new Logger();
-  const evmChain = new EvmChain(chain);
+  const evmChain = new EvmChain(
+    chain,
+    false,
+    '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+  );
   logger.info(
     `Collecting catalyst vault events for contract ${chain.catalystVault} on ${chain.name} Chain...`,
   );
@@ -74,6 +78,8 @@ export const listenToSendAsset = async (
           }
         }
       });
+
+      if (testing) return;
 
       startBlock = endBlock;
       await wait(interval);

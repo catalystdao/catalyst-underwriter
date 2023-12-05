@@ -27,7 +27,11 @@ export const underwrite = async (
 
     if (amb) {
       const destChain = getChainByID(amb.destinationChain as ChainID);
-      const destEvmChain = new EvmChain(destChain, true); //Using dedicated RPC
+      const destEvmChain = new EvmChain(
+        destChain,
+        true,
+        '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+      ); //Using dedicated RPC
 
       const destVaultContract = destEvmChain.getCatalystVaultContract(
         destChain.catalystVault,

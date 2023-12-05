@@ -1,10 +1,11 @@
-import { hexZeroPad } from 'ethers/lib/utils';
+import { BigNumber, ethers } from 'ethers';
+import { defaultAbiCoder, parseEther, parseUnits } from 'ethers/lib/utils';
 import { CHAINS } from '../chains/chains';
 import { EvmChain } from '../chains/evm-chain';
 import { Chain } from '../chains/interfaces/chain.interface';
 
 export const swap = async (
-  underwriteIncentiveX16: number = 1,
+  underwriteIncentiveX16: BigNumber = BigNumber.from(1),
 ): Promise<number> => {
   const fromChain: Chain = { ...CHAINS[0], rpc: 'http://localhost:8545' };
   const fromEvmChain = new EvmChain(
@@ -21,22 +22,31 @@ export const swap = async (
     true,
   );
 
-  const chainIdentifier = hexZeroPad(fromChain.chainId, 32);
+  const chainIdentifier = defaultAbiCoder.encode(
+    ['uint256'],
+    [fromChain.chainId],
+  );
+
+  const zero = BigNumber.from(0);
   const toVault = toChain.catalystVault;
   const incentive = {
     maxGasDelivery: 2000000,
     maxGasAck: 2000000,
     refundGasTo: account,
-    priceOfDeliveryGas: 5,
-    priceOfAckGas: 5,
-    targetDelta: 0,
+    priceOfDeliveryGas: parseUnits('5', 'gwei'),
+    priceOfAckGas: parseUnits('5', 'gwei'),
+    targetDelta: zero,
   };
 
-  const fromasset = await vault._tokenIndexing(0);
-  const toassetindex = 0;
-  const amount = 1;
-  const minOut = 0;
-  const cdata = '';
+  const amount = parseEther('1');
+  const fromasset = await vault._tokenIndexing('0x0');
+  const tokenContract = fromEvmChain.getTokenContract(fromasset);
+  const approveTx = await tokenContract.approve(account, amount);
+  await approveTx.wait();
+
+  const toassetindex = zero;
+  const minOut = zero;
+  const cdata = ethers.constants.HashZero;
 
   const tx = await vault.sendAsset(
     {
@@ -52,6 +62,7 @@ export const swap = async (
     account,
     underwriteIncentiveX16,
     cdata,
+    { gasLimit: 3000000 },
   );
 
   await tx.wait();

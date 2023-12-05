@@ -4,6 +4,7 @@ import {
   CatalystChainInterface__factory,
   CatalystVaultCommon__factory,
   CatalystVaultEvents__factory,
+  Token__factory,
 } from '../contracts';
 import { Chain } from './interfaces/chain.interface';
 
@@ -60,6 +61,15 @@ export class EvmChain {
       address,
       useSigner ? this.signer : this.provider,
     );
+  }
+
+  /**
+   * ERC20Token contract for approve
+   * @param address Token Address
+   * @returns Signer
+   */
+  getTokenContract(address: string) {
+    return Token__factory.connect(address, this.signer);
   }
 
   /**

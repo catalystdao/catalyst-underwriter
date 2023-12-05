@@ -1,3 +1,4 @@
+import { BigNumber } from 'ethers';
 import { CHAINS } from '../chains/chains';
 import { Chain } from '../chains/interfaces/chain.interface';
 import { listenToSendAsset } from '../listener/listenSendAsset';
@@ -12,11 +13,11 @@ describe('Testing Underwrite', () => {
     const blockNumber = await swap();
     chain.startingBlock = blockNumber - 1;
 
-    const sendAsset = await listenToSendAsset(1000, chain, true);
+    const sendAsset = await listenToSendAsset(0, chain, true);
 
     const swapObj: Swap = {
       blockNumber,
-      sendAsset,
+      sendAsset: sendAsset!,
       delay: 0,
     };
     const tx = await underwrite(swapObj, chain);
@@ -28,14 +29,14 @@ describe('Testing Underwrite', () => {
 describe('Testing Underwrite expected failure', () => {
   it('should NOT perform an underwrite because incentive is too low', async () => {
     const chain: Chain = { ...CHAINS[0], rpc: 'http://localhost:8545' };
-    const blockNumber = await swap(0);
+    const blockNumber = await swap(BigNumber.from(0));
     chain.startingBlock = blockNumber - 1;
 
-    const sendAsset = await listenToSendAsset(1000, chain, true);
+    const sendAsset = await listenToSendAsset(0, chain, true);
 
     const swapObj: Swap = {
       blockNumber,
-      sendAsset,
+      sendAsset: sendAsset!,
       delay: 0,
     };
     const tx = await underwrite(swapObj, chain);
