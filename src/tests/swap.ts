@@ -5,9 +5,9 @@ import { EvmChain } from '../chains/evm-chain';
 import { Chain } from '../chains/interfaces/chain.interface';
 
 export const swap = async (
+  fromChain: Chain,
   underwriteIncentiveX16: BigNumber = BigNumber.from(1),
 ): Promise<number> => {
-  const fromChain: Chain = { ...CHAINS[0], rpc: 'http://localhost:8545' };
   const fromEvmChain = new EvmChain(
     fromChain,
     false,

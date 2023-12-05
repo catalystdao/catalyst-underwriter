@@ -4,6 +4,7 @@ import {
   CatalystChainInterface__factory,
   CatalystVaultCommon__factory,
   CatalystVaultEvents__factory,
+  IWormhole__factory,
   Token__factory,
 } from '../contracts';
 import { Chain } from './interfaces/chain.interface';
@@ -70,6 +71,15 @@ export class EvmChain {
    */
   getTokenContract(address: string) {
     return Token__factory.connect(address, this.signer);
+  }
+
+  /**
+   * Gets the wormhole bridge contract
+   * @param address Wormhole Bridge
+   * @returns Provider
+   */
+  getIWormholeContract(address: string) {
+    return IWormhole__factory.connect(address, this.provider);
   }
 
   /**

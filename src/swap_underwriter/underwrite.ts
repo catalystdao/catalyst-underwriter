@@ -6,12 +6,14 @@ import { wait } from '../common/utils';
 import { SendAssetEvent } from '../listener/interface/sendasset-event.interface';
 import { Logger } from '../logger';
 import { getAMBByID, prioritise } from '../relayer';
+import { AMB } from '../relayer/interfaces/amb.interface';
 import { Swap } from './interfaces/swap,interface';
 import { getMessageIdentifier, getcdataByPayload } from './utils';
 
 export const underwrite = async (
   swap: Swap,
   sourceChain: Chain,
+  testAMB?: AMB,
 ): Promise<string | undefined> => {
   const delay = swap.delay;
   await wait(delay);
@@ -23,7 +25,8 @@ export const underwrite = async (
   const messageIdentifier = getMessageIdentifier(sendAsset, swap.blockNumber);
 
   try {
-    const amb = await getAMBByID(messageIdentifier);
+    const relayerAMB = await getAMBByID(messageIdentifier);
+    const amb = testAMB ?? relayerAMB ?? undefined;
 
     if (amb) {
       const destChain = getChainByID(amb.destinationChain as ChainID);

@@ -5,4 +5,6 @@ export enum ChainID {
   Mantle = '5001',
   InEVM = '1738',
   ScrollSepolia = '534351',
+  opBNB = '5611',
+  BSC = '97',
 }
