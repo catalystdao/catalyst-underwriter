@@ -1,21 +1,16 @@
 import { BigNumber, ethers } from 'ethers';
 import { defaultAbiCoder, parseEther, parseUnits } from 'ethers/lib/utils';
-import { CHAINS } from '../chains/chains';
-import { EvmChain } from '../chains/evm-chain';
-import { Chain } from '../chains/interfaces/chain.interface';
+import { EvmChain } from '../../chains/evm-chain';
+import { Chain } from '../../chains/interfaces/chain.interface';
+import { MOCK_PRIVATE_KEY } from './constants';
 
 export const swap = async (
   fromChain: Chain,
+  toChain: Chain,
   underwriteIncentiveX16: BigNumber = BigNumber.from(1),
 ): Promise<number> => {
-  const fromEvmChain = new EvmChain(
-    fromChain,
-    false,
-    '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
-  );
+  const fromEvmChain = new EvmChain(fromChain, false, MOCK_PRIVATE_KEY);
   const account = fromEvmChain.signer.address;
-
-  const toChain: Chain = { ...CHAINS[1], rpc: 'http://localhost:8545' };
 
   const vault = fromEvmChain.getCatalystVaultContract(
     fromChain.catalystVault,

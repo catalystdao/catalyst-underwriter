@@ -7,6 +7,9 @@ import { SendAssetEvent } from '../listener/interface/sendasset-event.interface'
 import { Logger } from '../logger';
 import { getAMBByID, prioritise } from '../relayer';
 import { AMB } from '../relayer/interfaces/amb.interface';
+import { getForkChain } from '../tests/utils/common';
+import { MOCK_PRIVATE_KEY } from '../tests/utils/constants';
+
 import { Swap } from './interfaces/swap,interface';
 import { getMessageIdentifier, getcdataByPayload } from './utils';
 
@@ -30,11 +33,9 @@ export const underwrite = async (
 
     if (amb) {
       const destChain = getChainByID(amb.destinationChain as ChainID);
-      const destEvmChain = new EvmChain(
-        destChain,
-        true,
-        '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
-      ); //Using dedicated RPC
+      const destEvmChain = testAMB
+        ? new EvmChain(getForkChain(destChain), true, MOCK_PRIVATE_KEY)
+        : new EvmChain(destChain, true); //Using dedicated RPC
 
       const destVaultContract = destEvmChain.getCatalystVaultContract(
         destChain.catalystVault,

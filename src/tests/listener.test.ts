@@ -1,15 +1,19 @@
-import { CHAINS } from '../chains/chains';
+import { getChainByID } from '../chains/chains';
+import { ChainID } from '../chains/enums/chainid.enum';
 import { Chain } from '../chains/interfaces/chain.interface';
 import { listenToSendAsset } from '../listener/listenSendAsset';
-import { swap } from './swap';
+import { getForkChain } from './utils/common';
+import { swap } from './utils/swap';
 
 describe('Testing Listener can find a swap', () => {
   it('should find a swap and ', async () => {
-    const chain: Chain = { ...CHAINS[0], rpc: 'http://localhost:8545' };
-    const blockNumber = await swap(chain);
-    chain.startingBlock = blockNumber - 1;
+    const fromChain: Chain = getForkChain(getChainByID(ChainID.Sepolia));
+    const toChain: Chain = getForkChain(getChainByID(ChainID.Mumbai));
 
-    const sendAsset = await listenToSendAsset(0, chain, true);
+    const blockNumber = await swap(fromChain, toChain);
+    fromChain.startingBlock = blockNumber - 1;
+
+    const sendAsset = await listenToSendAsset(0, fromChain, true);
 
     //Expect to find the swap
     expect(sendAsset).toBeTruthy();

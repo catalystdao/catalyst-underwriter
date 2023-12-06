@@ -7,7 +7,6 @@
   "private": true,
   "scripts": {
     "start": "ts-node src/index.ts",
-    "start:fork": "anvil -f https://rpc.notadegen.com/eth/sepolia",
     "build": "tsc",
     "test": "jest --runInBand",
     "lint": "eslint src --ext .ts --fix",
