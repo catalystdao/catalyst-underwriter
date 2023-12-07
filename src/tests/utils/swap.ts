@@ -35,6 +35,11 @@ export const swap = async (
 
   const amount = parseEther('1');
   const fromasset = await vault._tokenIndexing('0x0');
+
+  const wethContract = await fromEvmChain.getWethContract(fromasset);
+  const wethTx = await wethContract.deposit({ value: amount });
+  await wethTx.wait();
+
   const tokenContract = fromEvmChain.getTokenContract(fromasset);
   const approveTx = await tokenContract.approve(account, amount);
   await approveTx.wait();

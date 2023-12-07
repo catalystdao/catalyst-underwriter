@@ -16,7 +16,7 @@ import { getMessageIdentifier, getcdataByPayload } from './utils';
 export const underwrite = async (
   swap: Swap,
   sourceChain: Chain,
-  testAMB?: AMB,
+  testMock?: AMB,
 ): Promise<string | undefined> => {
   const delay = swap.delay;
   await wait(delay);
@@ -29,11 +29,11 @@ export const underwrite = async (
 
   try {
     const relayerAMB = await getAMBByID(messageIdentifier);
-    const amb = testAMB ?? relayerAMB ?? undefined;
+    const amb = testMock ?? relayerAMB ?? undefined;
 
     if (amb) {
       const destChain = getChainByID(amb.destinationChain as ChainID);
-      const destEvmChain = testAMB
+      const destEvmChain = testMock
         ? new EvmChain(getForkChain(destChain), true, MOCK_PRIVATE_KEY)
         : new EvmChain(destChain, true); //Using dedicated RPC
 

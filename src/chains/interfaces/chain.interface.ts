@@ -5,7 +5,5 @@ export interface Chain {
   underwriterRPC: string;
   catalystVault: string;
   startingBlock?: number;
-  bridges?: {
-    wormhole: string;
-  };
+  mock: string;
 }

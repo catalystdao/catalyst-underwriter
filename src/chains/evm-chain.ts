@@ -4,8 +4,9 @@ import {
   CatalystChainInterface__factory,
   CatalystVaultCommon__factory,
   CatalystVaultEvents__factory,
-  IWormhole__factory,
+  IncentivizedMockEscrow__factory,
   Token__factory,
+  WETH__factory,
 } from '../contracts';
 import { Chain } from './interfaces/chain.interface';
 
@@ -74,12 +75,21 @@ export class EvmChain {
   }
 
   /**
-   * Gets the wormhole bridge contract
-   * @param address Wormhole Bridge
+   * WETH contract
+   * @param address WETH Address
+   * @returns Signer
+   */
+  getWethContract(address: string) {
+    return WETH__factory.connect(address, this.signer);
+  }
+
+  /**
+   * Gets the mock IncentivizedMockEscrow contract
+   * @param address Mock Contract
    * @returns Provider
    */
-  getIWormholeContract(address: string) {
-    return IWormhole__factory.connect(address, this.provider);
+  getMockContract(address: string) {
+    return IncentivizedMockEscrow__factory.connect(address, this.provider);
   }
 
   /**

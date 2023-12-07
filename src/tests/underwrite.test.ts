@@ -6,8 +6,8 @@ import { listenToSendAsset } from '../listener/listenSendAsset';
 import { ChainID } from '../chains/enums/chainid.enum';
 import { Swap } from '../swap_underwriter/interfaces/swap,interface';
 import { underwrite } from '../swap_underwriter/underwrite';
-import { getWormholeAMB } from './ambs/wormhole';
 import { getForkChain } from './utils/common';
+import { getMockMessage } from './utils/mock';
 import { swap } from './utils/swap';
 
 describe('Testing Underwrite', () => {
@@ -29,10 +29,10 @@ describe('Testing Underwrite', () => {
       delay: 0,
     };
 
-    const amb = await getWormholeAMB(startingBlock, toChain);
-    if (!amb) fail('Failed to get amb');
+    const mock = await getMockMessage(startingBlock, toChain);
+    if (!mock) fail('Failed to get mock');
 
-    const tx = await underwrite(swapObj, toChain, amb);
+    const tx = await underwrite(swapObj, toChain, mock);
 
     expect(tx).toBeTruthy();
   });
@@ -56,10 +56,10 @@ describe('Testing Underwrite expected failure', () => {
       delay: 0,
     };
 
-    const amb = await getWormholeAMB(startingBlock, fromChain);
-    if (!amb) fail('Failed to get amb');
+    const mock = await getMockMessage(startingBlock, fromChain);
+    if (!mock) fail('Failed to get amb');
 
-    const tx = await underwrite(swapObj, fromChain);
+    const tx = await underwrite(swapObj, fromChain, mock);
 
     expect(tx).toBeFalsy();
   });

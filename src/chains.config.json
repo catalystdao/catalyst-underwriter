@@ -5,9 +5,7 @@
     "rpc": "https://rpc.notadegen.com/eth/sepolia",
     "underwriterRPC": "https://rpc.notadegen.com/eth/sepolia",
     "catalystVault": "0x4207b55dcf38ad113c6e91721c932ccd19fd7604",
-    "bridges": {
-      "wormhole": "0x4a8bc80Ed5a4067f1CCf107057b8270E0cC11A78"
-    }
+    "mock": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4"
   },
 
   {
@@ -16,8 +14,6 @@
     "rpc": "https://polygon-mumbai-pokt.nodies.app",
     "underwriterRPC": "https://polygon-mumbai-pokt.nodies.app",
     "catalystVault": "0x4207b55dcf38ad113c6e91721c932ccd19fd7604",
-    "bridges": {
-      "wormhole": "0x0CBE91CF822c73C2315FB05100C2F714765d5c20"
-    }
+    "mock": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4"
   }
 ]
