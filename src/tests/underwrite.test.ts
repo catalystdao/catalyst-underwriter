@@ -1,4 +1,3 @@
-import { BigNumber } from 'ethers';
 import { getChainByID } from '../chains/chains';
 import { Chain } from '../chains/interfaces/chain.interface';
 import { listenToSendAsset } from '../listener/listenSendAsset';
@@ -12,8 +11,8 @@ import { swap } from './utils/swap';
 
 describe('Testing Underwrite', () => {
   it('should perform an underwrite', async () => {
-    const fromChain: Chain = getForkChain(getChainByID(ChainID.Sepolia));
-    const toChain: Chain = getForkChain(getChainByID(ChainID.Mumbai));
+    const fromChain: Chain = getForkChain(getChainByID(ChainID.Mumbai));
+    const toChain: Chain = getForkChain(getChainByID(ChainID.Sepolia));
 
     const blockNumber = await swap(fromChain, toChain);
     const startingBlock = blockNumber - 1;
@@ -35,7 +34,7 @@ describe('Testing Underwrite', () => {
     const tx = await underwrite(swapObj, toChain, mock);
 
     expect(tx).toBeTruthy();
-  });
+  }, 20000);
 });
 
 describe('Testing Underwrite expected failure', () => {
@@ -43,7 +42,7 @@ describe('Testing Underwrite expected failure', () => {
     const fromChain: Chain = getForkChain(getChainByID(ChainID.Sepolia));
     const toChain: Chain = getForkChain(getChainByID(ChainID.Mumbai));
 
-    const blockNumber = await swap(fromChain, toChain, BigNumber.from(0));
+    const blockNumber = await swap(fromChain, toChain, 0);
     const startingBlock = blockNumber - 1;
     fromChain.startingBlock = startingBlock;
 
@@ -62,5 +61,5 @@ describe('Testing Underwrite expected failure', () => {
     const tx = await underwrite(swapObj, fromChain, mock);
 
     expect(tx).toBeFalsy();
-  });
+  }, 20000);
 });

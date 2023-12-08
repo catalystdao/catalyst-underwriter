@@ -1,5 +1,6 @@
 set -exo pipefail
 
-source .env set
-
-anvil -f https://rpc.notadegen.com/eth/sepolia --port $FORK_PORT
+cat "./src/chains.config.json" | jq -r '.[]|[.rpc, .forkPort] | @tsv' |
+  while IFS=$'\t' read -r rpc forkPort; do
+    pm2 start "anvil -f $rpc --port $forkPort"
+  done

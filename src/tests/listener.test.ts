@@ -17,5 +17,5 @@ describe('Testing Listener can find a swap', () => {
 
     //Expect to find the swap
     expect(sendAsset).toBeTruthy();
-  });
+  }, 20000);
 });

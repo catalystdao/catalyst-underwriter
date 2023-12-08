@@ -5,15 +5,17 @@
     "rpc": "https://rpc.notadegen.com/eth/sepolia",
     "underwriterRPC": "https://rpc.notadegen.com/eth/sepolia",
     "catalystVault": "0x4207b55dcf38ad113c6e91721c932ccd19fd7604",
-    "mock": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4"
+    "mock": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+    "forkPort": "8545"
   },
 
   {
     "chainId": "80001",
     "name": "Mumbai",
-    "rpc": "https://polygon-mumbai-pokt.nodies.app",
-    "underwriterRPC": "https://polygon-mumbai-pokt.nodies.app",
+    "rpc": "https://polygon-mumbai-bor.publicnode.com",
+    "underwriterRPC": "https://polygon-mumbai-bor.publicnode.com",
     "catalystVault": "0x4207b55dcf38ad113c6e91721c932ccd19fd7604",
-    "mock": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4"
+    "mock": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
+    "forkPort": "8585"
   }
 ]

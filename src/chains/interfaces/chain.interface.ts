@@ -4,6 +4,7 @@ export interface Chain {
   rpc: string;
   underwriterRPC: string;
   catalystVault: string;
-  startingBlock?: number;
   mock: string;
+  forkPort: string;
+  startingBlock?: number;
 }
