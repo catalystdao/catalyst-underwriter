@@ -28,7 +28,7 @@ describe('Testing Underwrite', () => {
       delay: 0,
     };
 
-    const mock = await getMockMessage(startingBlock, toChain);
+    const mock = await getMockMessage(startingBlock, fromChain);
     if (!mock) fail('Failed to get mock');
 
     const tx = await underwrite(swapObj, toChain, mock);
@@ -39,8 +39,8 @@ describe('Testing Underwrite', () => {
 
 describe('Testing Underwrite expected failure', () => {
   it('should NOT perform an underwrite because incentive is too low', async () => {
-    const fromChain: Chain = getForkChain(getChainByID(ChainID.Sepolia));
-    const toChain: Chain = getForkChain(getChainByID(ChainID.Mumbai));
+    const fromChain: Chain = getForkChain(getChainByID(ChainID.Mumbai));
+    const toChain: Chain = getForkChain(getChainByID(ChainID.Sepolia));
 
     const blockNumber = await swap(fromChain, toChain, 0);
     const startingBlock = blockNumber - 1;

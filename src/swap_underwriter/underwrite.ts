@@ -28,8 +28,7 @@ export const underwrite = async (
   const messageIdentifier = getMessageIdentifier(sendAsset, swap.blockNumber);
 
   try {
-    const relayerAMB = await getAMBByID(messageIdentifier);
-    const amb = testMock ?? relayerAMB ?? undefined;
+    const amb = testMock ?? (await getAMBByID(messageIdentifier)) ?? undefined;
 
     if (amb) {
       const destChain = getChainByID(amb.destinationChain as ChainID);

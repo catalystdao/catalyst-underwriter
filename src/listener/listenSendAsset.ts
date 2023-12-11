@@ -50,7 +50,7 @@ export const listenToSendAsset = async (
         endBlock,
       );
 
-      logs.forEach(async (event) => {
+      for (const event of logs) {
         const sendAsset = {
           channelId: event.args.channelId,
           toVault: event.args.toVault,
@@ -74,7 +74,7 @@ export const listenToSendAsset = async (
             parentPort?.postMessage(swap);
           }
         }
-      });
+      }
 
       if (testing) return;
 

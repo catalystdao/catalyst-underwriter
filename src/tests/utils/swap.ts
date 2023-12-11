@@ -1,4 +1,4 @@
-import { ethers } from 'ethers';
+import { constants, ethers } from 'ethers';
 import {
   defaultAbiCoder,
   hexZeroPad,
@@ -25,7 +25,7 @@ export const swap = async (
 
   const chainIdentifier = defaultAbiCoder.encode(
     ['uint256'],
-    [fromChain.chainId],
+    [toChain.chainId],
   );
 
   const toVault = solidityPack(
@@ -45,14 +45,16 @@ export const swap = async (
     targetDelta: 0,
   };
 
-  const amount = parseEther('0.0001');
+  const amount = parseEther('0.1');
   const value = parseEther('0.1');
-  const fromasset = await fromVault._tokenIndexing('0x0');
+
+  const toAssetIndex = 0;
+  const fromasset = await fromVault._tokenIndexing(toAssetIndex);
 
   const tokenContract = fromEvmChain.getTokenContract(fromasset);
   const approveTx = await tokenContract.approve(
     fromChain.catalystVault,
-    amount,
+    constants.MaxUint256,
   );
   await approveTx.wait();
 
@@ -60,9 +62,8 @@ export const swap = async (
   const wethTx = await wethContract.deposit({ value: amount });
   await wethTx.wait();
 
-  const toAssetIndex = 0;
   const minOut = 0;
-  const cdata = ethers.constants.HashZero;
+  const cdata: any[] = [];
 
   const tx = await fromVault.sendAsset(
     {
@@ -82,6 +83,9 @@ export const swap = async (
   );
 
   await tx.wait();
+  const anvil = await fromEvmChain.provider.getTransaction(tx.hash);
 
-  return tx.blockNumber!;
+  if (!anvil.blockNumber) fail('no block');
+
+  return anvil.blockNumber;
 };

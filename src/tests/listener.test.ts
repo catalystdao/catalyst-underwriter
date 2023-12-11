@@ -7,8 +7,8 @@ import { swap } from './utils/swap';
 
 describe('Testing Listener can find a swap', () => {
   it('should find a swap and ', async () => {
-    const fromChain: Chain = getForkChain(getChainByID(ChainID.Sepolia));
-    const toChain: Chain = getForkChain(getChainByID(ChainID.Mumbai));
+    const fromChain: Chain = getForkChain(getChainByID(ChainID.Mumbai));
+    const toChain: Chain = getForkChain(getChainByID(ChainID.Sepolia));
 
     const blockNumber = await swap(fromChain, toChain);
     fromChain.startingBlock = blockNumber - 1;
