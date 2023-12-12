@@ -1,8 +1,9 @@
+import { defaultAbiCoder } from '@ethersproject/abi';
 import { getChainByID } from '../chains/chains';
 import { ChainID } from '../chains/enums/chainid.enum';
 import { EvmChain } from '../chains/evm-chain';
 import { Chain } from '../chains/interfaces/chain.interface';
-import { wait } from '../common/utils';
+import { decodeVaultOrAccount, wait } from '../common/utils';
 import { SendAssetEvent } from '../listener/interface/sendasset-event.interface';
 import { Logger } from '../logger';
 import { getAMBByID, prioritise } from '../relayer';
@@ -23,7 +24,7 @@ export const underwrite = async (
 
   const logger = new Logger();
   const sendAsset: SendAssetEvent = swap.sendAsset;
-  if (sendAsset.underwriteIncentiveX16 < 0) return;
+  if (sendAsset.underwriteIncentiveX16 === 0) return;
 
   const messageIdentifier = getMessageIdentifier(sendAsset, swap.blockNumber);
 
@@ -48,16 +49,24 @@ export const underwrite = async (
 
       const cdata = getcdataByPayload(amb.payload);
 
+      const sourceIdentifier = defaultAbiCoder.encode(
+        ['uint256'],
+        [sourceChain.chainId],
+      );
+      const targetVault = decodeVaultOrAccount(sendAsset.toVault);
+      const toAccount = decodeVaultOrAccount(sendAsset.toAccount);
+
       const tx = await catalystDestChainContract.underwriteAndCheckConnection(
-        sourceChain.chainId, //sourceIdentifier
+        sourceIdentifier, //sourceIdentifier
         sourceChain.catalystVault, //fromVault
-        sendAsset.toVault, //targetVault
+        targetVault, //targetVault
         toAsset, //toAsset
         sendAsset.units, //U
         sendAsset.minOut, //minOut
-        sendAsset.toAccount, //toAccount
+        toAccount, //toAccount
         sendAsset.underwriteIncentiveX16, //underwriteIncentiveX16
-        cdata, //cdata
+        cdata,
+        { gasLimit: 3000000, from: destEvmChain.signer.address }, //cdata
       );
 
       prioritise(messageIdentifier);

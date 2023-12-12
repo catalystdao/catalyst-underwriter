@@ -14,7 +14,7 @@ describe('Testing Underwrite', () => {
     const fromChain: Chain = getForkChain(getChainByID(ChainID.Mumbai));
     const toChain: Chain = getForkChain(getChainByID(ChainID.Sepolia));
 
-    const blockNumber = await swap(fromChain, toChain);
+    const blockNumber = await swap(fromChain, toChain, 1);
     const startingBlock = blockNumber - 1;
 
     fromChain.startingBlock = startingBlock;

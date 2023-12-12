@@ -45,7 +45,7 @@ export const swap = async (
     targetDelta: 0,
   };
 
-  const amount = parseEther('0.1');
+  const amount = parseEther('0.0001');
   const value = parseEther('0.1');
 
   const toAssetIndex = 0;

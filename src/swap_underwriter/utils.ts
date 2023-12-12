@@ -1,5 +1,6 @@
 import { defaultAbiCoder } from '@ethersproject/abi';
 import { keccak256 } from 'ethers/lib/utils';
+import { add0X } from '../common/utils';
 import { SendAssetEvent } from '../listener/interface/sendasset-event.interface';
 
 export const getMessageIdentifier = (
@@ -21,5 +22,5 @@ export const getMessageIdentifier = (
 };
 
 export const getcdataByPayload = (payload: string): string => {
-  return payload.substring(364, payload.length);
+  return add0X(payload.substring(364, payload.length));
 };
