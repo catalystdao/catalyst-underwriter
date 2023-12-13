@@ -9,7 +9,7 @@ import { Logger } from '../logger';
 import { getAMBByID, prioritise } from '../relayer';
 import { AMB } from '../relayer/interfaces/amb.interface';
 import { getForkChain } from '../tests/utils/common';
-import { MOCK_PRIVATE_KEY } from '../tests/utils/constants';
+import { MOCK_UNDERWRITE_PRIVATE_KEY } from '../tests/utils/constants';
 
 import { Swap } from './interfaces/swap,interface';
 import { getMessageIdentifier, getcdataByPayload } from './utils';
@@ -34,7 +34,11 @@ export const underwrite = async (
     if (amb) {
       const destChain = getChainByID(amb.destinationChain as ChainID);
       const destEvmChain = testMock
-        ? new EvmChain(getForkChain(destChain), true, MOCK_PRIVATE_KEY)
+        ? new EvmChain(
+            getForkChain(destChain),
+            true,
+            MOCK_UNDERWRITE_PRIVATE_KEY,
+          )
         : new EvmChain(destChain, true); //Using dedicated RPC
 
       const destVaultContract = destEvmChain.getCatalystVaultContract(
@@ -68,6 +72,11 @@ export const underwrite = async (
         cdata,
         { gasLimit: 3000000, from: destEvmChain.signer.address }, //cdata
       );
+
+      if (testMock) {
+        await tx.wait();
+        return tx.hash;
+      }
 
       prioritise(messageIdentifier);
 

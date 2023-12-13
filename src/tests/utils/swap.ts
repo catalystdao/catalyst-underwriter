@@ -8,14 +8,14 @@ import {
 } from 'ethers/lib/utils';
 import { EvmChain } from '../../chains/evm-chain';
 import { Chain } from '../../chains/interfaces/chain.interface';
-import { MOCK_PRIVATE_KEY } from './constants';
+import { MOCK_SWAP_PRIVATE_KEY } from './constants';
 
 export const swap = async (
   fromChain: Chain,
   toChain: Chain,
   underwriteIncentiveX16: number = 0,
 ): Promise<number> => {
-  const fromEvmChain = new EvmChain(fromChain, false, MOCK_PRIVATE_KEY);
+  const fromEvmChain = new EvmChain(fromChain, false, MOCK_SWAP_PRIVATE_KEY);
   const account = fromEvmChain.signer.address;
 
   const fromVault = fromEvmChain.getCatalystVaultContract(

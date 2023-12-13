@@ -5,7 +5,6 @@ import { wait } from '../common/utils';
 import { evaulate } from '../evaluator';
 import { Logger } from '../logger';
 import { Swap } from '../swap_underwriter/interfaces/swap,interface';
-import { MOCK_PRIVATE_KEY } from '../tests/utils/constants';
 import { SendAssetEvent } from './interface/sendasset-event.interface';
 
 export const listenToSendAsset = async (
@@ -14,7 +13,7 @@ export const listenToSendAsset = async (
   testing: boolean = false,
 ): Promise<SendAssetEvent | undefined> => {
   const logger = new Logger();
-  const evmChain = new EvmChain(chain, false, MOCK_PRIVATE_KEY);
+  const evmChain = new EvmChain(chain);
   logger.info(
     `Collecting catalyst vault events for contract ${chain.catalystVault} on ${chain.name} Chain...`,
   );
