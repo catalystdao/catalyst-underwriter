@@ -21,6 +21,21 @@ const bootstrap = () => {
       });
     });
   });
+
+  CHAINS.forEach((chain) => {
+    const worker = new Worker(join(__dirname, './expirer/index.js'), {
+      workerData: { chain, interval: 4000 },
+    });
+
+    worker.on('message', async (swap: Swap) => {
+      new Worker(join(__dirname, './swap_underwriter/index.js'), {
+        workerData: {
+          chain,
+          swap,
+        },
+      });
+    });
+  });
 };
 
 bootstrap();

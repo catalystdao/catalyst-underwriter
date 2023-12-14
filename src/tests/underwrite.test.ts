@@ -1,6 +1,6 @@
 import { getChainByID } from '../chains/chains';
 import { Chain } from '../chains/interfaces/chain.interface';
-import { listenToSendAsset } from '../listener/listenSendAsset';
+import { listenToSendAsset } from '../listener/listenSwapEvents';
 
 import { ChainID } from '../chains/enums/chainid.enum';
 import { Swap } from '../swap_underwriter/interfaces/swap,interface';

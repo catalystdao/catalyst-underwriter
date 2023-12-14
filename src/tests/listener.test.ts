@@ -1,7 +1,7 @@
 import { getChainByID } from '../chains/chains';
 import { ChainID } from '../chains/enums/chainid.enum';
 import { Chain } from '../chains/interfaces/chain.interface';
-import { listenToSendAsset } from '../listener/listenSendAsset';
+import { listenToSendAsset } from '../listener/listenSwapEvents';
 import { getForkChain } from './utils/common';
 import { swap } from './utils/swap';
 
