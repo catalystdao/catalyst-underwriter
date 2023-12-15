@@ -3,23 +3,31 @@ import { pino } from 'pino';
 export class Logger {
   readonly logger: pino.Logger;
 
+  readonly loggerOptions: pino.LoggerOptions = {
+    base: undefined,
+  };
+
   constructor() {
-    this.logger = pino();
+    this.logger = pino(this.loggerOptions);
   }
 
-  error(message: string, stackTrace: string): void {
-    this.logger.error({ error: stackTrace }, message);
+  fatal(obj: any, msg?: string | undefined, ...args: any[]): void {
+    this.logger.fatal(obj, msg, args);
   }
 
-  warn(message: string): void {
-    this.logger.warn(message);
+  error(obj: any, msg?: string | undefined, ...args: any[]): void {
+    this.logger.error(obj, msg, args);
   }
 
-  info(message: string): void {
-    this.logger.info(message);
+  warn(obj: any, msg?: string | undefined, ...args: any[]): void {
+    this.logger.warn(obj, msg, args);
   }
 
-  debug(message: string): void {
-    this.logger.debug(message);
+  info(obj: any, msg?: string | undefined, ...args: any[]): void {
+    this.logger.info(obj, msg, args);
+  }
+
+  debug(obj: any, msg?: string | undefined, ...args: any[]): void {
+    this.logger.debug(obj, msg, args);
   }
 }

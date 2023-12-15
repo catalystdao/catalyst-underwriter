@@ -1,5 +1,5 @@
+import pino from 'pino';
 import { EvmChain } from '../chains/evm-chain';
-import { Logger } from '../logger';
 
 export const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
@@ -14,7 +14,7 @@ export const decodeVaultOrAccount = (encodedAddress: string) => {
 export const blockScanner = async (
   evmChain: EvmChain,
   interval: number,
-  logger: Logger,
+  logger: pino.Logger<pino.LoggerOptions>,
   callBack: (startBlock: number, endBlock: number) => void,
 ) => {
   let startBlock =

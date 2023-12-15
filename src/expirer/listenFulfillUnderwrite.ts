@@ -1,13 +1,18 @@
+import pino from 'pino';
 import { EvmChain } from '../chains/evm-chain';
 import { Chain } from '../chains/interfaces/chain.interface';
 import { blockScanner } from '../common/utils';
-import { Logger } from '../logger';
 
 export const listenToFulfillUnderwrite = async (
   interval: number,
   chain: Chain,
+  loggerOptions: pino.LoggerOptions,
 ) => {
-  const logger = new Logger();
+  const logger = pino(loggerOptions).child({
+    worker: 'Fulfill-Underwrite',
+    chain: chain.chainId,
+  });
+
   const evmChain = new EvmChain(chain);
   const vaultContract = evmChain.getCatalystVaultContract(chain.catalystVault);
   const chainInterface = await vaultContract._chainInterface();

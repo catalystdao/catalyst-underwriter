@@ -19,7 +19,12 @@ describe('Testing Underwrite', () => {
 
     fromChain.startingBlock = startingBlock;
 
-    const sendAsset = await listenSwapEvents(0, fromChain, true);
+    const sendAsset = await listenSwapEvents(
+      0,
+      fromChain,
+      { base: undefined },
+      true,
+    );
     if (!sendAsset) fail('Failed to get sendAsset Event');
 
     const swapObj: Swap = {
@@ -31,7 +36,7 @@ describe('Testing Underwrite', () => {
     const mock = await getMockMessage(startingBlock, fromChain);
     if (!mock) fail('Failed to get mock');
 
-    const tx = await underwrite(swapObj, toChain, mock);
+    const tx = await underwrite(swapObj, toChain, { base: undefined }, mock);
 
     expect(tx).toBeTruthy();
   }, 20000);
@@ -46,7 +51,12 @@ describe('Testing Underwrite expected failure', () => {
     const startingBlock = blockNumber - 1;
     fromChain.startingBlock = startingBlock;
 
-    const sendAsset = await listenSwapEvents(0, fromChain, true);
+    const sendAsset = await listenSwapEvents(
+      0,
+      fromChain,
+      { base: undefined },
+      true,
+    );
     if (!sendAsset) fail('Failed to get sendAsset Event');
 
     const swapObj: Swap = {
@@ -58,7 +68,7 @@ describe('Testing Underwrite expected failure', () => {
     const mock = await getMockMessage(startingBlock, fromChain);
     if (!mock) fail('Failed to get amb');
 
-    const tx = await underwrite(swapObj, fromChain, mock);
+    const tx = await underwrite(swapObj, fromChain, { base: undefined }, mock);
 
     expect(tx).toBeFalsy();
   }, 20000);

@@ -13,7 +13,12 @@ describe('Testing Listener can find a swap', () => {
     const blockNumber = await swap(fromChain, toChain);
     fromChain.startingBlock = blockNumber - 1;
 
-    const sendAsset = await listenSwapEvents(0, fromChain, true);
+    const sendAsset = await listenSwapEvents(
+      0,
+      fromChain,
+      { base: undefined },
+      true,
+    );
 
     //Expect to find the swap
     expect(sendAsset).toBeTruthy();

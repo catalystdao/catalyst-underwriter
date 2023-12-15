@@ -5,24 +5,28 @@ import { EvmChain } from '../chains/evm-chain';
 import { Chain } from '../chains/interfaces/chain.interface';
 import { decodeVaultOrAccount, wait } from '../common/utils';
 import { SendAssetEvent } from '../listener/interface/sendasset-event.interface';
-import { Logger } from '../logger';
 import { getAMBByID, prioritise } from '../relayer';
 import { AMB } from '../relayer/interfaces/amb.interface';
 import { getForkChain } from '../tests/utils/common';
 import { MOCK_UNDERWRITE_PRIVATE_KEY } from '../tests/utils/constants';
 
+import pino from 'pino';
 import { Swap } from './interfaces/swap,interface';
 import { getMessageIdentifier, getcdataByPayload } from './utils';
 
 export const underwrite = async (
   swap: Swap,
   sourceChain: Chain,
+  loggerOptions: pino.LoggerOptions,
   testMock?: AMB,
 ): Promise<string | undefined> => {
   const delay = swap.delay;
   await wait(delay);
 
-  const logger = new Logger();
+  const logger = pino(loggerOptions).child({
+    worker: 'Underwrite',
+    chain: sourceChain.chainId,
+  });
   const sendAsset: SendAssetEvent = swap.sendAsset;
   if (sendAsset.underwriteIncentiveX16 === 0) return;
 
