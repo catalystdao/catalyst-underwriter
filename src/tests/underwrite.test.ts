@@ -1,8 +1,8 @@
 import { getChainByID } from '../chains/chains';
 import { Chain } from '../chains/interfaces/chain.interface';
-import { listenToSendAsset } from '../listener/listenSwapEvents';
 
 import { ChainID } from '../chains/enums/chainid.enum';
+import { listenSwapEvents } from '../listener/listenSwapEvents';
 import { Swap } from '../swap_underwriter/interfaces/swap,interface';
 import { underwrite } from '../swap_underwriter/underwrite';
 import { getForkChain } from './utils/common';
@@ -19,7 +19,7 @@ describe('Testing Underwrite', () => {
 
     fromChain.startingBlock = startingBlock;
 
-    const sendAsset = await listenToSendAsset(0, fromChain, true);
+    const sendAsset = await listenSwapEvents(0, fromChain, true);
     if (!sendAsset) fail('Failed to get sendAsset Event');
 
     const swapObj: Swap = {
@@ -46,7 +46,7 @@ describe('Testing Underwrite expected failure', () => {
     const startingBlock = blockNumber - 1;
     fromChain.startingBlock = startingBlock;
 
-    const sendAsset = await listenToSendAsset(0, fromChain, true);
+    const sendAsset = await listenSwapEvents(0, fromChain, true);
     if (!sendAsset) fail('Failed to get sendAsset Event');
 
     const swapObj: Swap = {

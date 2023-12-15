@@ -1,7 +1,7 @@
 import { parentPort } from 'worker_threads';
 import { EvmChain } from '../chains/evm-chain';
 import { Chain } from '../chains/interfaces/chain.interface';
-import { wait } from '../common/utils';
+import { blockScanner } from '../common/utils';
 import { CatalystChainInterface, CatalystVaultEvents } from '../contracts';
 import { evaulate } from '../evaluator';
 import { Logger } from '../logger';
@@ -17,35 +17,21 @@ export const listenSwapEvents = async (
   const evmChain = new EvmChain(chain);
   const vaultContract = evmChain.getCatalystVaultContract(chain.catalystVault);
   const chainInterface = await vaultContract._chainInterface();
+
   logger.info(
     `Collecting catalyst swap events for contract ${chain.catalystVault} and ${chainInterface} on ${chain.name} Chain...`,
   );
-  const chainContract = evmChain.getCatalystChainContract(chainInterface);
 
-  let startBlock =
-    evmChain.chain.startingBlock ?? (await evmChain.getCurrentBlock());
-  await wait(interval);
+  const sendAsset = blockScanner(
+    evmChain,
+    interval,
+    logger,
+    async (startBlock, endBlock) => {
+      logger.info(
+        `Scanning catalyst swap events from block ${startBlock} to ${endBlock} on ${evmChain.chain.name} Chain`,
+      );
 
-  while (true) {
-    let endBlock: number;
-    try {
-      endBlock = await evmChain.getCurrentBlock();
-    } catch (error) {
-      logger.error(`Failed on the event listener endblock`, error);
-      await wait(interval);
-      continue;
-    }
-
-    if (startBlock === endBlock) {
-      await wait(interval);
-      continue;
-    }
-
-    logger.info(
-      `Scanning events from block ${startBlock} to ${endBlock} on ${evmChain.chain.name} Chain`,
-    );
-
-    try {
+      const chainContract = evmChain.getCatalystChainContract(chainInterface);
       const sendAsset = trackSendAsset(
         vaultContract,
         startBlock,
@@ -57,13 +43,11 @@ export const listenSwapEvents = async (
 
       if (sendAsset && testing) return sendAsset;
       if (testing) return;
+    },
+  );
 
-      startBlock = endBlock;
-      await wait(interval);
-    } catch (error) {
-      logger.error(`Failed on event listener`, error);
-    }
-  }
+  if (sendAsset && testing) return sendAsset;
+  if (testing) return;
 };
 
 const trackSendAsset = async (

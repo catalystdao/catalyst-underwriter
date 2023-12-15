@@ -1,7 +1,7 @@
 import { getChainByID } from '../chains/chains';
 import { ChainID } from '../chains/enums/chainid.enum';
 import { Chain } from '../chains/interfaces/chain.interface';
-import { listenToSendAsset } from '../listener/listenSwapEvents';
+import { listenSwapEvents } from '../listener/listenSwapEvents';
 import { getForkChain } from './utils/common';
 import { swap } from './utils/swap';
 
@@ -13,7 +13,7 @@ describe('Testing Listener can find a swap', () => {
     const blockNumber = await swap(fromChain, toChain);
     fromChain.startingBlock = blockNumber - 1;
 
-    const sendAsset = await listenToSendAsset(0, fromChain, true);
+    const sendAsset = await listenSwapEvents(0, fromChain, true);
 
     //Expect to find the swap
     expect(sendAsset).toBeTruthy();
