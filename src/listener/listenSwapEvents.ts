@@ -6,14 +6,12 @@ import { blockScanner } from '../common/utils';
 import { CatalystChainInterface, CatalystVaultEvents } from '../contracts';
 import { evaulate } from '../evaluator';
 import { Swap } from '../swap_underwriter/interfaces/swap,interface';
-import { SendAssetEvent } from './interface/sendasset-event.interface';
 
 export const listenSwapEvents = async (
   interval: number,
   chain: Chain,
   loggerOptions: pino.LoggerOptions,
-  testing: boolean = false,
-): Promise<SendAssetEvent | undefined> => {
+) => {
   const logger = pino(loggerOptions).child({
     worker: 'Swap-Events',
     chain: chain.chainId,
@@ -27,39 +25,23 @@ export const listenSwapEvents = async (
     `Collecting catalyst swap events for contract ${chain.catalystVault} and ${chainInterface} on ${chain.name} Chain...`,
   );
 
-  const sendAsset = blockScanner(
-    evmChain,
-    interval,
-    logger,
-    async (startBlock, endBlock) => {
-      logger.info(
-        `Scanning catalyst swap events from block ${startBlock} to ${endBlock} on ${evmChain.chain.name} Chain`,
-      );
+  blockScanner(evmChain, interval, logger, async (startBlock, endBlock) => {
+    logger.info(
+      `Scanning catalyst swap events from block ${startBlock} to ${endBlock} on ${evmChain.chain.name} Chain`,
+    );
 
-      const chainContract = evmChain.getCatalystChainContract(chainInterface);
-      const sendAsset = trackSendAsset(
-        vaultContract,
-        startBlock,
-        endBlock,
-        testing,
-      );
+    const chainContract = evmChain.getCatalystChainContract(chainInterface);
+    trackSendAsset(vaultContract, startBlock, endBlock);
 
-      trackUnderwriteSwap(chainContract, startBlock, endBlock);
-
-      if (sendAsset && testing) return sendAsset;
-      if (testing) return;
-    },
-  );
-
-  if (sendAsset && testing) return sendAsset;
-  if (testing) return;
+    trackUnderwriteSwap(chainContract, startBlock, endBlock);
+  });
 };
 
-const trackSendAsset = async (
+export const trackSendAsset = async (
   contract: CatalystVaultEvents,
   startBlock: number,
-  endBlock: number,
-  testing: boolean,
+  endBlock?: number,
+  testing: boolean = false,
 ) => {
   const logs = await contract.queryFilter(
     contract.filters.SendAsset(),

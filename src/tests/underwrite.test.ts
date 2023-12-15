@@ -2,7 +2,8 @@ import { getChainByID } from '../chains/chains';
 import { Chain } from '../chains/interfaces/chain.interface';
 
 import { ChainID } from '../chains/enums/chainid.enum';
-import { listenSwapEvents } from '../listener/listenSwapEvents';
+import { EvmChain } from '../chains/evm-chain';
+import { trackSendAsset } from '../listener/listenSwapEvents';
 import { Swap } from '../swap_underwriter/interfaces/swap,interface';
 import { underwrite } from '../swap_underwriter/underwrite';
 import { getForkChain } from './utils/common';
@@ -19,10 +20,15 @@ describe('Testing Underwrite', () => {
 
     fromChain.startingBlock = startingBlock;
 
-    const sendAsset = await listenSwapEvents(
-      0,
-      fromChain,
-      { base: undefined },
+    const evmChain = new EvmChain(fromChain);
+    const vaultContract = evmChain.getCatalystVaultContract(
+      fromChain.catalystVault,
+    );
+
+    const sendAsset = await trackSendAsset(
+      vaultContract,
+      startingBlock,
+      undefined,
       true,
     );
     if (!sendAsset) fail('Failed to get sendAsset Event');
@@ -51,10 +57,14 @@ describe('Testing Underwrite expected failure', () => {
     const startingBlock = blockNumber - 1;
     fromChain.startingBlock = startingBlock;
 
-    const sendAsset = await listenSwapEvents(
-      0,
-      fromChain,
-      { base: undefined },
+    const evmChain = new EvmChain(fromChain);
+    const vaultContract = evmChain.getCatalystVaultContract(
+      fromChain.catalystVault,
+    );
+    const sendAsset = await trackSendAsset(
+      vaultContract,
+      startingBlock,
+      undefined,
       true,
     );
     if (!sendAsset) fail('Failed to get sendAsset Event');

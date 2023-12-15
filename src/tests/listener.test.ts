@@ -1,7 +1,8 @@
 import { getChainByID } from '../chains/chains';
 import { ChainID } from '../chains/enums/chainid.enum';
+import { EvmChain } from '../chains/evm-chain';
 import { Chain } from '../chains/interfaces/chain.interface';
-import { listenSwapEvents } from '../listener/listenSwapEvents';
+import { trackSendAsset } from '../listener/listenSwapEvents';
 import { getForkChain } from './utils/common';
 import { swap } from './utils/swap';
 
@@ -11,12 +12,19 @@ describe('Testing Listener can find a swap', () => {
     const toChain: Chain = getForkChain(getChainByID(ChainID.Sepolia));
 
     const blockNumber = await swap(fromChain, toChain);
-    fromChain.startingBlock = blockNumber - 1;
+    const startingBlock = blockNumber - 1;
 
-    const sendAsset = await listenSwapEvents(
-      0,
-      fromChain,
-      { base: undefined },
+    fromChain.startingBlock = startingBlock;
+
+    const evmChain = new EvmChain(fromChain);
+    const vaultContract = evmChain.getCatalystVaultContract(
+      fromChain.catalystVault,
+    );
+
+    const sendAsset = await trackSendAsset(
+      vaultContract,
+      startingBlock,
+      undefined,
       true,
     );
 
