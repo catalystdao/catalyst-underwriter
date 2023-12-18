@@ -1,6 +1,7 @@
 import { BigNumber } from 'ethers';
 
 export interface SendAssetEvent {
+  messageIdentifier: string;
   channelId: string;
   toVault: string;
   toAccount: string;

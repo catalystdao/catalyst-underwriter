@@ -1,22 +1,19 @@
 import { defaultAbiCoder } from '@ethersproject/abi';
+import { BigNumber } from 'ethers';
 import { keccak256 } from 'ethers/lib/utils';
 import { add0X } from '../common/utils';
-import { SendAssetEvent } from '../listener/interface/sendasset-event.interface';
 
 export const getMessageIdentifier = (
-  sendAsset: SendAssetEvent,
+  toAccount: string,
+  units: BigNumber,
+  fromAmount: BigNumber,
+  fromAsset: string,
   blockNumber: number,
 ) => {
   return keccak256(
     defaultAbiCoder.encode(
       ['bytes', 'uint256', 'uint256', 'address', 'uint32'],
-      [
-        sendAsset.toAccount,
-        sendAsset.units,
-        sendAsset.fromAmount,
-        sendAsset.fromAsset,
-        blockNumber,
-      ],
+      [toAccount, units, fromAmount, fromAsset, blockNumber],
     ),
   );
 };

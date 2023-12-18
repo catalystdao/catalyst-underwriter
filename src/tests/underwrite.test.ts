@@ -29,6 +29,7 @@ describe('Testing Underwrite', () => {
       vaultContract,
       startingBlock,
       undefined,
+      undefined,
       true,
     );
     if (!sendAsset) fail('Failed to get sendAsset Event');
@@ -64,6 +65,7 @@ describe('Testing Underwrite expected failure', () => {
     const sendAsset = await trackSendAsset(
       vaultContract,
       startingBlock,
+      undefined,
       undefined,
       true,
     );

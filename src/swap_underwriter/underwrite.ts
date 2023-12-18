@@ -12,7 +12,7 @@ import { MOCK_UNDERWRITE_PRIVATE_KEY } from '../tests/utils/constants';
 
 import pino from 'pino';
 import { Swap } from './interfaces/swap,interface';
-import { getMessageIdentifier, getcdataByPayload } from './utils';
+import { getcdataByPayload } from './utils';
 
 export const underwrite = async (
   swap: Swap,
@@ -30,7 +30,7 @@ export const underwrite = async (
   const sendAsset: SendAssetEvent = swap.sendAsset;
   if (sendAsset.underwriteIncentiveX16 === 0) return;
 
-  const messageIdentifier = getMessageIdentifier(sendAsset, swap.blockNumber);
+  const messageIdentifier = sendAsset.messageIdentifier;
 
   try {
     const amb = testMock ?? (await getAMBByID(messageIdentifier)) ?? undefined;

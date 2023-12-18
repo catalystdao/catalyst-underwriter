@@ -25,6 +25,7 @@ describe('Testing Listener can find a swap', () => {
       vaultContract,
       startingBlock,
       undefined,
+      undefined,
       true,
     );
 

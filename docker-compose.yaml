@@ -1,9 +1,20 @@
 services:
+  redis:
+    image: redis:latest
+    container_name: redis
+    expose:
+      - ${REDIS_PORT}:${REDIS_PORT}
+    attach: false
+
   underwriter:
     build:
       context: .
       dockerfile: dockerfile.underwriter
     environment:
       - PRIVATE_KEY=${PRIVATE_KEY}
+      - REDIS_PORT=${REDIS_PORT}
+      - USE_DOCKER=true
     container_name: underwriter
     restart: unless-stopped
+    depends_on:
+      - redis

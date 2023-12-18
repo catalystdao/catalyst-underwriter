@@ -5,7 +5,9 @@ import { Chain } from '../chains/interfaces/chain.interface';
 import { blockScanner } from '../common/utils';
 import { CatalystChainInterface, CatalystVaultEvents } from '../contracts';
 import { evaulate } from '../evaluator';
+import { RedisStore } from '../redis';
 import { Swap } from '../swap_underwriter/interfaces/swap,interface';
+import { getMessageIdentifier } from '../swap_underwriter/utils';
 
 export const listenSwapEvents = async (
   interval: number,
@@ -16,6 +18,8 @@ export const listenSwapEvents = async (
     worker: 'Swap-Events',
     chain: chain.chainId,
   });
+
+  const redis = new RedisStore();
 
   const evmChain = new EvmChain(chain);
   const vaultContract = evmChain.getCatalystVaultContract(chain.catalystVault);
@@ -31,9 +35,9 @@ export const listenSwapEvents = async (
     );
 
     const chainContract = evmChain.getCatalystChainContract(chainInterface);
-    trackSendAsset(vaultContract, startBlock, endBlock);
+    trackSendAsset(vaultContract, startBlock, endBlock, redis);
 
-    trackUnderwriteSwap(chainContract, startBlock, endBlock);
+    trackUnderwriteSwap(chainContract, startBlock, endBlock, redis);
   });
 };
 
@@ -41,6 +45,7 @@ export const trackSendAsset = async (
   contract: CatalystVaultEvents,
   startBlock: number,
   endBlock?: number,
+  redis?: RedisStore,
   testing: boolean = false,
 ) => {
   const logs = await contract.queryFilter(
@@ -50,17 +55,38 @@ export const trackSendAsset = async (
   );
 
   for (const event of logs) {
+    const channelId = event.args.channelId;
+    const toVault = event.args.toVault;
+    const toAccount = event.args.toAccount;
+    const fromAsset = event.args.fromAsset;
+    const toAssetIndex = event.args.toAssetIndex;
+    const fromAmount = event.args.fromAmount;
+    const minOut = event.args.minOut;
+    const units = event.args.units;
+    const fee = event.args.fee;
+    const underwriteIncentiveX16 = event.args.underwriteIncentiveX16;
+    const blockNumber = event.blockNumber;
+
+    const messageIdentifier = getMessageIdentifier(
+      toAccount,
+      units,
+      fromAmount,
+      fromAsset,
+      blockNumber,
+    );
+
     const sendAsset = {
-      channelId: event.args.channelId,
-      toVault: event.args.toVault,
-      toAccount: event.args.toAccount,
-      fromAsset: event.args.fromAsset,
-      toAssetIndex: event.args.toAssetIndex,
-      fromAmount: event.args.fromAmount,
-      minOut: event.args.minOut,
-      units: event.args.units,
-      fee: event.args.fee,
-      underwriteIncentiveX16: event.args.underwriteIncentiveX16,
+      messageIdentifier,
+      channelId,
+      toVault,
+      toAccount,
+      fromAsset,
+      toAssetIndex,
+      fromAmount,
+      minOut,
+      units,
+      fee,
+      underwriteIncentiveX16,
     };
 
     if (testing) return sendAsset;
@@ -68,8 +94,8 @@ export const trackSendAsset = async (
     if (sendAsset.underwriteIncentiveX16 > 0) {
       const delay = evaulate(sendAsset);
       if (delay) {
-        const blockNumber = event.blockNumber;
         const swap: Swap = { sendAsset, delay, blockNumber };
+        redis?.set(messageIdentifier, JSON.stringify(sendAsset));
         parentPort?.postMessage(swap);
       }
     }
@@ -80,6 +106,7 @@ const trackUnderwriteSwap = async (
   contract: CatalystChainInterface,
   startBlock: number,
   endBlock: number,
+  redis?: RedisStore,
 ) => {
   const logs = await contract.queryFilter(
     contract.filters.UnderwriteSwap(),
@@ -91,6 +118,13 @@ const trackUnderwriteSwap = async (
     const identifier = event.args.identifier;
     const underwriter = event.args.underwriter;
     const expiry = event.args.expiry;
-    //TODO add to redis
+
+    const underwriteSwap = {
+      identifier,
+      underwriter,
+      expiry,
+    };
+
+    redis?.set(identifier, JSON.stringify(underwriteSwap));
   }
 };

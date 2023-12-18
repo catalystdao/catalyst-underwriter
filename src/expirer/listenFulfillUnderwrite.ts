@@ -2,6 +2,7 @@ import pino from 'pino';
 import { EvmChain } from '../chains/evm-chain';
 import { Chain } from '../chains/interfaces/chain.interface';
 import { blockScanner } from '../common/utils';
+import { RedisStore } from '../redis';
 
 export const listenToFulfillUnderwrite = async (
   interval: number,
@@ -12,6 +13,8 @@ export const listenToFulfillUnderwrite = async (
     worker: 'Fulfill-Underwrite',
     chain: chain.chainId,
   });
+
+  const redis = new RedisStore();
 
   const evmChain = new EvmChain(chain);
   const vaultContract = evmChain.getCatalystVaultContract(chain.catalystVault);
@@ -35,7 +38,7 @@ export const listenToFulfillUnderwrite = async (
 
     for (const event of logs) {
       const identifier = event.args.identifier;
-      //TODO remove from redis
+      redis.del(identifier);
     }
   });
 };
