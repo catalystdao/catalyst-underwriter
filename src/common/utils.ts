@@ -14,7 +14,7 @@ export const decodeVaultOrAccount = (encodedAddress: string) => {
 export const blockScanner = async (
   evmChain: EvmChain,
   interval: number,
-  logger: pino.Logger<pino.LoggerOptions>,
+  logger: pino.Logger<never>,
   callBack: (startBlock: number, endBlock: number) => void,
 ) => {
   let startBlock =

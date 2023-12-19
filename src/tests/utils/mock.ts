@@ -1,5 +1,6 @@
 import { EvmChain } from '../../chains/evm-chain';
 import { Chain } from '../../chains/interfaces/chain.interface';
+import { getcdataByPayload } from '../../swap_underwriter/utils';
 
 export const getMockMessage = async (startBlock: number, chain: Chain) => {
   const evmChain = new EvmChain(chain);
@@ -17,8 +18,7 @@ export const getMockMessage = async (startBlock: number, chain: Chain) => {
     const destinationChain = BigInt(
       event.args.destinationIdentifier,
     ).toString();
-
-    const cdata = payload;
+    const cdata = getcdataByPayload(payload);
 
     const assetSwapMetaData = {
       destinationChain,

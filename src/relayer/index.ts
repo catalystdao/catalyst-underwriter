@@ -1,4 +1,3 @@
-import fetch from 'node-fetch';
 import { join } from 'path';
 import { AssetSwapMetaData } from './interfaces/asset-swap-metadata.interface';
 require('dotenv').config();
@@ -6,43 +5,45 @@ require('dotenv').config();
 const baseEndpoint = process.env.RELAYER_ENDPOINT!;
 
 export const getMetadataBySwap = async (
-  id: string,
+  swapIdentifier: string,
   fromVault: string,
   chainId: string,
 ): Promise<AssetSwapMetaData | undefined> => {
   try {
     const res = await fetch(join(baseEndpoint, 'metadata'), {
-      method: 'POST',
+      method: 'GET',
       body: JSON.stringify({
-        id,
+        swapIdentifier,
         fromVault,
         chainId,
       }),
-      headers: { 'Content-Type': 'application/json' },
     });
+    const data = (await res.json()) as AssetSwapMetaData;
 
-    return undefined;
+    return data;
   } catch (error) {
-    console.error(`Failed to get amb ${id} from the relayer`);
+    console.error(
+      `Failed to get amb metadata for swap ${swapIdentifier} from the relayer`,
+    );
   }
 };
 
 export const prioritiseSwap = async (
-  id: string,
+  swapIdentifier: string,
   fromVault: string,
   chainId: string,
 ) => {
   try {
-    await fetch(join(baseEndpoint, 'metadata'), {
+    await fetch(join(baseEndpoint, 'prioritise'), {
       method: 'POST',
       body: JSON.stringify({
-        id,
+        swapIdentifier,
         fromVault,
         chainId,
       }),
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error(`Failed to prioritise bounty ${id}`);
+    console.error(`Failed to prioritise bounty for swap ${swapIdentifier}`);
   }
 };
