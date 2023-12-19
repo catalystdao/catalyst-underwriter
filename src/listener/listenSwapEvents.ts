@@ -7,7 +7,7 @@ import { CatalystChainInterface, CatalystVaultEvents } from '../contracts';
 import { evaulate } from '../evaluator';
 import { RedisStore } from '../redis';
 import { Swap } from '../swap_underwriter/interfaces/swap,interface';
-import { getMessageIdentifier } from '../swap_underwriter/utils';
+import { getSwapIdentifier } from '../swap_underwriter/utils';
 
 export const listenSwapEvents = async (
   interval: number,
@@ -35,7 +35,7 @@ export const listenSwapEvents = async (
     );
 
     const chainContract = evmChain.getCatalystChainContract(chainInterface);
-    trackSendAsset(vaultContract, startBlock, endBlock, redis);
+    trackSendAsset(vaultContract, chain.chainId, startBlock, endBlock, redis);
 
     trackUnderwriteSwap(chainContract, startBlock, endBlock, redis);
   });
@@ -43,6 +43,7 @@ export const listenSwapEvents = async (
 
 export const trackSendAsset = async (
   contract: CatalystVaultEvents,
+  chainId: string,
   startBlock: number,
   endBlock?: number,
   redis?: RedisStore,
@@ -67,16 +68,19 @@ export const trackSendAsset = async (
     const underwriteIncentiveX16 = event.args.underwriteIncentiveX16;
     const blockNumber = event.blockNumber;
 
-    const messageIdentifier = getMessageIdentifier(
+    const swapIdentifier = getSwapIdentifier(
       toAccount,
       units,
       fromAmount,
+      fee,
       fromAsset,
       blockNumber,
     );
 
     const sendAsset = {
-      messageIdentifier,
+      swapIdentifier,
+      fromVault: event.address,
+      chainId,
       channelId,
       toVault,
       toAccount,
@@ -95,7 +99,7 @@ export const trackSendAsset = async (
       const delay = evaulate(sendAsset);
       if (delay) {
         const swap: Swap = { sendAsset, delay, blockNumber };
-        redis?.set(messageIdentifier, JSON.stringify(sendAsset));
+        redis?.set(swapIdentifier, JSON.stringify(sendAsset));
         parentPort?.postMessage(swap);
       }
     }

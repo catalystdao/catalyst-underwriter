@@ -23,6 +23,7 @@ describe('Testing Listener can find a swap', () => {
 
     const sendAsset = await trackSendAsset(
       vaultContract,
+      fromChain.chainId,
       startingBlock,
       undefined,
       undefined,

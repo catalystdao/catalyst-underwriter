@@ -27,6 +27,7 @@ describe('Testing Underwrite', () => {
 
     const sendAsset = await trackSendAsset(
       vaultContract,
+      fromChain.chainId,
       startingBlock,
       undefined,
       undefined,
@@ -64,6 +65,7 @@ describe('Testing Underwrite expected failure', () => {
     );
     const sendAsset = await trackSendAsset(
       vaultContract,
+      fromChain.chainId,
       startingBlock,
       undefined,
       undefined,

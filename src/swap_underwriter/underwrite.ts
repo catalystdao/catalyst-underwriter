@@ -5,20 +5,20 @@ import { EvmChain } from '../chains/evm-chain';
 import { Chain } from '../chains/interfaces/chain.interface';
 import { decodeVaultOrAccount, wait } from '../common/utils';
 import { SendAssetEvent } from '../listener/interface/sendasset-event.interface';
-import { getAMBByID, prioritise } from '../relayer';
-import { AMB } from '../relayer/interfaces/amb.interface';
+
 import { getForkChain } from '../tests/utils/common';
 import { MOCK_UNDERWRITE_PRIVATE_KEY } from '../tests/utils/constants';
 
 import pino from 'pino';
+import { getMetadataBySwap, prioritiseSwap } from '../relayer';
+import { AssetSwapMetaData } from '../relayer/interfaces/asset-swap-metadata.interface';
 import { Swap } from './interfaces/swap,interface';
-import { getcdataByPayload } from './utils';
 
 export const underwrite = async (
   swap: Swap,
   sourceChain: Chain,
   loggerOptions: pino.LoggerOptions,
-  testMock?: AMB,
+  testMock?: AssetSwapMetaData,
 ): Promise<string | undefined> => {
   const delay = swap.delay;
   await wait(delay);
@@ -30,13 +30,20 @@ export const underwrite = async (
   const sendAsset: SendAssetEvent = swap.sendAsset;
   if (sendAsset.underwriteIncentiveX16 === 0) return;
 
-  const messageIdentifier = sendAsset.messageIdentifier;
+  const swapIdentifier = sendAsset.swapIdentifier;
 
   try {
-    const amb = testMock ?? (await getAMBByID(messageIdentifier)) ?? undefined;
+    const metaData =
+      testMock ??
+      (await getMetadataBySwap(
+        swapIdentifier,
+        sendAsset.fromVault,
+        sendAsset.chainId,
+      )) ??
+      undefined;
 
-    if (amb) {
-      const destChain = getChainByID(amb.destinationChain as ChainID);
+    if (metaData) {
+      const destChain = getChainByID(metaData.destinationChain as ChainID);
       const destEvmChain = testMock
         ? new EvmChain(
             getForkChain(destChain),
@@ -55,8 +62,6 @@ export const underwrite = async (
       const catalystDestChainContract =
         destEvmChain.getCatalystChainContract(destChainInterface);
 
-      const cdata = getcdataByPayload(amb.payload);
-
       const sourceIdentifier = defaultAbiCoder.encode(
         ['uint256'],
         [sourceChain.chainId],
@@ -73,7 +78,7 @@ export const underwrite = async (
         sendAsset.minOut, //minOut
         toAccount, //toAccount
         sendAsset.underwriteIncentiveX16, //underwriteIncentiveX16
-        cdata,
+        metaData.cdata,
         { gasLimit: 3000000, from: destEvmChain.signer.address }, //cdata
       );
 
@@ -82,7 +87,7 @@ export const underwrite = async (
         return tx.hash;
       }
 
-      prioritise(messageIdentifier);
+      prioritiseSwap(swapIdentifier, sendAsset.fromVault, sendAsset.chainId);
 
       logger.info(
         `Successfully called underwrite with txHash ${tx.hash} from ${sourceChain.name} chain to ${destChain.name} chain`,
@@ -91,6 +96,6 @@ export const underwrite = async (
       return tx.hash;
     }
   } catch (error) {
-    logger.error(`Failed to underwrite swap ${messageIdentifier}`, error);
+    logger.error(`Failed to underwrite swap ${swapIdentifier}`, error);
   }
 };
