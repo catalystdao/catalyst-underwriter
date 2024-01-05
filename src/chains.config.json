@@ -4,7 +4,7 @@
     "name": "Sepolia",
     "rpc": "https://rpc.notadegen.com/eth/sepolia",
     "underwriterRPC": "https://rpc.notadegen.com/eth/sepolia",
-    "catalystVault": "0x4207b55dcf38ad113c6e91721c932ccd19fd7604",
+    "catalystVault": "0x6243df63dc7e97a5968578e9ae35008af3ec69df",
     "mock": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
     "forkPort": "8545"
   },
@@ -14,8 +14,8 @@
     "name": "Mumbai",
     "rpc": "https://polygon-mumbai-bor.publicnode.com",
     "underwriterRPC": "https://polygon-mumbai-bor.publicnode.com",
-    "catalystVault": "0x4207b55dcf38ad113c6e91721c932ccd19fd7604",
+    "catalystVault": "0x6243df63dc7e97a5968578e9ae35008af3ec69df",
     "mock": "0x00000001a9818a7807998dbc243b05F2B3CfF6f4",
-    "forkPort": "8585"
+    "forkPort": "8546"
   }
 ]
