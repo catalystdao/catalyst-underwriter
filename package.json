@@ -10,7 +10,7 @@
     "build": "tsc",
     "test": "jest --runInBand",
     "lint": "eslint src --ext .ts --fix",
-    "postinstall": "typechain --target ethers-v5 --out-dir src/contracts src/abis/*.json"
+    "postinstall": "typechain --target ethers-v5 --out-dir src/contracts abis/*.json"
   },
   "dependencies": {
     "@ethersproject/abi": "^5.7.0",

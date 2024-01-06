@@ -1,11 +1,29 @@
-FROM node:18
+FROM node:18-alpine AS BUILD_IMAGE
 
 WORKDIR /usr/catalyst-underwriter
 
+# Copy packages and install
 COPY package.json yarn.lock tsconfig*.json ./
-COPY src ./src
+COPY abis ./abis
+RUN yarn global add node-gyp
+RUN yarn install --frozen-lockfile --prod=false
 
-RUN yarn install --frozen-lockfile
+# Copy src and build
+COPY src ./src
 RUN yarn build
+
+# Remove devDependencies
+RUN npm prune --production
+
+
+# Production image
+FROM node:18-alpine
+
+WORKDIR /usr/catalyst-underwriter
+
+COPY --from=BUILD_IMAGE /usr/catalyst-underwriter/dist ./dist
+COPY --from=BUILD_IMAGE /usr/catalyst-underwriter/node_modules ./node_modules
+
+ENV NODE_ENV=${NODE_ENV}
 
 CMD ["node", "dist/index.js"]
