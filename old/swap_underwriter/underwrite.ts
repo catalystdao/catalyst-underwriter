@@ -43,7 +43,7 @@ export const underwrite = async (
       undefined;
 
     if (metaData) {
-      const destChain = getChainByID(metaData.destinationChain as ChainID);
+      const destChain = getChainByID(metaData.destinationChain as ChainID); //TODO is this safe?
       const destEvmChain = testMock
         ? new EvmChain(
             getForkChain(destChain),
