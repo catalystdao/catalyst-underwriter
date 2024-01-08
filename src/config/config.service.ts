@@ -163,7 +163,7 @@ export class ConfigService {
           `Invalid chain configuration for chain '${rawChainConfig.chainId}': 'rpc' missing.`,
         );
       }
-      chainConfig.set(rawChainConfig.chainId, {
+      chainConfig.set(rawChainConfig.chainId.toString(), {
         chainId: rawChainConfig.chainId.toString(),
         name: rawChainConfig.name,
         rpc: rawChainConfig.rpc,
@@ -242,6 +242,9 @@ export class ConfigService {
             `Invalid vault configuration for vault '${vault.name}': 'interfaceAddress' missing.`
           );
         }
+
+        // Make sure 'chainId' is a string
+        vault.chainId = vault.chainId.toString();
       }
 
       poolsConfig.set(rawPoolsConfig.name, {
