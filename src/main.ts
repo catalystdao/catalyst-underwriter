@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from './config/config.service';
-import { LoggerService } from './config/logger/logger.service';
+import { LoggerService } from './logger/logger.service';
 
 async function logLoadedOptions(
   configService: ConfigService,
