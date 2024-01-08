@@ -53,7 +53,8 @@ export interface PoolConfig {
   vaults: {
     name: string;
     chainId: string;
-    address: string;
+    vaultAddress: string;
+    interfaceAddress: string;
   }[];
 }
 
