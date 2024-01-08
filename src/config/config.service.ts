@@ -229,9 +229,14 @@ export class ConfigService {
             `Invalid vault configuration for vault '${vault.name}': 'chainId' missing.`
           );
         }
-        if (vault.address == undefined) {
+        if (vault.vaultAddress == undefined) {
           throw new Error(
-            `Invalid vault configuration for vault '${vault.name}': 'address' missing.`
+            `Invalid vault configuration for vault '${vault.name}': 'vaultAddress' missing.`
+          );
+        }
+        if (vault.interfaceAddress == undefined) {
+          throw new Error(
+            `Invalid vault configuration for vault '${vault.name}': 'interfaceAddress' missing.`
           );
         }
       }
