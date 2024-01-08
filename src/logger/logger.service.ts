@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { pino } from 'pino';
 import { ConfigService } from 'src/config/config.service';
 
+export const STATUS_LOG_INTERVAL = 60000; //TODO move to config
+
 @Injectable()
 export class LoggerService {
   readonly logger: pino.Logger;
