@@ -272,9 +272,39 @@
           "internalType": "uint96",
           "name": "expiry",
           "type": "uint96"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "targetVault",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "toAsset",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "U",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "toAccount",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "outAmount",
+          "type": "uint256"
         }
       ],
-      "name": "UnderwriteSwap",
+      "name": "SwapUnderwritten",
       "type": "event"
     },
     {
