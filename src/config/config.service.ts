@@ -31,6 +31,7 @@ export interface ChainConfig {
   chainId: string;
   name: string;
   rpc: string;
+  startingBlock?: number;
   blockDelay?: number;
   listener: {
     interval: number;
@@ -166,6 +167,7 @@ export class ConfigService {
         chainId: rawChainConfig.chainId.toString(),
         name: rawChainConfig.name,
         rpc: rawChainConfig.rpc,
+        startingBlock: rawChainConfig.startingBlock,
         blockDelay: rawChainConfig.blockDelay,
         listener: rawChainConfig.listener ?? {},
         underwriter: rawChainConfig.underwriter ?? {},
