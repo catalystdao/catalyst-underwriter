@@ -6,8 +6,8 @@ import { ConfigService } from 'src/config/config.service';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 
 export const DEFAULT_LISTENER_INTERVAL = 5000;
-export const DEFAULT_BLOCK_DELAY = 0;
-export const DEFAULT_MAX_BLOCKS = null;
+export const DEFAULT_LISTENER_BLOCK_DELAY = 0;
+export const DEFAULT_LISTENER_MAX_BLOCKS = null;
 
 
 interface DefaultListenerWorkerData {
@@ -80,9 +80,9 @@ export class ListenerService implements OnModuleInit {
         const underwriterConfig = this.configService.underwriterConfig;
         const globalListenerConfig = underwriterConfig.listener;
 
-        const blockDelay = underwriterConfig.blockDelay ?? DEFAULT_BLOCK_DELAY;
+        const blockDelay = underwriterConfig.blockDelay ?? DEFAULT_LISTENER_BLOCK_DELAY;
         const interval = globalListenerConfig.interval ?? DEFAULT_LISTENER_INTERVAL;
-        const maxBlocks = globalListenerConfig.maxBlocks ?? DEFAULT_MAX_BLOCKS;
+        const maxBlocks = globalListenerConfig.maxBlocks ?? DEFAULT_LISTENER_MAX_BLOCKS;
 
         return {
             interval,
