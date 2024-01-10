@@ -5,7 +5,7 @@ import { ListenerWorkerData, VaultConfig } from "./listener.service";
 import { CatalystChainInterface__factory, ICatalystV1VaultEvents__factory } from "src/contracts";
 import { CatalystChainInterfaceInterface } from "src/contracts/CatalystChainInterface";
 import { ICatalystV1VaultEventsInterface, SendAssetEvent } from "src/contracts/ICatalystV1VaultEvents";
-import { wait } from "src/common/utils";
+import { decodeBytes65Address, wait } from "src/common/utils";
 import { Store } from "src/store/store.lib";
 
 class ListenerWorker {
@@ -18,9 +18,8 @@ class ListenerWorker {
 
     readonly chainId: string;
     readonly chainName: string;
-    readonly vaults: string[];
-    readonly interfaces: string[];
-    readonly channels: Record<string, Record<string, string>>;  // Maps a vault address to its channels (bytes32 hex channel => chainId)
+
+    readonly vaultConfigs: VaultConfig[];
 
     readonly vaultEventsInterface: ICatalystV1VaultEventsInterface;
     readonly chainInterfaceEventsInterface: CatalystChainInterfaceInterface;
@@ -33,8 +32,9 @@ class ListenerWorker {
 
         this.chainId = this.config.chainId;
         this.chainName = this.config.chainName;
-        [this.vaults, this.interfaces, this.channels] = this.initializeAddresses(this.config.vaultConfigs);
-        this.addresses = [...this.vaults, ...this.interfaces];
+
+        this.vaultConfigs = this.normalizeVaultConfig(this.config.vaultConfigs);
+        this.addresses = this.getAllAddresses(this.vaultConfigs);
 
         this.store = new Store();
         this.logger = this.initializeLogger(this.chainId);
@@ -66,32 +66,45 @@ class ListenerWorker {
         )
     }
 
-    private initializeAddresses(vaultConfigs: VaultConfig[]): [
-        vaults: string[],
-        interfaces: string[],
-        channels: Record<string, Record<string, string>>
-    ] {
+    private normalizeVaultConfig(vaultConfigs: VaultConfig[]): VaultConfig[] {
 
-        const vaults = [];
-        const interfaces = [];
-        const channels: Record<string, Record<string, string>> = {};
+        const normalizedConfigs: VaultConfig[] = [];
 
         // NOTE: 'toLowerCase' transaforms are important for when comparing addresses later
         for (const vaultConfig of vaultConfigs) {
             const vaultAddress = vaultConfig.vaultAddress.toLowerCase();
             const interfaceAddress = vaultConfig.interfaceAddress.toLowerCase();
 
-            vaults.push(vaultAddress);
-            interfaces.push(interfaceAddress);
-
-            // ! TODO the following logic will yield inconsistent results if there are multiple vaults definitions on the same chain under the same address (this should never happen, but should be protected for still).
-            channels[vaultAddress] = {}
-            for (const [channelId, chainId] of Object.entries(vaultConfig.channels)) {
-                channels[vaultAddress][channelId.toLowerCase()] = chainId;
+            // Make sure that there are no vault/interface address duplicates
+            if (normalizedConfigs.some((config) => config.vaultAddress === vaultAddress)) {
+                throw new Error(`Vault address ${vaultAddress} is defined more than once.`);
             }
+            if (normalizedConfigs.some((config) => config.interfaceAddress === interfaceAddress)) {
+                throw new Error(`Interface address ${interfaceAddress} is defined more than once.`);
+            }
+
+            // The following logic only works if vault addresses are unique
+            const normalizedChannels: Record<string, string> = {}
+            for (const [channelId, chainId] of Object.entries(vaultConfig.channels)) {
+                normalizedChannels[channelId.toLowerCase()] = chainId;
+            }
+
+            normalizedConfigs.push({
+                poolId: vaultConfig.poolId,
+                vaultAddress,
+                interfaceAddress,
+                channels: normalizedChannels
+            });
         }
 
-        return [vaults, interfaces, channels];
+        return normalizedConfigs;
+    }
+
+    private getAllAddresses(vaultConfigs: VaultConfig[]): string[] {
+        return [
+            ...vaultConfigs.map((config) => config.vaultAddress),
+            ...vaultConfigs.map((config) => config.interfaceAddress)
+        ]
     }
 
     private initializeContractTypes(): {
@@ -166,167 +179,182 @@ class ListenerWorker {
         }
     }
 
+    private getVaultConfig(address: string): VaultConfig | undefined {
+        return this.vaultConfigs.find((config) => {
+            return config.vaultAddress == address.toLowerCase()
+        });
+    }
+
+    private getInterfaceConfig(address: string): VaultConfig | undefined {
+        return this.vaultConfigs.find((config) => {
+            return config.interfaceAddress == address.toLowerCase()
+        });
+    }
+
     private async queryAndProcessEvents(
         fromBlock: number,
         toBlock: number
     ): Promise<void> {
 
-        const addresses = [...this.vaults, ...this.interfaces];
-
         const logs = await this.provider.getLogs({
-            address: addresses,
+            address: this.addresses,
             topics: this.topics,
             fromBlock,
             toBlock
         });
 
-        const vaultLogs = logs.filter((log) => this.vaults.includes(log.address.toLowerCase()));
-        await this.handleVaultEvents(vaultLogs);
+        for (const log of logs) {
 
-        const interfaceLogs = logs.filter((log) => this.interfaces.includes(log.address.toLowerCase()));
-        await this.handleInterfaceEvents(interfaceLogs);
+            const vaultConfig = this.getVaultConfig(log.address);
+            if (vaultConfig != undefined) {
+                await this.handleVaultEvent(log, vaultConfig);
+                continue;
+            }
+
+            const interfaceConfig = this.getInterfaceConfig(log.address);
+            if (interfaceConfig != undefined) {
+                await this.handleInterfaceEvent(log, interfaceConfig);
+                continue;
+            }
+
+            this.logger.warn(`No vault/interface configuration found for the address ${log.address}`);
+        }
     }
 
     // Event handlers
     // ********************************************************************************************
 
-    private async handleVaultEvents(logs: Log[]): Promise<void> {
-        for (const log of logs) {
-            const parsedLog = this.vaultEventsInterface.parseLog({
-                topics: Object.assign([], log.topics),
-                data: log.data,
-            });
+    private async handleVaultEvent(log: Log, vaultConfig: VaultConfig): Promise<void> {
+        const parsedLog = this.vaultEventsInterface.parseLog({
+            topics: Object.assign([], log.topics),
+            data: log.data,
+        });
 
-            if (parsedLog == null) {
-                this.logger.error(
-                    `Failed to parse Catalyst vault contract event. Topics: ${log.topics}, data: ${log.data}`,
-                );
-                continue;
-            }
-
-            switch (parsedLog.name) {
-                case 'SendAsset':
-                    await this.handleSendAssetEvent(
-                        log.address,
-                        log.transactionHash,
-                        parsedLog.args as unknown as SendAssetEvent.OutputObject,   //TODO verify?
-                        log.blockNumber,
-                        log.blockHash
-                    );
-                    break;
-
-                default:
-                    this.logger.warn(
-                        `Event with unknown name/topic received: ${parsedLog.name}/${parsedLog.topic}`,
-                    );
-            }
+        if (parsedLog == null) {
+            this.logger.error(
+                `Failed to parse Catalyst vault contract event. Topics: ${log.topics}, data: ${log.data}`,
+            );
+            return;
         }
 
+        switch (parsedLog.name) {
+            case 'SendAsset':
+                await this.handleSendAssetEvent(log, parsedLog, vaultConfig);
+                break;
+
+            default:
+                this.logger.warn(
+                    `Event with unknown name/topic received: ${parsedLog.name}/${parsedLog.topic}`,
+                );
+        }
     }
 
-    private async handleInterfaceEvents(logs: Log[]): Promise<void> {
-        for (const log of logs) {
-            const parsedLog = this.chainInterfaceEventsInterface.parseLog({
-                topics: Object.assign([], log.topics),
-                data: log.data,
-            });
+    private async handleInterfaceEvent(log: Log, vaultConfig: VaultConfig): Promise<void> {
+        const parsedLog = this.chainInterfaceEventsInterface.parseLog({
+            topics: Object.assign([], log.topics),
+            data: log.data,
+        });
 
-            if (parsedLog == null) {
-                this.logger.error(
-                    `Failed to parse Catalyst chain interface contract event. Topics: ${log.topics}, data: ${log.data}`,
+        if (parsedLog == null) {
+            this.logger.error(
+                `Failed to parse Catalyst chain interface contract event. Topics: ${log.topics}, data: ${log.data}`,
+            );
+            return;
+        }
+
+        switch (parsedLog.name) {
+            case 'SwapUnderwritten':
+                await this.handleSwapUnderwrittenEvent(log, parsedLog, vaultConfig);
+                break;
+
+            case 'FulfillUnderwrite':
+                await this.handleFulfillUnderwriteEvent(log, parsedLog, vaultConfig);
+                break;
+
+            case 'ExpireUnderwrite':
+                await this.handleExpireUnderwriteEvent(log, parsedLog, vaultConfig);
+                break;
+
+            default:
+                this.logger.warn(
+                    `Event with unknown name/topic received: ${parsedLog.name}/${parsedLog.topic}`,
                 );
-                continue;
-            }
-
-            switch (parsedLog.name) {
-                case 'SwapUnderwritten':
-                    await this.handleSwapUnderwrittenEvent(
-                        log.address,
-                        parsedLog
-                    );
-                    break;
-
-                case 'FulfillUnderwrite':
-                    await this.handleFulfillUnderwriteEvent(
-                        log.address,
-                        parsedLog
-                    );
-                    break;
-
-                case 'ExpireUnderwrite':
-                    await this.handleExpireUnderwriteEvent(
-                        log.address,
-                        parsedLog
-                    );
-                    break;
-
-                default:
-                    this.logger.warn(
-                        `Event with unknown name/topic received: ${parsedLog.name}/${parsedLog.topic}`,
-                    );
-            }
         }
 
     }
     
     private async handleSendAssetEvent (
-        vaultAddress: string,
-        txHash: string,
-        event: SendAssetEvent.OutputObject,
-        blockHeight: number,
-        blockHash: string
+        log: Log,
+        parsedLog: LogDescription,
+        vaultConfig: VaultConfig
     ): Promise<void> {
-    
-        this.logger.info(`SendAsset ${event} (${vaultAddress})`);
 
-        const toChainId = this.channels[vaultAddress.toLowerCase()]?.[event.channelId.toLowerCase()];
+        const vaultAddress = log.address;
+        const sendAssetEvent = parsedLog.args as unknown as SendAssetEvent.OutputObject;
+    
+        this.logger.info(`SendAsset ${sendAssetEvent} (${vaultAddress})`);
+
+        const toChainId = vaultConfig.channels[sendAssetEvent.channelId.toLowerCase()];
 
         if (toChainId == undefined) {
-            this.logger.warn(`Dropping SendAsset event. No mapping for the event's channelId (${event.channelId}) found.`);
+            this.logger.warn(`Dropping SendAsset event. No mapping for the event's channelId (${sendAssetEvent.channelId}) found.`);
             return;
         }
     
         await this.store.registerSendAsset(
+            vaultConfig.poolId,
             this.chainId,
             vaultAddress,
-            txHash,
+            log.transactionHash,
             toChainId,
-            'id', //TODO
-            event,
-            blockHeight,
-            blockHash
+            'swapId', //TODO
+            log.blockNumber,
+            log.blockHash,
+            sendAssetEvent.channelId,
+            decodeBytes65Address(sendAssetEvent.toVault),
+            decodeBytes65Address(sendAssetEvent.toAccount),
+            sendAssetEvent.fromAsset,
+            sendAssetEvent.toAssetIndex,
+            sendAssetEvent.fromAmount,
+            sendAssetEvent.minOut,
+            sendAssetEvent.units,
+            sendAssetEvent.fee,
+            sendAssetEvent.underwriteIncentiveX16
         )
     };
 
     
     private async handleSwapUnderwrittenEvent (
-        interfaceAddress: string,
-        event: LogDescription
+        log: Log,
+        parsedLog: LogDescription,
+        _vaultConfig: VaultConfig
     ): Promise<void> {
     
-        this.logger.info(`SwapUnderwritten ${event.args} (${interfaceAddress})`);
+        this.logger.info(`SwapUnderwritten ${parsedLog.args} (${log.address})`);
     
         // TODO
     };
 
     
     private async handleFulfillUnderwriteEvent (
-        interfaceAddress: string,
-        event: LogDescription
+        log: Log,
+        parsedLog: LogDescription,
+        _vaultConfig: VaultConfig
     ): Promise<void> {
     
-        this.logger.info(`FulfillUnderwrite ${event.args} (${interfaceAddress})`);
+        this.logger.info(`FulfillUnderwrite ${parsedLog.args} (${log.address})`);
     
         // TODO
     };
 
     
     private async handleExpireUnderwriteEvent (
-        interfaceAddress: string,
-        event: LogDescription
+        log: Log,
+        parsedLog: LogDescription,
+        _vaultConfig: VaultConfig
     ): Promise<void> {
     
-        this.logger.info(`ExpireUnderwrite ${event.args} (${interfaceAddress})`);
+        this.logger.info(`ExpireUnderwrite ${parsedLog.args} (${log.address})`);
     
         // TODO
     };

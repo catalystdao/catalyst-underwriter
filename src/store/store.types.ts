@@ -9,6 +9,7 @@ export enum UnderwriteStatus {
 export interface SwapStatus {
 
     // Trusted fields (provided by the listener)
+    poolId: string;
     fromChainId: string;
     fromVault: string;
     txHash: string;
@@ -45,6 +46,7 @@ export interface SwapStatus {
 }
 
 export interface SwapDescription {
+    poolId: string;
     fromChainId: string;
     fromVault: string;
     txHash: string;

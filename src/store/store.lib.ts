@@ -1,7 +1,5 @@
 import { Redis } from 'ioredis';
 import { SwapStatus, SwapDescription } from './store.types';
-import { SendAssetEvent } from 'src/contracts/CatalystVaultCommon';
-
 
 // Monkey patch BigInt. https://github.com/GoogleChromeLabs/jsbi/issues/30#issuecomment-1006086291
 (BigInt.prototype as any).toJSON = function () {
@@ -177,32 +175,43 @@ export class Store {
     //TODO allow to set if it already exists (as with the relayer)?
     //TODO what if the 'SendAsset' event is observed after the swap complete event?
     async registerSendAsset(
+        poolId: string,
         fromChainId: string,
         fromVault: string,
         txHash: string,
         toChainId: string,
         swapIdentifier: string,
-        sendAssetEvent: SendAssetEvent.OutputObject,
         eventBlockHeight: number,
-        eventBlockHash: string
+        eventBlockHash: string,
+        channelId: string,
+        toVault: string,
+        toAccount: string,
+        fromAsset: string,
+        toAssetIndex: bigint,
+        fromAmount: bigint,
+        minOut: bigint,
+        units: bigint,
+        fee: bigint,
+        underwriteIncentiveX16: bigint
     ) {
 
         const swapStatus: SwapStatus = {
+            poolId,
             fromChainId,
             fromVault,
             txHash,
             toChainId,
             swapIdentifier,
-            channelId: sendAssetEvent.channelId,
-            toVault: sendAssetEvent.toVault,
-            toAccount: sendAssetEvent.toAccount,
-            fromAsset: sendAssetEvent.fromAsset,
-            toAssetIndex: sendAssetEvent.toAssetIndex,
-            fromAmount: sendAssetEvent.fromAmount,
-            minOut: sendAssetEvent.minOut,
-            units: sendAssetEvent.units,
-            fee: sendAssetEvent.fee,
-            underwriteIncentiveX16: sendAssetEvent.underwriteIncentiveX16,
+            channelId,
+            toVault,
+            toAccount,
+            fromAsset,
+            toAssetIndex,
+            fromAmount,
+            minOut,
+            units,
+            fee,
+            underwriteIncentiveX16,
             eventBlockHeight,
             eventBlockHash,
             observedTimestamp: Math.floor(Date.now() / 1000),
@@ -219,6 +228,7 @@ export class Store {
         );
 
         const swapStatusDescription: SwapDescription = {
+            poolId,
             fromChainId,
             fromVault,
             txHash,

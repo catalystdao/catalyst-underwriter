@@ -48,6 +48,7 @@ class UnderwriterWorker {
         this.signer = this.initializeSigner(this.config.privateKey, this.provider);
 
         [this.evalQueue, this.underwriteQueue] = this.initializeQueues(
+            this.pools,
             this.config.retryInterval,
             this.config.maxTries,
             this.config.transactionTimeout,
@@ -90,6 +91,7 @@ class UnderwriterWorker {
     }
 
     private initializeQueues(
+        pools: PoolConfig[],
         retryInterval: number,
         maxTries: number,
         transactionTimeout: number,
@@ -98,6 +100,7 @@ class UnderwriterWorker {
         logger: pino.Logger,
     ): [EvalQueue, UnderwriteQueue] {
         const evalQueue = new EvalQueue(
+            pools,
             retryInterval,
             maxTries,
             signer,
@@ -105,6 +108,7 @@ class UnderwriterWorker {
         );
 
         const underwriteQueue = new UnderwriteQueue(
+            pools,
             retryInterval,
             maxTries,
             transactionTimeout,
@@ -216,6 +220,7 @@ class UnderwriterWorker {
                 }
 
                 void this.addUnderwriteOrder(
+                    swapStatus.poolId,
                     swapStatus.fromChainId,
                     swapStatus.fromVault,
                     swapStatus.txHash,
@@ -275,6 +280,7 @@ class UnderwriterWorker {
 
     //TODO refactor arguments? (abstract into different objects?)
     private async addUnderwriteOrder(
+        poolId: string,
         fromChainId: string,
         fromVault: string,
         txHash: string,
@@ -295,6 +301,7 @@ class UnderwriterWorker {
         );
 
         const order: Order = {
+            poolId,
             fromChainId,
             fromVault,
             txHash,

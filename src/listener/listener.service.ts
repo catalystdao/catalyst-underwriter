@@ -17,6 +17,7 @@ interface DefaultListenerWorkerData {
 }
 
 export interface VaultConfig {
+    poolId: string,
     vaultAddress: string,
     interfaceAddress: string,
     channels: Record<string, string>
@@ -129,16 +130,17 @@ export class ListenerService implements OnModuleInit {
         }
 
         // Get all the vaults across all the pools
-        for (const [poolName, poolConfig] of this.configService.poolsConfig.entries()) {
+        for (const [poolId, poolConfig] of this.configService.poolsConfig.entries()) {
 
             for (const fullVaultConfig of poolConfig.vaults) {
                 const chainId = fullVaultConfig.chainId;
 
                 if (!(chainId in configs)) {
-                    throw new Error(`The chain id ${chainId} is required for vault '${fullVaultConfig.name}' (pool '${poolName}'), but is not configured.`)
+                    throw new Error(`The chain id ${chainId} is required for vault '${fullVaultConfig.name}' (pool '${poolId}' ('${poolConfig.name}')), but is not configured.`)
                 }
 
                 configs[chainId].push({
+                    poolId: poolId,
                     vaultAddress: fullVaultConfig.vaultAddress,
                     interfaceAddress: fullVaultConfig.interfaceAddress,
                     channels: fullVaultConfig.channels

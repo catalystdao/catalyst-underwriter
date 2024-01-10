@@ -48,7 +48,7 @@ export abstract class RetryQueue<OrderType, ReturnOrderType=OrderType> {
                     validOrders.push(returnOrder);
                 }
             } catch (error) {
-                const retryOrder = await this.handleFailedOrder(order.order, error, order.retryCount);
+                const retryOrder = await this.handleFailedOrder(order.order, order.retryCount, error);
                 if (retryOrder) {
                     await this.addOrderToRetryQueue(order);
                 }

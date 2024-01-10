@@ -119,7 +119,7 @@ export class UnderwriterService implements OnModuleInit {
 
         // Only pass pools that contain a vault on the desired chainId
         const filteredPools = pools.filter(pool => {
-            pool.vaults.filter((vault) => vault.chainId == chainId)
+            return pool.vaults.some((vault) => vault.chainId == chainId)
         });
 
         const chainUnderwriterConfig = chainConfig.underwriter;
@@ -150,6 +150,7 @@ export class UnderwriterService implements OnModuleInit {
 
         for (const [, poolConfig] of this.configService.poolsConfig) {
             pools.push({
+                id: poolConfig.id,
                 name: poolConfig.name,
                 amb: poolConfig.amb,
                 vaults: poolConfig.vaults.map(vault => {

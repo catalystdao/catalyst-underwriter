@@ -2,6 +2,8 @@ import { FeeData, Wallet } from "ethers";
 import pino from "pino";
 import { RetryQueue } from "./retry-queue";
 import { UnderwriteOrder, GasFeeConfig, EvalOrder, GasFeeOverrides } from "../underwriter.types";
+import { PoolConfig } from "src/config/config.service";
+import { CatalystChainInterface__factory } from "src/contracts";
 
 
 export class UnderwriteQueue extends RetryQueue<UnderwriteOrder, never> {
@@ -16,8 +18,9 @@ export class UnderwriteQueue extends RetryQueue<UnderwriteOrder, never> {
     }
 
     constructor(
-        retryInterval: number,
-        maxTries: number,
+        readonly pools: PoolConfig[],
+        readonly retryInterval: number,
+        readonly maxTries: number,
         readonly transactionTimeout: number,
         readonly gasFeeConfig: GasFeeConfig,
         private readonly signer: Wallet,
@@ -45,15 +48,28 @@ export class UnderwriteQueue extends RetryQueue<UnderwriteOrder, never> {
 
         this.logger.info(`Handle order triggered: ${order}`)
 
-        // Execute the relay transaction if the static call did not fail.
-        //TODO tx
+        const interfaceContract = CatalystChainInterface__factory.connect(order.interfaceAddress, this.signer);
+
+        const underwriteTx = await interfaceContract.underwrite(
+            order.toVault,
+            order.toAsset,
+            order.units,
+            order.minOut,
+            order.toAccount,
+            order.underwriteIncentiveX16,
+            order.calldata,
+            { gasLimit: order.gasLimit }
+        );
+
+        const txReceipt = await underwriteTx.wait();
+
 
         // this.registerPendingTransaction(tx.wait(), order);
         // this.transactionCount++;
 
-        // this.logger.info(
-        //     `Submitted underwrite ${'TODO'} (hash: ${tx.hash} on block ${tx.blockNumber})`, //TODO id
-        // );
+        this.logger.info(
+            `Submitted underwrite ${'TODO'} (hash: ${txReceipt?.hash} on block ${txReceipt?.blockNumber})`, //TODO id
+        );
 
         return null;
     }

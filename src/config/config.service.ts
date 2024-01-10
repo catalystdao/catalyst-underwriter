@@ -53,6 +53,7 @@ export interface ChainConfig {
 }
 
 export interface PoolConfig {
+  id: string;
   name: string;
   amb: string;
   vaults: {
@@ -208,22 +209,28 @@ export class ConfigService {
     const poolsConfig = new Map<string, PoolConfig>();
 
     for (const rawPoolsConfig of this.rawConfig.pools) {
+      if (rawPoolsConfig.id == undefined) {
+        throw new Error(
+          `Invalid pool configuration: 'id' missing.`,
+        );
+      }
+
       if (rawPoolsConfig.name == undefined) {
         throw new Error(
-          `Invalid pool configuration: 'name' missing.`,
+          `Invalid pool configuration for pool '${rawPoolsConfig.id}': 'name' missing.`,
         );
       }
 
       if (rawPoolsConfig.amb == undefined || !ambNames.includes(rawPoolsConfig.amb)) {
         throw new Error(
-          `Invalid pool configuration for pool '${rawPoolsConfig.name}': 'amb' invalid or missing.`,
+          `Invalid pool configuration for pool '${rawPoolsConfig.id}': 'amb' invalid or missing.`,
         );
       }
 
       const vaults = rawPoolsConfig.vaults ?? [];
       if (vaults.length < 2) {
         throw new Error(
-          `Invalid pool configuration for pool '${rawPoolsConfig.name}': at least 2 vaults must be specified.`,
+          `Invalid pool configuration for pool '${rawPoolsConfig.id}': at least 2 vaults must be specified.`,
         );
       }
       for (const vault of vaults) {
@@ -266,7 +273,8 @@ export class ConfigService {
         // ! TODO make sure all channels are unique and that all channels are mapped 
       }
 
-      poolsConfig.set(rawPoolsConfig.name, {
+      poolsConfig.set(rawPoolsConfig.id.toString(), {
+        id: rawPoolsConfig.id,
         name: rawPoolsConfig.name,
         amb: rawPoolsConfig.amb,
         vaults

@@ -3,6 +3,7 @@ import { BytesLike, BigNumberish } from "ethers";
 
 export interface Order {
     // Trusted fields (provided by the listener)
+    poolId: string;
     fromChainId: string;
     fromVault: string;
     txHash: string;
@@ -29,6 +30,9 @@ export interface EvalOrder extends Order {
 export interface UnderwriteOrder extends Order {
     calldata: BytesLike;
     gasLimit: number | undefined;
+    toAsset: string;
+    toAssetAllowance: bigint;
+    interfaceAddress: string;
 }
 
 
