@@ -32,8 +32,9 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const loggerService = app.get(LoggerService);
 
-  logLoadedOptions(configService, loggerService);
+  await logLoadedOptions(configService, loggerService);
 
   await app.listen(configService.underwriterConfig.port);
 }
-bootstrap();
+
+void bootstrap();
