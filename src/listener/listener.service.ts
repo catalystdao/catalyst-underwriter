@@ -16,6 +16,12 @@ interface DefaultListenerWorkerData {
     maxBlocks: number | null
 }
 
+export interface VaultConfig {
+    vaultAddress: string,
+    interfaceAddress: string,
+    channels: Record<string, string>
+}
+
 export interface ListenerWorkerData {
     chainId: string,
     chainName: string,
@@ -24,8 +30,7 @@ export interface ListenerWorkerData {
     blockDelay: number,
     interval: number,
     maxBlocks: number | null,
-    vaults: string[],
-    interfaces: string[],
+    vaultConfigs: VaultConfig[],
     loggerOptions: LoggerOptions
 }
 
@@ -49,11 +54,11 @@ export class ListenerService implements OnModuleInit {
     private initializeWorkers(): void {
         const defaultWorkerConfig = this.loadDefaultWorkerConfig();
 
-        const addresses = this.loadAddresses();
+        const vaultConfigs = this.loadVaultConfigs();
 
-        for (const [chainId, { vaults, interfaces }] of Object.entries(addresses)) {
+        for (const [chainId, chainVaultConfigs] of Object.entries(vaultConfigs)) {
 
-            const workerData = this.loadWorkerConfig(chainId, vaults, interfaces, defaultWorkerConfig);
+            const workerData = this.loadWorkerConfig(chainId, chainVaultConfigs, defaultWorkerConfig);
 
             const worker = new Worker(join(__dirname, 'listener.worker.js'), {
                 workerData
@@ -93,8 +98,7 @@ export class ListenerService implements OnModuleInit {
 
     private loadWorkerConfig(
         chainId: string,
-        vaults: string[],
-        interfaces: string[],
+        vaultConfigs: VaultConfig[],
         defaultConfig: DefaultListenerWorkerData
     ): ListenerWorkerData {
 
@@ -112,38 +116,37 @@ export class ListenerService implements OnModuleInit {
             blockDelay: chainConfig.blockDelay ?? defaultConfig.blockDelay,
             interval: chainListenerConfig.interval ?? defaultConfig.interval,
             maxBlocks: chainListenerConfig.maxBlocks ?? defaultConfig.maxBlocks,
-            vaults,
-            interfaces,
+            vaultConfigs,
             loggerOptions: this.loggerService.loggerOptions
         };
     }
 
-    private loadAddresses(): Record<string, { vaults: string[], interfaces: string[] }> {
+    private loadVaultConfigs(): Record<string, VaultConfig[]> {
 
-        const addresses: Record<string, { vaults: string[], interfaces: string[] }> = {};
+        const configs: Record<string, VaultConfig[]> = {};
         for (const [chainId,] of this.configService.chainsConfig) {
-            addresses[chainId] = {
-                vaults: [],
-                interfaces: []
-            };
+            configs[chainId] = [];
         }
 
         // Get all the vaults across all the pools
         for (const [poolName, poolConfig] of this.configService.poolsConfig.entries()) {
 
-            for (const vaultConfig of poolConfig.vaults) {
-                const chainId = vaultConfig.chainId;
+            for (const fullVaultConfig of poolConfig.vaults) {
+                const chainId = fullVaultConfig.chainId;
 
-                if (!(chainId in addresses)) {
-                    throw new Error(`The chain id ${chainId} is required for vault '${vaultConfig.name}' (pool '${poolName}'), but is not configured.`)
+                if (!(chainId in configs)) {
+                    throw new Error(`The chain id ${chainId} is required for vault '${fullVaultConfig.name}' (pool '${poolName}'), but is not configured.`)
                 }
 
-                addresses[chainId].vaults.push(vaultConfig.vaultAddress);
-                addresses[chainId].interfaces.push(vaultConfig.interfaceAddress);
+                configs[chainId].push({
+                    vaultAddress: fullVaultConfig.vaultAddress,
+                    interfaceAddress: fullVaultConfig.interfaceAddress,
+                    channels: fullVaultConfig.channels
+                });
             }
         }
 
-        return addresses;
+        return configs;
     }
 
     private initiateIntervalStatusLog(): void {

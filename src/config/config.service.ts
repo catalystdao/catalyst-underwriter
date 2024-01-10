@@ -18,7 +18,6 @@ export interface UnderwriterConfig {
     maxTries?: number;
     maxPendingTransactions?: number;
     transactionTimeout?: number;
-    gasLimitBuffer?: Record<string, any> & { default: number };
   };
 }
 
@@ -44,7 +43,12 @@ export interface ChainConfig {
     maxTries?: number;
     maxPendingTransactions?: number;
     transactionTimeout?: number;
-    gasLimitBuffer?: Record<string, any> & { default: number };
+    gasLimitBuffer?: Record<string, number> & { default?: number };
+    gasPriceAdjustmentFactor?: number;
+    maxAllowedGasPrice?: bigint;
+    maxFeePerGas?: bigint;
+    maxPriorityFeeAdjustmentFactor?: number;
+    maxAllowedPriorityFeePerGas?: bigint;
   }
 }
 
@@ -56,6 +60,7 @@ export interface PoolConfig {
     chainId: string;
     vaultAddress: string;
     interfaceAddress: string;
+    channels: Record<string, string>;
   }[];
 }
 
@@ -169,8 +174,8 @@ export class ConfigService {
         rpc: rawChainConfig.rpc,
         startingBlock: rawChainConfig.startingBlock,
         blockDelay: rawChainConfig.blockDelay,
-        listener: rawChainConfig.listener ?? {},
-        underwriter: rawChainConfig.underwriter ?? {},
+        listener: rawChainConfig.listener ?? {},        //TODO 'listener' object should be verified
+        underwriter: rawChainConfig.underwriter ?? {},  //TODO 'underwriter' object should be verified
       });
     }
 
@@ -242,9 +247,23 @@ export class ConfigService {
             `Invalid vault configuration for vault '${vault.name}': 'interfaceAddress' missing.`
           );
         }
+        if (vault.channels == undefined) {
+          throw new Error(
+            `Invalid vault configuration for vault '${vault.name}': 'channels' missing.`
+          );
+        }
 
-        // Make sure 'chainId' is a string
+        // Make sure 'chainId's are always strings
         vault.chainId = vault.chainId.toString();
+
+        const transformedChannels: Record<string, string> = {};
+        for (const [channelId, chainId] of Object.entries(vault.channels)) {
+          transformedChannels[channelId] = (chainId as number).toString();
+        }
+        vault.channels = transformedChannels;
+
+        // Make sure all connected vaults have their channel mapped
+        // ! TODO make sure all channels are unique and that all channels are mapped 
       }
 
       poolsConfig.set(rawPoolsConfig.name, {

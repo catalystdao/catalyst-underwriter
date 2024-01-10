@@ -1,13 +1,15 @@
 import { JsonRpcProvider, Log, LogDescription } from "ethers";
 import pino from "pino";
 import { workerData } from 'worker_threads';
-import { ListenerWorkerData } from "./listener.service";
+import { ListenerWorkerData, VaultConfig } from "./listener.service";
 import { CatalystChainInterface__factory, ICatalystV1VaultEvents__factory } from "src/contracts";
 import { CatalystChainInterfaceInterface } from "src/contracts/CatalystChainInterface";
-import { ICatalystV1VaultEventsInterface } from "src/contracts/ICatalystV1VaultEvents";
+import { ICatalystV1VaultEventsInterface, SendAssetEvent } from "src/contracts/ICatalystV1VaultEvents";
 import { wait } from "src/common/utils";
+import { Store } from "src/store/store.lib";
 
 class ListenerWorker {
+    readonly store: Store;
     readonly logger: pino.Logger;
 
     readonly config: ListenerWorkerData;
@@ -18,6 +20,7 @@ class ListenerWorker {
     readonly chainName: string;
     readonly vaults: string[];
     readonly interfaces: string[];
+    readonly channels: Record<string, Record<string, string>>;  // Maps a vault address to its channels (bytes32 hex channel => chainId)
 
     readonly vaultEventsInterface: ICatalystV1VaultEventsInterface;
     readonly chainInterfaceEventsInterface: CatalystChainInterfaceInterface;
@@ -30,10 +33,10 @@ class ListenerWorker {
 
         this.chainId = this.config.chainId;
         this.chainName = this.config.chainName;
-        this.vaults = this.config.vaults.map((vault) => vault.toLowerCase());   // 'toLowerCase' important for later, when comparing addresses
-        this.interfaces = this.config.interfaces.map((vault) => vault.toLowerCase());   // 'toLowerCase' important for later, when comparing addresses
+        [this.vaults, this.interfaces, this.channels] = this.initializeAddresses(this.config.vaultConfigs);
         this.addresses = [...this.vaults, ...this.interfaces];
 
+        this.store = new Store();
         this.logger = this.initializeLogger(this.chainId);
         this.provider = this.initializeProvider(this.config.rpc);
 
@@ -61,6 +64,34 @@ class ListenerWorker {
             undefined,
             { staticNetwork: true }
         )
+    }
+
+    private initializeAddresses(vaultConfigs: VaultConfig[]): [
+        vaults: string[],
+        interfaces: string[],
+        channels: Record<string, Record<string, string>>
+    ] {
+
+        const vaults = [];
+        const interfaces = [];
+        const channels: Record<string, Record<string, string>> = {};
+
+        // NOTE: 'toLowerCase' transaforms are important for when comparing addresses later
+        for (const vaultConfig of vaultConfigs) {
+            const vaultAddress = vaultConfig.vaultAddress.toLowerCase();
+            const interfaceAddress = vaultConfig.interfaceAddress.toLowerCase();
+
+            vaults.push(vaultAddress);
+            interfaces.push(interfaceAddress);
+
+            // ! TODO the following logic will yield inconsistent results if there are multiple vaults definitions on the same chain under the same address (this should never happen, but should be protected for still).
+            channels[vaultAddress] = {}
+            for (const [channelId, chainId] of Object.entries(vaultConfig.channels)) {
+                channels[vaultAddress][channelId.toLowerCase()] = chainId;
+            }
+        }
+
+        return [vaults, interfaces, channels];
     }
 
     private initializeContractTypes(): {
@@ -177,7 +208,10 @@ class ListenerWorker {
                 case 'SendAsset':
                     await this.handleSendAssetEvent(
                         log.address,
-                        parsedLog
+                        log.transactionHash,
+                        parsedLog.args as unknown as SendAssetEvent.OutputObject,   //TODO verify?
+                        log.blockNumber,
+                        log.blockHash
                     );
                     break;
 
@@ -237,12 +271,31 @@ class ListenerWorker {
     
     private async handleSendAssetEvent (
         vaultAddress: string,
-        event: LogDescription
+        txHash: string,
+        event: SendAssetEvent.OutputObject,
+        blockHeight: number,
+        blockHash: string
     ): Promise<void> {
     
-        this.logger.info(`SendAsset ${event.args} (${vaultAddress})`);
+        this.logger.info(`SendAsset ${event} (${vaultAddress})`);
+
+        const toChainId = this.channels[vaultAddress.toLowerCase()]?.[event.channelId.toLowerCase()];
+
+        if (toChainId == undefined) {
+            this.logger.warn(`Dropping SendAsset event. No mapping for the event's channelId (${event.channelId}) found.`);
+            return;
+        }
     
-        // TODO
+        await this.store.registerSendAsset(
+            this.chainId,
+            vaultAddress,
+            txHash,
+            toChainId,
+            'id', //TODO
+            event,
+            blockHeight,
+            blockHash
+        )
     };
 
     
