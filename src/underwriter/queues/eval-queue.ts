@@ -1,7 +1,7 @@
 import { calcAssetSwapIdentifier } from 'src/common/utils';
 import { Wallet } from "ethers";
 import pino from "pino";
-import { RetryQueue } from "./retry-queue";
+import { HandleOrderResult, ProcessingQueue } from "./processing-queue";
 import { EvalOrder, UnderwriteOrder } from "../underwriter.types";
 import { PoolConfig } from "src/config/config.service";
 import { CatalystVaultCommon__factory, Token__factory } from "src/contracts";
@@ -9,7 +9,7 @@ import fetch from 'node-fetch';
 import { CatalystContext, catalystParse } from 'src/common/decode.catalyst';
 import { parsePayload } from 'src/common/decode.payload';
 
-export class EvalQueue extends RetryQueue<EvalOrder, UnderwriteOrder> {
+export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
     constructor(
         readonly pools: PoolConfig[],
@@ -21,28 +21,18 @@ export class EvalQueue extends RetryQueue<EvalOrder, UnderwriteOrder> {
         super(retryInterval, maxTries);
     }
 
-    async init(): Promise<void> {
-        // No init required for the eval queue
-    }
-
-    protected async onRetryOrderDrop(order: EvalOrder, retryCount: number): Promise<void> {
-        this.logger.error(
-          `Failed to eval underwrite for swap ${order.swapIdentifier} (swap txHash ${order.txHash}). Dropping message (try ${retryCount + 1}).`,
-        );
-    }
-
-    protected async handleOrder(order: EvalOrder, retryCount: number): Promise<UnderwriteOrder | null> {
+    protected async handleOrder(order: EvalOrder, retryCount: number): Promise<HandleOrderResult<UnderwriteOrder> | null> {
 
         const poolConfig = this.pools.find((pool) => pool.id == order.poolId);
         if (poolConfig == undefined) {
-            this.logger.error(`Unknown pool id ${order.poolId}`);
-            return null;
+            // NOTE: The following error is matched on `handleFailedOrder`
+            throw new Error(`Unknown pool id ${order.poolId}`);
         }
 
         const toVaultConfig = poolConfig.vaults.find((vault) => vault.vaultAddress == order.toVault);
         if (toVaultConfig == undefined) {
-            this.logger.error(`No vault ${order.toVault} defined on pool ${order.poolId}`);
-            return null;
+            // NOTE: The following error is matched on `handleFailedOrder`
+            throw new Error(`No vault ${order.toVault} defined on pool ${order.poolId}`);
         }
 
         // Get the amb
@@ -56,8 +46,7 @@ export class EvalQueue extends RetryQueue<EvalOrder, UnderwriteOrder> {
         );
 
         if (calldata == undefined) {
-            this.logger.error(`Underwrite evaluation fail: AMB of txHash ${order.txHash} (chain ${order.fromChainId}) not found`);
-            throw new Error('AMB not found');
+            throw new Error(`Underwrite evaluation fail: AMB of txHash ${order.txHash} (chain ${order.fromChainId}) not found`);
         }
 
         const toVaultContract = CatalystVaultCommon__factory.connect(
@@ -91,14 +80,15 @@ export class EvalQueue extends RetryQueue<EvalOrder, UnderwriteOrder> {
 
         //TODO evaluation
         if (true) {
-            return {
+            const result: UnderwriteOrder = {
                 ...order,
                 toAsset,
                 toAssetAllowance,
                 interfaceAddress,
                 calldata,
                 gasLimit: 1000000 //TODO
-            };
+            }
+            return { result };
         } else {
             this.logger.info(
                 `Dropping order ${'TODO'} on evaluation (try ${retryCount + 1})`   //TODO set order id
@@ -109,21 +99,53 @@ export class EvalQueue extends RetryQueue<EvalOrder, UnderwriteOrder> {
     }
 
     protected async handleFailedOrder(order: EvalOrder, retryCount: number, error: any): Promise<boolean> {
+
+        if (typeof error.message == "string") {
+            if (
+                /^Unknown pool id (0x)?[0-9a-f]*/.test(error.message)
+                || /^No vault (0x)?[0-9a-f]* defined on pool (0x)?[0-9a-f]*/.test(error.message)
+            ) {
+                this.logger.warn(
+                    error,
+                    `Error on underwrite eval ${'TODO'}. Dropping message. (try ${retryCount + 1})`,   //TODO set order id
+                );
+                return false;   // Do not retry eval
+            }
+        }
+
         //TODO improve error filtering?
         if (error.code === 'CALL_EXCEPTION') {
             this.logger.error(
                 error,
-                `Failed to evaluate message ${order}: CALL_EXCEPTION. Dropping message (try ${retryCount + 1}).`,
+                `Error on underwrite eval ${'TODO'}: CALL_EXCEPTION. Dropping message. (try ${retryCount + 1})`,   //TODO set order id
             );
-            return false;
+            return false;   // Do not retry eval
         }
 
         this.logger.warn(
             error,
-            `Failed to eval order ${'TODO'} (try ${retryCount + 1})`,   //TODO set order id
+            `Error on underwrite eval ${'TODO'} (try ${retryCount + 1})`,   //TODO set order id
         );
 
         return true;
+    }
+
+    protected async onOrderCompletion(
+        order: EvalOrder,
+        success: boolean,
+        _result: UnderwriteOrder | null,
+        retryCount: number
+    ): Promise<void> {
+        if (success) {
+            this.logger.debug(
+              `Successful underwrite eval of swap ${order.swapIdentifier} (swap txHash ${order.txHash}). (try ${retryCount + 1})`,
+            );
+
+        } else {
+            this.logger.error(
+              `Unsuccessful underwrite eval of swap ${order.swapIdentifier} (swap txHash ${order.txHash}). (try ${retryCount + 1})`,
+            );
+        }
     }
 
     private async queryAMBCalldata(

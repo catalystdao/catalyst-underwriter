@@ -159,11 +159,10 @@ class UnderwriterWorker {
         const logStatus = () => {
             const status = {
                 capacity: this.getUnderwritterCapacity(),
-                pendingTransactions: this.underwriteQueue.pendingTransactionsCount,
                 newOrdersQueue: this.newOrdersQueue.length,
-                evalQueue: this.evalQueue.queue.length,
+                evalQueue: this.evalQueue.size,
                 evalRetryQueue: this.evalQueue.retryQueue.length,
-                underwriteQueue: this.underwriteQueue.queue.length,
+                underwriteQueue: this.underwriteQueue.size,
                 underwriteRetryQueue: this.underwriteQueue.retryQueue.length,
             };
             this.logger.info(status, 'Underwriter status.');
@@ -188,14 +187,15 @@ class UnderwriterWorker {
         while (true) {
             const evalOrders = await this.processNewOrdersQueue();
 
-            this.evalQueue.addOrders(...evalOrders);
-            const validOrders = await this.evalQueue.processOrders();
+            await this.evalQueue.addOrders(...evalOrders);
+            await this.evalQueue.processOrders();
 
-            this.underwriteQueue.addOrders(...validOrders);
+            const newUnderwriteOrders = this.evalQueue.getCompletedOrders();
+            await this.underwriteQueue.addOrders(...newUnderwriteOrders);
             await this.underwriteQueue.processOrders();
 
-            await this.evalQueue.processRetryOrders();
-            await this.underwriteQueue.processRetryOrders();
+            await this.evalQueue.processRetries();
+            await this.underwriteQueue.processRetries();
 
             await wait(this.config.processingInterval);
         }
@@ -267,14 +267,9 @@ class UnderwriterWorker {
     private getUnderwritterCapacity(): number {
         return Math.max(
             0,
-            this.config.maxPendingTransactions -
-            (
-                this.evalQueue.queue.length
-                + this.evalQueue.retryQueue.length
-                + this.underwriteQueue.pendingTransactionsCount
-                + this.underwriteQueue.queue.length
-                + this.underwriteQueue.retryQueue.length
-            )
+            this.config.maxPendingTransactions
+                - this.evalQueue.size
+                - this.underwriteQueue.size
         );
     }
 

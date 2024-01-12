@@ -1,21 +1,16 @@
 import { FeeData, Wallet } from "ethers";
 import pino from "pino";
-import { RetryQueue } from "./retry-queue";
+import { HandleOrderResult, ProcessingQueue } from "./processing-queue";
 import { UnderwriteOrder, GasFeeConfig, EvalOrder, GasFeeOverrides } from "../underwriter.types";
 import { PoolConfig } from "src/config/config.service";
 import { CatalystChainInterface__factory } from "src/contracts";
 
 
-export class UnderwriteQueue extends RetryQueue<UnderwriteOrder, never> {
+export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, null> {
 
     private feeData: FeeData | undefined;
 
-    private transactionCount = 0;
-    private pendingTransactions = 0;
-
-    get pendingTransactionsCount(): number {
-        return this.pendingTransactions;
-    }
+    private transactionNonce = 0;
 
     constructor(
         readonly pools: PoolConfig[],
@@ -35,22 +30,14 @@ export class UnderwriteQueue extends RetryQueue<UnderwriteOrder, never> {
     }
 
     protected async onProcessOrders(): Promise<void> {
-        if (this.queue.length > 0) await this.updateFeeData();
+        if (this.ordersQueue.length > 0) await this.updateFeeData();
     }
 
-    protected async onRetryOrderDrop(order: EvalOrder, retryCount: number): Promise<void> {
-        this.logger.error(
-          `Failed to perform underwrite for swap ${order.swapIdentifier} (swap txHash ${order.txHash}). Dropping message (try ${retryCount + 1}).`,
-        );
-    }
-
-    protected async handleOrder(order: UnderwriteOrder, _retryCount: number): Promise<null> {
-
-        this.logger.info(`Handle order triggered: ${order}`)
+    protected async handleOrder(order: UnderwriteOrder, _retryCount: number): Promise<HandleOrderResult<null> | null> {
 
         const interfaceContract = CatalystChainInterface__factory.connect(order.interfaceAddress, this.signer);
 
-        const underwriteTx = await interfaceContract.underwrite(
+        const underwriteTx = await interfaceContract.underwrite(    //TODO use underwriteAndCheckConnection
             order.toVault,
             order.toAsset,
             order.units,
@@ -59,32 +46,43 @@ export class UnderwriteQueue extends RetryQueue<UnderwriteOrder, never> {
             order.underwriteIncentiveX16,
             order.calldata,
             {
-                nonce: this.transactionCount,
+                nonce: this.transactionNonce,
                 gasLimit: order.gasLimit
             }
         );
 
-        const txReceipt = await underwriteTx.wait();
-
-
-        // this.registerPendingTransaction(tx.wait(), order);
-        this.transactionCount++;
+        this.transactionNonce++;
 
         this.logger.info(
-            `Submitted underwrite ${'TODO'} (hash: ${txReceipt?.hash} on block ${txReceipt?.blockNumber})`, //TODO id
+            {
+                order: {
+                    fromChainId: order.fromChainId,
+                    fromVault: order.fromVault,
+                    swapIdentifier: order.swapIdentifier,
+                    toVault: order.toVault
+                }
+            },
+            `Submitted underwrite (hash: ${underwriteTx?.hash} on block ${underwriteTx?.blockHash})`, //TODO id
         );
 
-        return null;
+        const timingOutTxPromise: Promise<null> = Promise.race([
+            underwriteTx.wait(),
+            new Promise((_resolve, reject) =>
+                setTimeout(() => reject("Underwrite tx TIMEOUT"), this.transactionTimeout)
+            ),
+        ]).then(() => null);
+        
+        return { result: timingOutTxPromise }
     }
 
     protected async handleFailedOrder(order: UnderwriteOrder, retryCount: number, error: any): Promise<boolean> {
+
+        //TODO improve error filtering?
         if (error.code === 'CALL_EXCEPTION') {
-            //TODO improve error filtering?
             this.logger.info(
-                `Failed to submit underwrite ${'TODO'}: CALL_EXCEPTION. Dropping message (try ${retryCount + 1}).`,
+                `Error on underwrite submission ${'TODO'}: CALL_EXCEPTION. Dropping message. (try ${retryCount + 1})`,   //TODO id
             );
-            //TODO approved funds
-            return false;
+            return false;   // Do not retry eval
         }
 
         if (
@@ -97,10 +95,36 @@ export class UnderwriteQueue extends RetryQueue<UnderwriteOrder, never> {
 
         this.logger.warn(
             error,
-            `Failed to submit underwrite ${'TODO'} (try ${retryCount + 1})`,  //TODO id
+            `Error on underwrite submission ${'TODO'} (try ${retryCount + 1})`,  //TODO id
         );
 
         return true;
+    }
+
+    protected async onOrderCompletion(
+        order: EvalOrder,
+        success: boolean,
+        _result: UnderwriteOrder | null,
+        retryCount: number
+    ): Promise<void> {
+        if (success) {
+            this.logger.debug(
+                {
+                    order: {
+                        fromChainId: order.fromChainId,
+                        fromVault: order.fromVault,
+                        swapIdentifier: order.swapIdentifier,
+                        toVault: order.toVault
+                    }
+                },
+                `Successful underwrite of swap ${order.swapIdentifier} (swap txHash ${order.txHash}). (try ${retryCount + 1})`,
+            );
+
+        } else {
+            this.logger.error(
+                `Unsuccessful underwrite of swap ${order.swapIdentifier} (swap txHash ${order.txHash}).  (try ${retryCount + 1})`,
+            );
+        }
     }
 
 
@@ -108,7 +132,7 @@ export class UnderwriteQueue extends RetryQueue<UnderwriteOrder, never> {
         let i = 1;
         while (true) {
             try {
-                this.transactionCount =
+                this.transactionNonce =
                     await this.signer.getNonce('pending'); //TODO 'pending' may not be supported
                 break;
             } catch (error) {
@@ -190,41 +214,4 @@ export class UnderwriteQueue extends RetryQueue<UnderwriteOrder, never> {
             };
         }
     }
-
-    private registerPendingTransaction(
-        promise: Promise<any>,
-        order: UnderwriteOrder,
-        retryCount: number,
-    ): void {
-        this.pendingTransactions += 1;
-
-        const timingOutPromise = Promise.race([
-            promise,
-            new Promise((resolve, reject) =>
-                setTimeout(reject, this.transactionTimeout),
-            ),
-        ]);
-
-        timingOutPromise.then(
-            () => {
-                this.pendingTransactions -= 1;
-                //TODO prioritiseSwap
-            },
-            () => {
-                this.pendingTransactions -= 1;
-
-                this.logger.warn(
-                    new Error('Transaction submission timed out.'),
-                    `Failed to submit order ${'TODO'} (try ${retryCount + 1})`,  //TODO order id
-                );
-
-                return this.addOrderToRetryQueue({
-                    order,
-                    retryCount,
-                    retryAtTimestamp: 0
-                });
-            },
-        );
-    }
-
 }
