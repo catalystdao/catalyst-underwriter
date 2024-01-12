@@ -58,14 +58,17 @@ export class UnderwriteQueue extends RetryQueue<UnderwriteOrder, never> {
             order.toAccount,
             order.underwriteIncentiveX16,
             order.calldata,
-            { gasLimit: order.gasLimit }
+            {
+                nonce: this.transactionCount,
+                gasLimit: order.gasLimit
+            }
         );
 
         const txReceipt = await underwriteTx.wait();
 
 
         // this.registerPendingTransaction(tx.wait(), order);
-        // this.transactionCount++;
+        this.transactionCount++;
 
         this.logger.info(
             `Submitted underwrite ${'TODO'} (hash: ${txReceipt?.hash} on block ${txReceipt?.blockNumber})`, //TODO id
