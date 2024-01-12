@@ -1,13 +1,20 @@
+import { AbiCoder, keccak256 } from "ethers";
 
 export const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export function decodeBytes65Address(addressBytes65: string): string {
-    let workingAddress = addressBytes65;
-    if (addressBytes65.slice(0, 2) === "0x") workingAddress = addressBytes65.slice(2);
+export const add0X = (address: string): string => `0x${address}`;
 
-    const length = parseInt(workingAddress.slice(0, 2), 16);
-
-    const totalLength = 2 + 64*2;
-    const startingPoint = totalLength - length*2;
-    return "0x" + workingAddress.slice(startingPoint);
-}
+export const calcAssetSwapIdentifier = (
+    toAccount: string,
+    units: bigint,
+    swapAmount: bigint, // fromAmount - fee
+    fromAsset: string,
+    blockNumber: number,
+) => {
+    return keccak256(
+        AbiCoder.defaultAbiCoder().encode(
+            ['bytes', 'uint256', 'uint256', 'address', 'uint32'],
+            [toAccount, units, swapAmount, fromAsset, blockNumber % (2**32)],
+        ),
+    );
+};

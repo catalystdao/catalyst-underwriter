@@ -5,8 +5,9 @@ import { ListenerWorkerData, VaultConfig } from "./listener.service";
 import { CatalystChainInterface__factory, ICatalystV1VaultEvents__factory } from "src/contracts";
 import { CatalystChainInterfaceInterface } from "src/contracts/CatalystChainInterface";
 import { ICatalystV1VaultEventsInterface, SendAssetEvent } from "src/contracts/ICatalystV1VaultEvents";
-import { decodeBytes65Address, wait } from "src/common/utils";
+import { calcAssetSwapIdentifier, wait } from "src/common/utils";
 import { Store } from "src/store/store.lib";
+import { decodeBytes65Address } from "src/common/decode.payload";
 
 class ListenerWorker {
     readonly store: Store;
@@ -300,6 +301,16 @@ class ListenerWorker {
             this.logger.warn(`Dropping SendAsset event. No mapping for the event's channelId (${sendAssetEvent.channelId}) found.`);
             return;
         }
+
+        const toVault = decodeBytes65Address(sendAssetEvent.toVault);
+        const toAccount = decodeBytes65Address(sendAssetEvent.toAccount);
+        const swapId = calcAssetSwapIdentifier(
+            toAccount,
+            sendAssetEvent.units,
+            sendAssetEvent.fromAmount - sendAssetEvent.fee,
+            sendAssetEvent.fromAsset,
+            log.blockNumber
+        );
     
         await this.store.registerSendAsset(
             vaultConfig.poolId,
@@ -307,12 +318,12 @@ class ListenerWorker {
             vaultAddress,
             log.transactionHash,
             toChainId,
-            'swapId', //TODO
+            swapId,
             log.blockNumber,
             log.blockHash,
             sendAssetEvent.channelId,
-            decodeBytes65Address(sendAssetEvent.toVault),
-            decodeBytes65Address(sendAssetEvent.toAccount),
+            toVault,
+            toAccount,
             sendAssetEvent.fromAsset,
             sendAssetEvent.toAssetIndex,
             sendAssetEvent.fromAmount,

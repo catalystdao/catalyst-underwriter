@@ -1,9 +1,13 @@
+import { calcAssetSwapIdentifier } from 'src/common/utils';
 import { Wallet } from "ethers";
 import pino from "pino";
 import { RetryQueue } from "./retry-queue";
 import { EvalOrder, UnderwriteOrder } from "../underwriter.types";
 import { PoolConfig } from "src/config/config.service";
 import { CatalystVaultCommon__factory, Token__factory } from "src/contracts";
+import fetch from 'node-fetch';
+import { CatalystContext, catalystParse } from 'src/common/decode.catalyst';
+import { parsePayload } from 'src/common/decode.payload';
 
 export class EvalQueue extends RetryQueue<EvalOrder, UnderwriteOrder> {
 
@@ -41,13 +45,27 @@ export class EvalQueue extends RetryQueue<EvalOrder, UnderwriteOrder> {
             return null;
         }
 
+        // Get the amb
+        const interfaceAddress = toVaultConfig.interfaceAddress;
+        const calldata = await this.queryAMBCalldata(
+            order.fromChainId,
+            order.txHash,
+            interfaceAddress,
+            order.fromVault,
+            order.swapIdentifier
+        );
+
+        if (calldata == undefined) {
+            this.logger.error(`Underwrite evaluation fail: AMB of txHash ${order.txHash} (chain ${order.fromChainId}) not found`);
+            throw new Error('AMB not found');
+        }
+
         const toVaultContract = CatalystVaultCommon__factory.connect(
             order.toVault,
             this.signer
         );
         const toAsset = await toVaultContract._tokenIndexing(order.toAssetIndex);
 
-        const interfaceAddress = toVaultConfig.interfaceAddress;
 
         // Estimate return
         const expectedReturn = await toVaultContract.calcReceiveAsset(toAsset, order.units);
@@ -78,7 +96,7 @@ export class EvalQueue extends RetryQueue<EvalOrder, UnderwriteOrder> {
                 toAsset,
                 toAssetAllowance,
                 interfaceAddress,
-                calldata: '0x0000', //TODO
+                calldata,
                 gasLimit: 1000000 //TODO
             };
         } else {
@@ -106,6 +124,52 @@ export class EvalQueue extends RetryQueue<EvalOrder, UnderwriteOrder> {
         );
 
         return true;
+    }
+
+    private async queryAMBCalldata(
+        chainId: string,
+        txHash: string,
+        sourceInterface: string,
+        sourceVault: string,
+        swapId: string
+    ): Promise<string | undefined> {
+
+        const relayerEndpoint = `http://${process.env.RELAYER_HOST}:${process.env.RELAYER_PORT}/getAMBs?`;
+
+        const res = await fetch(relayerEndpoint + new URLSearchParams({chainId, txHash}));
+        const ambs = (await res.json());    //TODO type
+
+        // Find the AMB that matches the SendAsset event
+        for (const amb of ambs) {
+            try {
+                const giPayload = parsePayload(amb.payload);
+
+                if (giPayload.sourceApplicationAddress.toLowerCase() != sourceInterface.toLowerCase()) continue;
+
+                const catalystPayload = catalystParse(giPayload.message);
+
+                if (catalystPayload.context != CatalystContext.ASSET_SWAP) continue;
+
+                if (catalystPayload.fromVault.toLowerCase() != sourceVault.toLowerCase()) continue;
+
+                const ambSwapId = calcAssetSwapIdentifier(
+                    catalystPayload.toAccount,
+                    catalystPayload.units,
+                    catalystPayload.fromAmount,
+                    catalystPayload.fromAsset,
+                    catalystPayload.blockNumber
+                )
+
+                if (ambSwapId.toLowerCase() != swapId.toLowerCase()) continue;
+
+                return catalystPayload.cdata;
+
+            } catch {
+                // Continue
+            }
+        }
+
+        return undefined;
     }
 
 }
