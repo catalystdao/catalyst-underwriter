@@ -10,9 +10,11 @@ services:
     build:
       context: .
       dockerfile: dockerfile.underwriter
+    volumes:
+      - ./config.${NODE_ENV}.yaml:/usr/catalyst-underwriter/config.${NODE_ENV}.yaml
+      - ./.env:/usr/catalyst-underwriter/.env
     environment:
-      - PRIVATE_KEY=${PRIVATE_KEY}
-      - REDIS_PORT=${REDIS_PORT}
+      - NODE_ENV=${NODE_ENV}
       - USE_DOCKER=true
     container_name: underwriter
     restart: unless-stopped
