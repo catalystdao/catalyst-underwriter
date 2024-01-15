@@ -4,7 +4,7 @@ import pino from "pino";
 import { HandleOrderResult, ProcessingQueue } from "./processing-queue";
 import { EvalOrder, UnderwriteOrder } from "../underwriter.types";
 import { PoolConfig } from "src/config/config.service";
-import { CatalystVaultCommon__factory, Token__factory } from "src/contracts";
+import { CatalystVaultCommon__factory } from "src/contracts";
 import fetch from 'node-fetch';
 import { CatalystContext, catalystParse } from 'src/common/decode.catalyst';
 import { parsePayload } from 'src/common/decode.payload';
@@ -59,24 +59,6 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         // Estimate return
         const expectedReturn = await toVaultContract.calcReceiveAsset(toAsset, order.units);
         const toAssetAllowance = expectedReturn * 11n / 10n;    //TODO set customizable allowance margin
-
-        // Set allowance
-        // TODO overhaul approval logic
-        // - what if there are multiple pending tx
-        // - what if there aren't enough funds
-        const tokenContract = Token__factory.connect(
-            toAsset,
-            this.signer
-        );
-        const approveTx = await tokenContract.approve(
-            interfaceAddress,
-            2n**256n-1n, // Set unlimited approval
-            {gasLimit: 1000000} //TODO required for anvil, remove
-        );
-        await approveTx.wait();
-
-
-        // Set approval
 
         //TODO evaluation
         if (true) {
