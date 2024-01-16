@@ -28,7 +28,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, null> {
     }
 
     async init(): Promise<void> {
-        await this.updateTransactionCount();
+        await this.updateTransactionNonce();
         await this.updateFeeData();
     }
 
@@ -101,7 +101,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, null> {
             error.code === 'REPLACEMENT_UNDERPRICED' ||
             error.error?.message.includes('invalid sequence')
         ) {
-            await this.updateTransactionCount();
+            await this.updateTransactionNonce();
         }
 
         this.logger.warn(
@@ -266,8 +266,14 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, null> {
                         );
                         const approveTx = await tokenContract.approve(
                             interfaceAddress,
-                            requiredAllowance   //TODO set gas limit?
+                            requiredAllowance,   //TODO set gas limit?
+                            {
+                                nonce: this.transactionNonce
+                            }
                         );
+
+                        this.transactionNonce++;
+
                         await approveTx.wait(); //TODO this should not block the loop, but rather all txs should be awaited for at the end of the loop (with a timeout)
 
                         setAssetAllowances.set(assetAddress, requiredAllowance);
@@ -286,7 +292,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, null> {
     }
 
 
-    private async updateTransactionCount(): Promise<void> {
+    private async updateTransactionNonce(): Promise<void> {
         let i = 1;
         while (true) {
             try {
