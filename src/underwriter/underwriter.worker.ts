@@ -176,7 +176,7 @@ class UnderwriterWorker {
     // ********************************************************************************************
     async run(): Promise<void> {
         this.logger.info(
-            `Underwriter worker started on ${this.chainName} (${this.chainId})`
+            `Underwriter worker started.`
         );
 
         await this.evalQueue.init();
@@ -238,7 +238,10 @@ class UnderwriterWorker {
                 );
 
             }).catch((rejection) => {
-                this.logger.error(rejection, `Failed to retrieve the 'SwapStatus' for the swap description ${swapDescription}.`);
+                this.logger.error(
+                    { error: rejection, swapDescription },
+                    `Failed to retrieve the 'SwapStatus'.`
+                );
             })
             
         });
@@ -278,7 +281,7 @@ class UnderwriterWorker {
         poolId: string,
         fromChainId: string,
         fromVault: string,
-        txHash: string,
+        swapTxHash: string,
         swapIdentifier: string,
         channelId: string,
         toVault: string,
@@ -292,14 +295,15 @@ class UnderwriterWorker {
         underwriteIncentiveX16: bigint
     ) {
         this.logger.debug(
-            `Underwrite order received (SendAsset txHash: ${txHash}, swapId: ${swapIdentifier})`
+            { fromVault, fromChainId, swapTxHash, swapId: swapIdentifier },
+            `Underwrite order received.`
         );
 
         const order: Order = {
             poolId,
             fromChainId,
             fromVault,
-            txHash,
+            swapTxHash,
             swapIdentifier,
             channelId,
             toVault,

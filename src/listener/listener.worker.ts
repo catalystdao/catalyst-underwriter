@@ -137,9 +137,9 @@ class ListenerWorker {
     // Main handler
     // ********************************************************************************************
     async run(): Promise<void> {
-        const addressesString = this.addresses.join(', ');
         this.logger.info(
-            `Listener worker started (searching events of address(es) ${addressesString} on ${this.chainName} (${this.chainId}))`
+            { addresses: this.addresses },
+            `Listener worker started.`
         );
 
         let startBlock = this.config.startingBlock ?? (await this.provider.getBlockNumber());
@@ -162,7 +162,7 @@ class ListenerWorker {
                 }
 
                 this.logger.info(
-                    `Scanning swaps from block ${startBlock} to ${endBlock} on ${this.chainName} (${this.chainId})`,
+                    `Scanning swaps from block ${startBlock} to ${endBlock}.`,
                 );
                 await this.queryAndProcessEvents(startBlock, endBlock);
 
@@ -218,7 +218,10 @@ class ListenerWorker {
                 continue;
             }
 
-            this.logger.warn(`No vault/interface configuration found for the address ${log.address}`);
+            this.logger.warn(
+                { address: log.address },
+                `No vault/interface configuration found for the contract address ${log.address}.`
+            );
         }
     }
 
@@ -233,7 +236,8 @@ class ListenerWorker {
 
         if (parsedLog == null) {
             this.logger.error(
-                `Failed to parse Catalyst vault contract event. Topics: ${log.topics}, data: ${log.data}`,
+                { topics: log.topics, data: log.data },
+                `Failed to parse Catalyst vault contract event.`,
             );
             return;
         }
@@ -245,7 +249,8 @@ class ListenerWorker {
 
             default:
                 this.logger.warn(
-                    `Event with unknown name/topic received: ${parsedLog.name}/${parsedLog.topic}`,
+                    { name: parsedLog.name, topic: parsedLog.topic },
+                    `Event with unknown name/topic received.`,
                 );
         }
     }
@@ -258,7 +263,8 @@ class ListenerWorker {
 
         if (parsedLog == null) {
             this.logger.error(
-                `Failed to parse Catalyst chain interface contract event. Topics: ${log.topics}, data: ${log.data}`,
+                { topics: log.topics, data: log.data },
+                `Failed to parse Catalyst chain interface contract event.`,
             );
             return;
         }
@@ -278,7 +284,8 @@ class ListenerWorker {
 
             default:
                 this.logger.warn(
-                    `Event with unknown name/topic received: ${parsedLog.name}/${parsedLog.topic}`,
+                    { name: parsedLog.name, topic: parsedLog.topic },
+                    `Event with unknown name/topic received.`,
                 );
         }
 
@@ -292,15 +299,6 @@ class ListenerWorker {
 
         const vaultAddress = log.address;
         const sendAssetEvent = parsedLog.args as unknown as SendAssetEvent.OutputObject;
-    
-        this.logger.info(`SendAsset ${sendAssetEvent} (${vaultAddress})`);
-
-        const toChainId = vaultConfig.channels[sendAssetEvent.channelId.toLowerCase()];
-
-        if (toChainId == undefined) {
-            this.logger.warn(`Dropping SendAsset event. No mapping for the event's channelId (${sendAssetEvent.channelId}) found.`);
-            return;
-        }
 
         const toVault = decodeBytes65Address(sendAssetEvent.toVault);
         const toAccount = decodeBytes65Address(sendAssetEvent.toAccount);
@@ -311,6 +309,21 @@ class ListenerWorker {
             sendAssetEvent.fromAsset,
             log.blockNumber
         );
+    
+        this.logger.info(
+            { vaultAddress: vaultAddress, txHash: log.transactionHash, swapId },
+            `SendAsset event captured.`
+        );
+
+        const toChainId = vaultConfig.channels[sendAssetEvent.channelId.toLowerCase()];
+
+        if (toChainId == undefined) {
+            this.logger.warn(
+                { channelId: sendAssetEvent.channelId },
+                `Dropping SendAsset event. No mapping for the event's channelId found.`
+            );
+            return;
+        }
     
         await this.store.registerSendAsset(
             vaultConfig.poolId,
@@ -337,11 +350,14 @@ class ListenerWorker {
     
     private async handleSwapUnderwrittenEvent (
         log: Log,
-        parsedLog: LogDescription,
+        _parsedLog: LogDescription,
         _vaultConfig: VaultConfig
     ): Promise<void> {
     
-        this.logger.info(`SwapUnderwritten ${parsedLog.args} (${log.address})`);
+        this.logger.info(
+            { interfaceAddress: log.address },
+            `SwapUnderwritten event captured.`
+        );
     
         // TODO
     };
@@ -349,11 +365,14 @@ class ListenerWorker {
     
     private async handleFulfillUnderwriteEvent (
         log: Log,
-        parsedLog: LogDescription,
+        _parsedLog: LogDescription,
         _vaultConfig: VaultConfig
     ): Promise<void> {
     
-        this.logger.info(`FulfillUnderwrite ${parsedLog.args} (${log.address})`);
+        this.logger.info(
+            { interfaceAddress: log.address },
+            `FulfillUnderwrite event captured.`
+        );
     
         // TODO
     };
@@ -361,11 +380,14 @@ class ListenerWorker {
     
     private async handleExpireUnderwriteEvent (
         log: Log,
-        parsedLog: LogDescription,
+        _parsedLog: LogDescription,
         _vaultConfig: VaultConfig
     ): Promise<void> {
     
-        this.logger.info(`ExpireUnderwrite ${parsedLog.args} (${log.address})`);
+        this.logger.info(
+            { interfaceAddress: log.address },
+            `ExpireUnderwrite event captured.`
+        );
     
         // TODO
     };

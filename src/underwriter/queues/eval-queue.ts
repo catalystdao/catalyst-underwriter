@@ -39,14 +39,14 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         const interfaceAddress = toVaultConfig.interfaceAddress;
         const calldata = await this.queryAMBCalldata(
             order.fromChainId,
-            order.txHash,
+            order.swapTxHash,
             interfaceAddress,
             order.fromVault,
             order.swapIdentifier
         );
 
         if (calldata == undefined) {
-            throw new Error(`Underwrite evaluation fail: AMB of txHash ${order.txHash} (chain ${order.fromChainId}) not found`);
+            throw new Error(`Underwrite evaluation fail: AMB of txHash ${order.swapTxHash} (chain ${order.fromChainId}) not found`);
         }
 
         const toVaultContract = CatalystVaultCommon__factory.connect(
@@ -73,7 +73,14 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             return { result };
         } else {
             this.logger.info(
-                `Dropping order ${'TODO'} on evaluation (try ${retryCount + 1})`   //TODO set order id
+                {
+                    fromVault: order.fromVault,
+                    fromChainId: order.fromChainId,
+                    swapTxHash: order.swapTxHash,
+                    swapId: order.swapIdentifier,
+                    try: retryCount + 1
+                },
+                `Dropping order on evaluation`
             );
 
             return null;
@@ -82,14 +89,23 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
     protected async handleFailedOrder(order: EvalOrder, retryCount: number, error: any): Promise<boolean> {
 
+        const errorDescription = {
+            fromVault: order.fromVault,
+            fromChainId: order.fromChainId,
+            swapTxHash: order.swapTxHash,
+            swapId: order.swapIdentifier,
+            error,
+            try: retryCount + 1
+        };
+
         if (typeof error.message == "string") {
             if (
                 /^Unknown pool id (0x)?[0-9a-f]*/.test(error.message)
                 || /^No vault (0x)?[0-9a-f]* defined on pool (0x)?[0-9a-f]*/.test(error.message)
             ) {
                 this.logger.warn(
-                    error,
-                    `Error on underwrite eval ${'TODO'}. Dropping message. (try ${retryCount + 1})`,   //TODO set order id
+                    errorDescription,
+                    `Error on underwrite evaluation. Dropping message.`,
                 );
                 return false;   // Do not retry eval
             }
@@ -98,15 +114,15 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         //TODO improve error filtering?
         if (error.code === 'CALL_EXCEPTION') {
             this.logger.error(
-                error,
-                `Error on underwrite eval ${'TODO'}: CALL_EXCEPTION. Dropping message. (try ${retryCount + 1})`,   //TODO set order id
+                errorDescription,
+                `Error on underwrite evaluation: CALL_EXCEPTION. Dropping message.`,
             );
             return false;   // Do not retry eval
         }
 
         this.logger.warn(
-            error,
-            `Error on underwrite eval ${'TODO'} (try ${retryCount + 1})`,   //TODO set order id
+            errorDescription,
+            `Error on underwrite eval.`,
         );
 
         return true;
@@ -118,14 +134,25 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         _result: UnderwriteOrder | null,
         retryCount: number
     ): Promise<void> {
+
+        const orderDescription = {
+            fromVault: order.fromVault,
+            fromChainId: order.fromChainId,
+            swapTxHash: order.swapTxHash,
+            swapId: order.swapIdentifier,
+            try: retryCount + 1
+        };
+
         if (success) {
             this.logger.debug(
-              `Successful underwrite eval of swap ${order.swapIdentifier} (swap txHash ${order.txHash}). (try ${retryCount + 1})`,
+                orderDescription,
+                `Successful underwrite evaluation.`,
             );
 
         } else {
             this.logger.error(
-              `Unsuccessful underwrite eval of swap ${order.swapIdentifier} (swap txHash ${order.txHash}). (try ${retryCount + 1})`,
+                orderDescription,
+                `Unsuccessful underwrite evaluation.`,
             );
         }
     }

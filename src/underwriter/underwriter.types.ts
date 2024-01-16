@@ -6,7 +6,7 @@ export interface Order {
     poolId: string;
     fromChainId: string;
     fromVault: string;
-    txHash: string;
+    swapTxHash: string;
 
     // Derived from the SendAsset event
     swapIdentifier: string;
@@ -33,6 +33,10 @@ export interface UnderwriteOrder extends Order {
     toAsset: string;
     toAssetAllowance: bigint;
     interfaceAddress: string;
+}
+
+export interface UnderwriteOrderResult extends UnderwriteOrder {
+    underwriteTxHash: string;
 }
 
 

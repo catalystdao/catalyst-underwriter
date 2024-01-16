@@ -1,12 +1,12 @@
 import { FeeData, Wallet } from "ethers";
 import pino from "pino";
 import { HandleOrderResult, ProcessingQueue } from "./processing-queue";
-import { UnderwriteOrder, GasFeeConfig, GasFeeOverrides } from "../underwriter.types";
+import { UnderwriteOrder, GasFeeConfig, GasFeeOverrides, UnderwriteOrderResult } from "../underwriter.types";
 import { PoolConfig } from "src/config/config.service";
 import { CatalystChainInterface__factory, Token__factory } from "src/contracts";
 
 
-export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, null> {
+export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, UnderwriteOrderResult> {
 
     private feeData: FeeData | undefined;
 
@@ -42,7 +42,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, null> {
         await this.setAllowances();
     }
 
-    protected async handleOrder(order: UnderwriteOrder, _retryCount: number): Promise<HandleOrderResult<null> | null> {
+    protected async handleOrder(order: UnderwriteOrder, retryCount: number): Promise<HandleOrderResult<UnderwriteOrderResult> | null> {
 
         const interfaceContract = CatalystChainInterface__factory.connect(order.interfaceAddress, this.signer);
 
@@ -62,36 +62,57 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, null> {
 
         this.transactionNonce++;
 
+        //TODO add underwriteId to log? (note that this depends on the AMB implementation)
+        const orderDescription = {
+            fromVault: order.fromVault,
+            fromChainId: order.fromChainId,
+            swapTxHash: order.swapTxHash,
+            swapId: order.swapIdentifier,
+            underwriteTxHash: underwriteTx?.hash,
+            try: retryCount + 1
+        };
+
         this.logger.info(
-            {
-                order: {
-                    fromChainId: order.fromChainId,
-                    fromVault: order.fromVault,
-                    swapIdentifier: order.swapIdentifier,
-                    toVault: order.toVault
-                }
-            },
-            `Submitted underwrite (hash: ${underwriteTx?.hash} on block ${underwriteTx?.blockHash})`, //TODO id
+            orderDescription,
+            `Submitted underwrite.`,
         );
 
-        const timingOutTxPromise: Promise<null> = Promise.race([
-            underwriteTx.wait(),
-            new Promise((_resolve, reject) =>
+        const timingOutTxPromise: Promise<UnderwriteOrderResult> = Promise.race([
+
+            underwriteTx.wait().then((receipt) => {
+                if (receipt == null) {
+                    throw new Error("Underwrite tx TIMEOUT");
+                }
+                return { underwriteTxHash: receipt.hash, ...order }
+            }),
+
+            new Promise<never>((_resolve, reject) =>
                 setTimeout(() => reject("Underwrite tx TIMEOUT"), this.transactionTimeout)
             ),
-        ]).then(() => null);
+        ]);
         
         return { result: timingOutTxPromise }
     }
 
     protected async handleFailedOrder(order: UnderwriteOrder, retryCount: number, error: any): Promise<boolean> {
 
+        //TODO add underwriteId to log? (note that this depends on the AMB implementation)
+        const errorDescription = {
+            fromVault: order.fromVault,
+            fromChainId: order.fromChainId,
+            swapTxHash: order.swapTxHash,
+            swapId: order.swapIdentifier,
+            error,
+            try: retryCount + 1
+        };
+
         //TODO Improve error filtering?
         //TODO  - If invalid allowance => should retry
         //TODO  - If 'recentlyUnderwritten' => should not retry
         if (error.code === 'CALL_EXCEPTION') {
             this.logger.info(
-                `Error on underwrite submission ${'TODO'}: CALL_EXCEPTION. Dropping message. (try ${retryCount + 1})`,   //TODO id
+                errorDescription,
+                `Error on underwrite submission: CALL_EXCEPTION.`,
             );
             return false;   // Do not retry eval
         }
@@ -105,7 +126,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, null> {
         }
 
         this.logger.warn(
-            error,
+            errorDescription,
             `Error on underwrite submission ${'TODO'} (try ${retryCount + 1})`,  //TODO id
         );
 
@@ -115,9 +136,20 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, null> {
     protected async onOrderCompletion(
         order: UnderwriteOrder,
         success: boolean,
-        _result: UnderwriteOrder | null,
+        result: UnderwriteOrderResult | null,
         retryCount: number
     ): Promise<void> {
+
+        //TODO add underwriteId to log? (note that this depends on the AMB implementation)
+        const orderDescription = {
+            fromVault: order.fromVault,
+            fromChainId: order.fromChainId,
+            swapTxHash: order.swapTxHash,
+            swapId: order.swapIdentifier,
+            underwriteTxHash: result?.underwriteTxHash,
+            try: retryCount + 1
+        };
+
         if (success) {
             this.registerAllowanceUse(
                 order.interfaceAddress,
@@ -125,15 +157,8 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, null> {
                 order.toAssetAllowance
             );
             this.logger.debug(
-                {
-                    order: {
-                        fromChainId: order.fromChainId,
-                        fromVault: order.fromVault,
-                        swapIdentifier: order.swapIdentifier,
-                        toVault: order.toVault
-                    }
-                },
-                `Successful underwrite of swap ${order.swapIdentifier} (swap txHash ${order.txHash}). (try ${retryCount + 1})`,
+                orderDescription,
+                `Successful underwrite of swap.`,
             );
 
         } else {
@@ -143,7 +168,8 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, null> {
                 order.toAssetAllowance
             )
             this.logger.error(
-                `Unsuccessful underwrite of swap ${order.swapIdentifier} (swap txHash ${order.txHash}).  (try ${retryCount + 1})`,
+                orderDescription,
+                `Unsuccessful underwrite of swap.`,
             );
         }
     }
@@ -301,7 +327,10 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, null> {
                 break;
             } catch (error) {
                 // Continue trying indefinitely. If the transaction count is incorrect, no transaction will go through.
-                this.logger.error(error, `Failed to update nonce for chain (try ${i}).`);
+                this.logger.error(
+                    { error, try: i },
+                    `Failed to update nonce for chain.`
+                );
                 await new Promise((r) => setTimeout(r, this.retryInterval));
             }
 
