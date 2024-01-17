@@ -4381,7 +4381,7 @@ process@^0.11.10:
 
 "processing-queue@https://github.com/catalystdao/ProcessingQueue":
   version "1.0.0"
-  resolved "https://github.com/catalystdao/ProcessingQueue#f718818574b38f67432b14d3a50c556ae108de35"
+  resolved "https://github.com/catalystdao/ProcessingQueue#307321439f2b1bea146057f633a3c314be5fc7fe"
 
 prompts@^2.0.1:
   version "2.4.2"

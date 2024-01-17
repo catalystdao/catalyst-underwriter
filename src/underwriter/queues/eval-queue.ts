@@ -1,7 +1,7 @@
 import { calcAssetSwapIdentifier } from 'src/common/utils';
 import { Wallet } from "ethers";
 import pino from "pino";
-import { HandleOrderResult, ProcessingQueue } from "processing-queue/lib-esm/processing-queue";
+import { HandleOrderResult, ProcessingQueue } from "processing-queue";
 import { EvalOrder, UnderwriteOrder } from "../underwriter.types";
 import { PoolConfig } from "src/config/config.service";
 import { CatalystVaultCommon__factory } from "src/contracts";
