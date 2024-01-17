@@ -1,6 +1,6 @@
 import { FeeData, Wallet } from "ethers";
 import pino from "pino";
-import { HandleOrderResult, ProcessingQueue } from "./processing-queue";
+import { HandleOrderResult, ProcessingQueue } from "processing-queue/lib-esm/processing-queue";
 import { UnderwriteOrder, GasFeeConfig, GasFeeOverrides, UnderwriteOrderResult } from "../underwriter.types";
 import { PoolConfig } from "src/config/config.service";
 import { CatalystChainInterface__factory, Token__factory } from "src/contracts";
