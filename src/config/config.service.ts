@@ -17,7 +17,8 @@ export interface UnderwriterConfig {
     processingInterval?: number;
     maxTries?: number;
     maxPendingTransactions?: number;
-    transactionTimeout?: number;
+    confirmations?: number;
+    confirmationTimeout?: number;
   };
 }
 
@@ -42,13 +43,15 @@ export interface ChainConfig {
     processingInterval?: number;
     maxTries?: number;
     maxPendingTransactions?: number;
-    transactionTimeout?: number;
+    confirmations?: number;
+    confirmationTimeout?: number;
     gasLimitBuffer?: Record<string, number> & { default?: number };
     gasPriceAdjustmentFactor?: number;
     maxAllowedGasPrice?: bigint;
     maxFeePerGas?: bigint;
     maxPriorityFeeAdjustmentFactor?: number;
     maxAllowedPriorityFeePerGas?: bigint;
+    priorityAdjustmentFactor?: number;
   }
 }
 

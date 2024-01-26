@@ -1,4 +1,4 @@
-import { JsonRpcProvider, Wallet, Provider } from "ethers";
+import { JsonRpcProvider, Wallet, Provider, AbstractProvider, ContractTransactionResponse, ZeroAddress } from "ethers";
 import pino, { LoggerOptions } from "pino";
 import { workerData } from 'worker_threads';
 import { UnderwriterWorkerData } from "./underwriter.service";
@@ -7,12 +7,11 @@ import { PoolConfig } from "src/config/config.service";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
 import { SwapDescription } from "src/store/store.types";
-import { EvalOrder, GasFeeConfig, NewOrder, Order } from "./underwriter.types";
+import { EvalOrder, GasFeeConfig, NewOrder, Order, UnderwriteOrder, UnderwriteOrderResult } from "./underwriter.types";
 import { EvalQueue } from "./queues/eval-queue";
 import { UnderwriteQueue } from "./queues/underwrite-queue";
-
-
-const MAX_GAS_PRICE_ADJUSTMENT_FACTOR = 5;
+import { TransactionHelper } from "./transaction-helper";
+import { ConfirmQueue } from "./queues/confirm-queue";
 
 
 class UnderwriterWorker {
@@ -29,9 +28,14 @@ class UnderwriterWorker {
 
     readonly pools: PoolConfig[];
 
+    readonly transactionHelper: TransactionHelper;
+
     readonly newOrdersQueue: NewOrder<EvalOrder>[] = [];
     readonly evalQueue: EvalQueue;
     readonly underwriteQueue: UnderwriteQueue;
+    readonly confirmQueue: ConfirmQueue;
+
+    private isStalled = false;
 
 
     constructor() {
@@ -50,18 +54,22 @@ class UnderwriterWorker {
         this.provider = this.initializeProvider(this.config.rpc);
         this.signer = this.initializeSigner(this.config.privateKey, this.provider);
 
-        [this.evalQueue, this.underwriteQueue] = this.initializeQueues(
+        this.transactionHelper = new TransactionHelper(
+          this.getGasFeeConfig(this.config),
+          this.config.retryInterval,
+          this.provider,
+          this.signer,
+          this.logger,
+        );
+
+        [this.evalQueue, this.underwriteQueue, this.confirmQueue] = this.initializeQueues(
             this.pools,
             this.config.retryInterval,
             this.config.maxTries,
-            this.config.transactionTimeout,
-            this.loadGasFeeConfig(
-                this.config.gasPriceAdjustmentFactor,
-                this.config.maxAllowedGasPrice,
-                this.config.maxFeePerGas,
-                this.config.maxPriorityFeeAdjustmentFactor,
-                this.config.maxAllowedPriorityFeePerGas
-            ),
+            this.config.confirmations,
+            this.config.confirmationTimeout,
+            this.transactionHelper,
+            this.provider,
             this.signer,
             this.logger
         );
@@ -100,11 +108,13 @@ class UnderwriterWorker {
         pools: PoolConfig[],
         retryInterval: number,
         maxTries: number,
-        transactionTimeout: number,
-        gasFeeConfig: GasFeeConfig,
+        confirmations: number,
+        confirmationTimeout: number,
+        transactionHelper: TransactionHelper,
+        provider: AbstractProvider,
         signer: Wallet,
         logger: pino.Logger,
-    ): [EvalQueue, UnderwriteQueue] {
+    ): [EvalQueue, UnderwriteQueue, ConfirmQueue] {
         const evalQueue = new EvalQueue(
             pools,
             retryInterval,
@@ -117,47 +127,33 @@ class UnderwriterWorker {
             pools,
             retryInterval,
             maxTries,
-            transactionTimeout,
-            gasFeeConfig,
+            transactionHelper,
             signer,
             logger
-        )
+        );
 
-        return [evalQueue, underwriteQueue];
+        const confirmQueue = new ConfirmQueue(
+          retryInterval,
+          maxTries,
+          confirmations,
+          transactionHelper,
+          confirmationTimeout,
+          provider,
+          signer,
+          logger,
+        );
+
+        return [evalQueue, underwriteQueue, confirmQueue];
     }
 
-    private loadGasFeeConfig(
-        gasPriceAdjustmentFactor?: number,
-        maxAllowedGasPrice?: bigint,
-        maxFeePerGas?: bigint,
-        maxPriorityFeeAdjustmentFactor?: number,
-        maxAllowedPriorityFeePerGas?: bigint
-    ): GasFeeConfig {
-
-        if (
-            gasPriceAdjustmentFactor != undefined &&
-            gasPriceAdjustmentFactor > MAX_GAS_PRICE_ADJUSTMENT_FACTOR
-        ) {
-            throw new Error(
-                `Failed to load gas fee configuration. 'gasPriceAdjustmentFactor' is larger than the allowed (${MAX_GAS_PRICE_ADJUSTMENT_FACTOR})`,
-            );
-        }
-
-        if (
-            maxPriorityFeeAdjustmentFactor != undefined &&
-            maxPriorityFeeAdjustmentFactor > MAX_GAS_PRICE_ADJUSTMENT_FACTOR
-        ) {
-            throw new Error(
-                `Failed to load gas fee configuration. 'maxPriorityFeeAdjustmentFactor' is larger than the allowed (${MAX_GAS_PRICE_ADJUSTMENT_FACTOR})`,
-            );
-        }
-
+    private getGasFeeConfig(config: UnderwriterWorkerData): GasFeeConfig {
         return {
-            gasPriceAdjustmentFactor,
-            maxAllowedGasPrice,
-            maxFeePerGas,
-            maxPriorityFeeAdjustmentFactor,
-            maxAllowedPriorityFeePerGas,
+          gasPriceAdjustmentFactor: config.gasPriceAdjustmentFactor,
+          maxAllowedGasPrice: config.maxAllowedGasPrice,
+          maxFeePerGas: config.maxFeePerGas,
+          maxPriorityFeeAdjustmentFactor: config.maxPriorityFeeAdjustmentFactor,
+          maxAllowedPriorityFeePerGas: config.maxAllowedPriorityFeePerGas,
+          priorityAdjustmentFactor: config.priorityAdjustmentFactor,
         };
     }
 
@@ -170,6 +166,9 @@ class UnderwriterWorker {
                 evalRetryQueue: this.evalQueue.retryQueue.length,
                 underwriteQueue: this.underwriteQueue.size,
                 underwriteRetryQueue: this.underwriteQueue.retryQueue.length,
+                confirmQueue: this.confirmQueue.size,
+                confirmRetryQueue: this.confirmQueue.retryQueue.length,
+                isStalled: this.isStalled,
             };
             this.logger.info(status, 'Underwriter status.');
         };
@@ -185,8 +184,10 @@ class UnderwriterWorker {
             `Underwriter worker started.`
         );
 
+        await this.transactionHelper.init();
         await this.evalQueue.init();
         await this.underwriteQueue.init();
+        await this.confirmQueue.init();
 
         await this.listenForOrders();
 
@@ -200,10 +201,139 @@ class UnderwriterWorker {
             await this.underwriteQueue.addOrders(...newUnderwriteOrders);
             await this.underwriteQueue.processOrders();
 
-            this.underwriteQueue.getFinishedOrders();
+            const [toConfirmSubmitOrders, ,] = this.underwriteQueue.getFinishedOrders();
+            await this.confirmQueue.addOrders(...toConfirmSubmitOrders);
+            await this.confirmQueue.processOrders();
+
+            const [, unconfirmedSubmitOrders, rejectedSubmitOrders] =
+              this.confirmQueue.getFinishedOrders();
+      
+            await this.handleUnconfirmedSubmitOrders(unconfirmedSubmitOrders);
+      
+            await this.handleRejectedSubmitOrders(rejectedSubmitOrders);
 
             await wait(this.config.processingInterval);
         }
+    }
+
+    private async handleUnconfirmedSubmitOrders(
+      unconfirmedSubmitOrders: UnderwriteOrderResult[],
+    ): Promise<void> {
+      for (const unconfirmedOrder of unconfirmedSubmitOrders) {
+        if (unconfirmedOrder.resubmit) {
+          const requeueCount = unconfirmedOrder.requeueCount ?? 0;
+          if (requeueCount >= this.config.maxTries - 1) {
+            const orderDescription = {
+              originalTxHash: unconfirmedOrder.tx.hash,
+              replaceTxHash: unconfirmedOrder.replaceTx?.hash,
+              resubmit: unconfirmedOrder.resubmit,
+              requeueCount: requeueCount,
+            };
+  
+            this.logger.warn(
+              orderDescription,
+              `Transaction confirmation failure. Maximum number of requeues reached. Dropping message.`,
+            );
+            continue;
+          }
+  
+          const requeueOrder: UnderwriteOrder = {
+            poolId: unconfirmedOrder.poolId,
+            fromChainId: unconfirmedOrder.fromChainId,
+            fromVault: unconfirmedOrder.fromVault,
+            swapTxHash: unconfirmedOrder.swapTxHash,
+            swapIdentifier: unconfirmedOrder.swapIdentifier,
+            channelId: unconfirmedOrder.channelId,
+            toVault: unconfirmedOrder.toVault,
+            toAccount: unconfirmedOrder.toAccount,
+            fromAsset: unconfirmedOrder.fromAsset,
+            toAssetIndex: unconfirmedOrder.toAssetIndex,
+            fromAmount: unconfirmedOrder.fromAmount,
+            minOut: unconfirmedOrder.minOut,
+            units: unconfirmedOrder.units,
+            fee: unconfirmedOrder.fee,
+            underwriteIncentiveX16: unconfirmedOrder.underwriteIncentiveX16,
+            toAsset: unconfirmedOrder.toAsset,
+            toAssetAllowance: unconfirmedOrder.toAssetAllowance,
+            interfaceAddress: unconfirmedOrder.interfaceAddress,
+            calldata: unconfirmedOrder.calldata,
+            gasLimit: unconfirmedOrder.gasLimit,
+            requeueCount: requeueCount + 1,
+          };
+          await this.underwriteQueue.addOrders(requeueOrder);
+        }
+      }
+    }
+  
+    private async handleRejectedSubmitOrders(
+      rejectedSubmitOrders: UnderwriteOrderResult[],
+    ): Promise<void> {
+      for (const rejectedOrder of rejectedSubmitOrders) {
+        await this.cancelTransaction(rejectedOrder.tx);
+      }
+    }
+  
+    // This function does not return until the transaction of the given nonce is mined!
+    private async cancelTransaction(baseTx: ContractTransactionResponse): Promise<void> {
+      const cancelTxNonce = baseTx.nonce;
+      if (cancelTxNonce == undefined) {
+        // This point should never be reached.
+        //TODO log warn?
+        return;
+      }
+  
+      for (let i = 0; i < this.config.maxTries; i++) {
+        // NOTE: cannot use the 'transactionHelper' for querying of the transaction nonce, as the
+        // helper takes into account the 'pending' transactions.
+        const latestNonce = await this.signer.getNonce('latest');
+  
+        if (latestNonce > cancelTxNonce) {
+          return;
+        }
+  
+        try {
+          const tx = await this.signer.sendTransaction({
+            nonce: cancelTxNonce,
+            to: ZeroAddress,
+            data: '0x',
+            ...this.transactionHelper.getIncreasedFeeDataForTransaction(baseTx),
+          });
+  
+          await this.provider.waitForTransaction(
+            tx.hash,
+            this.config.confirmations,
+            this.config.confirmationTimeout,
+          );
+  
+          // Transaction cancelled
+          return;
+        } catch {
+          // continue
+        }
+      }
+  
+      this.isStalled = true;
+      while (true) {
+        this.logger.warn(
+          { nonce: cancelTxNonce },
+          `Underwriter stalled. Waiting until pending transaction is resolved.`,
+        );
+  
+        await wait(this.config.confirmationTimeout);
+  
+        // NOTE: cannot use the 'transactionHelper' for querying of the transaction nonce, as the
+        // helper takes into account the 'pending' transactions.
+        const latestNonce = await this.signer.getNonce('latest');
+  
+        if (latestNonce > cancelTxNonce) {
+          this.logger.info(
+            { nonce: cancelTxNonce },
+            `Underwriter resumed after stall recovery.`,
+          );
+          this.isStalled = false;
+          return;
+        }
+      }
     }
 
     private async listenForOrders(): Promise<void> {
@@ -278,6 +408,7 @@ class UnderwriterWorker {
             this.config.maxPendingTransactions
                 - this.evalQueue.size
                 - this.underwriteQueue.size
+                - this.confirmQueue.size
         );
     }
 

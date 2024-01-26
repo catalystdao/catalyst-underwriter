@@ -1,16 +1,14 @@
-import { FeeData, Wallet } from "ethers";
+import { Wallet } from "ethers";
 import pino from "pino";
 import { HandleOrderResult, ProcessingQueue } from "./processing-queue";
-import { UnderwriteOrder, GasFeeConfig, GasFeeOverrides, UnderwriteOrderResult } from "../underwriter.types";
+import { UnderwriteOrder, UnderwriteOrderResult } from "../underwriter.types";
 import { PoolConfig } from "src/config/config.service";
 import { CatalystChainInterface__factory, Token__factory } from "src/contracts";
+import { TransactionHelper } from "../transaction-helper";
 
+//TODO handle stuck approval tx
 
 export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, UnderwriteOrderResult> {
-
-    private feeData: FeeData | undefined;
-
-    private transactionNonce = 0;
 
     private requiredUnderwritingAllowances = new Map<string, Map<string, bigint>>();  // Maps interface => asset => allowance
     private setUnderwritingAllowances = new Map<string, Map<string, bigint>>();  // Maps interface => asset => allowance
@@ -19,8 +17,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
         readonly pools: PoolConfig[],
         readonly retryInterval: number,
         readonly maxTries: number,
-        readonly transactionTimeout: number,
-        readonly gasFeeConfig: GasFeeConfig,
+        private readonly transactionHelper: TransactionHelper,
         private readonly signer: Wallet,
         private readonly logger: pino.Logger
     ) {
@@ -28,8 +25,6 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
     }
 
     async init(): Promise<void> {
-        await this.updateTransactionNonce();
-        await this.updateFeeData();
     }
 
     protected async onOrderInit(order: UnderwriteOrder): Promise<void> {
@@ -38,15 +33,18 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
     }
 
     protected async onProcessOrders(): Promise<void> {
-        await this.updateFeeData();
+        await this.transactionHelper.updateFeeData();
         await this.setAllowances();
     }
 
-    protected async handleOrder(order: UnderwriteOrder, retryCount: number): Promise<HandleOrderResult<UnderwriteOrderResult> | null> {
+    protected async handleOrder(
+        order: UnderwriteOrder,
+        _retryCount: number
+    ): Promise<HandleOrderResult<UnderwriteOrderResult> | null> {
 
         const interfaceContract = CatalystChainInterface__factory.connect(order.interfaceAddress, this.signer);
 
-        const underwriteTx = await interfaceContract.underwrite(    //TODO use underwriteAndCheckConnection
+        const tx = await interfaceContract.underwrite(    //TODO use underwriteAndCheckConnection
             order.toVault,
             order.toAsset,
             order.units,
@@ -55,43 +53,15 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
             order.underwriteIncentiveX16,
             order.calldata,
             {
-                nonce: this.transactionNonce,
-                gasLimit: order.gasLimit
+                nonce: this.transactionHelper.getTransactionNonce(),
+                gasLimit: order.gasLimit,
+                ...this.transactionHelper.getFeeDataForTransaction()
             }
         );
 
-        this.transactionNonce++;
+        this.transactionHelper.increaseTransactionNonce();
 
-        //TODO add underwriteId to log? (note that this depends on the AMB implementation)
-        const orderDescription = {
-            fromVault: order.fromVault,
-            fromChainId: order.fromChainId,
-            swapTxHash: order.swapTxHash,
-            swapId: order.swapIdentifier,
-            underwriteTxHash: underwriteTx?.hash,
-            try: retryCount + 1
-        };
-
-        this.logger.info(
-            orderDescription,
-            `Submitted underwrite.`,
-        );
-
-        const timingOutTxPromise: Promise<UnderwriteOrderResult> = Promise.race([
-
-            underwriteTx.wait().then((receipt) => {
-                if (receipt == null) {
-                    throw new Error("Underwrite tx TIMEOUT");
-                }
-                return { underwriteTxHash: receipt.hash, ...order }
-            }),
-
-            new Promise<never>((_resolve, reject) =>
-                setTimeout(() => reject("Underwrite tx TIMEOUT"), this.transactionTimeout)
-            ),
-        ]);
-        
-        return { result: timingOutTxPromise }
+        return { result: { tx, ...order } };
     }
 
     protected async handleFailedOrder(order: UnderwriteOrder, retryCount: number, error: any): Promise<boolean> {
@@ -120,15 +90,12 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
         if (
             error.code === 'NONCE_EXPIRED' ||
             error.code === 'REPLACEMENT_UNDERPRICED' ||
-            error.error?.message.includes('invalid sequence')
+            error.error?.message.includes('invalid sequence') //TODO is this dangerous? (any contract may include that error)
         ) {
-            await this.updateTransactionNonce();
+            await this.transactionHelper.updateTransactionNonce();
         }
 
-        this.logger.warn(
-            errorDescription,
-            `Error on underwrite submission ${'TODO'} (try ${retryCount + 1})`,  //TODO id
-        );
+        this.logger.warn(errorDescription, `Error on underwrite submission.`);
 
         return true;
     }
@@ -146,21 +113,32 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
             fromChainId: order.fromChainId,
             swapTxHash: order.swapTxHash,
             swapId: order.swapIdentifier,
-            underwriteTxHash: result?.underwriteTxHash,
+            underwriteTxHash: result?.tx.hash,
             try: retryCount + 1
         };
 
         if (success) {
-            this.registerAllowanceUse(
-                order.interfaceAddress,
-                order.toAsset,
-                order.toAssetAllowance
-            );
-            this.logger.debug(
-                orderDescription,
-                `Successful underwrite of swap.`,
-            );
-
+            if (result != null) {
+                this.registerAllowanceUse(
+                    order.interfaceAddress,
+                    order.toAsset,
+                    order.toAssetAllowance
+                );
+                this.logger.debug(
+                    orderDescription,
+                    `Successful underwrite processing: underwrite submitted.`,
+                );
+            } else {
+                this.registerRequiredAllowanceDecrease(
+                    order.interfaceAddress,
+                    order.toAsset,
+                    order.toAssetAllowance
+                );
+                this.logger.debug(
+                    orderDescription,
+                    `Successful underwrite processing: underwrite not submitted.`,
+                );
+            }
         } else {
             this.registerRequiredAllowanceDecrease(
                 order.interfaceAddress,
@@ -169,7 +147,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
             )
             this.logger.error(
                 orderDescription,
-                `Unsuccessful underwrite of swap.`,
+                `Unsuccessful underwrite processing.`,
             );
         }
     }
@@ -294,11 +272,12 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
                             interfaceAddress,
                             requiredAllowance,   //TODO set gas limit?
                             {
-                                nonce: this.transactionNonce
+                                nonce: this.transactionHelper.getTransactionNonce(),
+                                ...this.transactionHelper.getFeeDataForTransaction(),
                             }
                         );
 
-                        this.transactionNonce++;
+                        this.transactionHelper.increaseTransactionNonce();
 
                         await approveTx.wait(); //TODO this should not block the loop, but rather all txs should be awaited for at the end of the loop (with a timeout)
 
@@ -315,96 +294,5 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
 
         }
 
-    }
-
-
-    private async updateTransactionNonce(): Promise<void> {
-        let i = 1;
-        while (true) {
-            try {
-                this.transactionNonce =
-                    await this.signer.getNonce('pending'); //TODO 'pending' may not be supported
-                break;
-            } catch (error) {
-                // Continue trying indefinitely. If the transaction count is incorrect, no transaction will go through.
-                this.logger.error(
-                    { error, try: i },
-                    `Failed to update nonce for chain.`
-                );
-                await new Promise((r) => setTimeout(r, this.retryInterval));
-            }
-
-            i++;
-        }
-    }
-
-    private async updateFeeData(): Promise<void> {
-        try {
-            this.feeData = await this.signer.provider!.getFeeData();    //TODO handle null possibility
-        } catch {
-            // Continue with stale fee data.
-        }
-    }
-
-    private getFeeDataForTransaction(): GasFeeOverrides {
-        const queriedFeeData = this.feeData;
-        if (queriedFeeData == undefined) {
-            return {};
-        }
-
-        const queriedMaxPriorityFeePerGas = queriedFeeData.maxPriorityFeePerGas;
-        if (queriedMaxPriorityFeePerGas != null) {
-            // Set fee data for an EIP 1559 transactions
-            const maxFeePerGas = this.gasFeeConfig.maxFeePerGas;
-
-            // Adjust the 'maxPriorityFeePerGas' by the adjustment factor
-            let maxPriorityFeePerGas;
-            if (this.gasFeeConfig.maxPriorityFeeAdjustmentFactor != undefined) {
-                maxPriorityFeePerGas = BigInt(Math.floor(
-                    Number(queriedMaxPriorityFeePerGas) *
-                    this.gasFeeConfig.maxPriorityFeeAdjustmentFactor,
-                ));
-            }
-
-            // Apply the max allowed 'maxPriorityFeePerGas'
-            if (
-                maxPriorityFeePerGas != undefined &&
-                this.gasFeeConfig.maxAllowedPriorityFeePerGas != undefined &&
-                this.gasFeeConfig.maxAllowedPriorityFeePerGas < maxPriorityFeePerGas
-            ) {
-                maxPriorityFeePerGas = this.gasFeeConfig.maxAllowedPriorityFeePerGas;
-            }
-
-            return {
-                maxFeePerGas,
-                maxPriorityFeePerGas,
-            };
-        } else {
-            // Set traditional gasPrice
-            const queriedGasPrice = queriedFeeData.gasPrice;
-            if (queriedGasPrice == null) return {};
-
-            // Adjust the 'gasPrice' by the adjustment factor
-            let gasPrice;
-            if (this.gasFeeConfig.gasPriceAdjustmentFactor != undefined) {
-                gasPrice = BigInt(Math.floor(
-                    Number(queriedGasPrice) *
-                    this.gasFeeConfig.gasPriceAdjustmentFactor,
-                ));
-            }
-
-            // Apply the max allowed 'gasPrice'
-            if (
-                gasPrice != undefined &&
-                this.gasFeeConfig.maxAllowedGasPrice != undefined &&
-                this.gasFeeConfig.maxAllowedGasPrice < gasPrice
-            ) {
-                gasPrice = this.gasFeeConfig.maxAllowedGasPrice;
-            }
-
-            return {
-                gasPrice,
-            };
-        }
     }
 }

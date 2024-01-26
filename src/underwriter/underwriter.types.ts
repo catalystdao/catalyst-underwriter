@@ -1,4 +1,4 @@
-import { BytesLike, BigNumberish } from "ethers";
+import { BytesLike, ContractTransactionResponse } from "ethers";
 
 
 export interface Order {
@@ -33,10 +33,13 @@ export interface UnderwriteOrder extends Order {
     toAsset: string;
     toAssetAllowance: bigint;
     interfaceAddress: string;
+    requeueCount?: number;
 }
 
 export interface UnderwriteOrderResult extends UnderwriteOrder {
-    underwriteTxHash: string;
+    tx: ContractTransactionResponse;
+    replaceTx?: ContractTransactionResponse;
+    resubmit?: boolean;
 }
 
 
@@ -47,9 +50,9 @@ export interface NewOrder<OrderType> {
 
 
 export interface GasFeeOverrides {
-    gasPrice?: BigNumberish;
-    maxFeePerGas?: BigNumberish;
-    maxPriorityFeePerGas?: BigNumberish;
+    gasPrice?: bigint;
+    maxFeePerGas?: bigint;
+    maxPriorityFeePerGas?: bigint;
 }
 
 export interface GasFeeConfig {
@@ -58,4 +61,5 @@ export interface GasFeeConfig {
     maxFeePerGas: bigint | undefined;
     maxPriorityFeeAdjustmentFactor: number | undefined;
     maxAllowedPriorityFeePerGas: bigint | undefined;
+    priorityAdjustmentFactor: number | undefined;
 }

@@ -9,14 +9,16 @@ const DEFAULT_UNDERWRITER_RETRY_INTERVAL = 2000;
 const DEFAULT_UNDERWRITER_PROCESSING_INTERVAL = 100;
 const DEFAULT_UNDERWRITER_MAX_TRIES = 3;
 const DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS = 100;
-const DEFAULT_UNDERWRITER_TRANSACTION_TIMEOUT = 10 * 60000;
+const DEFAULT_UNDERWRITER_CONFIRMATIONS = 1;
+const DEFAULT_UNDERWRITER_CONFIRMATION_TIMEOUT = 10 * 60000;
 
 interface DefaultUnderwriterWorkerData {
     retryInterval: number;
     processingInterval: number;
     maxTries: number;
     maxPendingTransactions: number;
-    transactionTimeout: number;
+    confirmations: number;
+    confirmationTimeout: number;
 }
 
 export interface UnderwriterWorkerData {
@@ -28,7 +30,8 @@ export interface UnderwriterWorkerData {
     processingInterval: number;
     maxTries: number;
     maxPendingTransactions: number;
-    transactionTimeout: number;
+    confirmations: number;
+    confirmationTimeout: number;
     privateKey: string;
     gasLimitBuffer: Record<string, any> & { default: number };
     gasPriceAdjustmentFactor?: number;
@@ -36,6 +39,7 @@ export interface UnderwriterWorkerData {
     maxFeePerGas?: bigint;
     maxPriorityFeeAdjustmentFactor?: number;
     maxAllowedPriorityFeePerGas?: bigint;
+    priorityAdjustmentFactor: number | undefined;
     loggerOptions: LoggerOptions;
 }
 
@@ -95,14 +99,16 @@ export class UnderwriterService implements OnModuleInit {
         const processingInterval = globalUnderwriterConfig.processingInterval ?? DEFAULT_UNDERWRITER_PROCESSING_INTERVAL;
         const maxTries = globalUnderwriterConfig.maxTries ?? DEFAULT_UNDERWRITER_MAX_TRIES;
         const maxPendingTransactions = globalUnderwriterConfig.maxPendingTransactions ?? DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS;
-        const transactionTimeout = globalUnderwriterConfig.transactionTimeout ?? DEFAULT_UNDERWRITER_TRANSACTION_TIMEOUT;
+        const confirmations = globalUnderwriterConfig.confirmations ?? DEFAULT_UNDERWRITER_CONFIRMATIONS;
+        const confirmationTimeout = globalUnderwriterConfig.confirmationTimeout ?? DEFAULT_UNDERWRITER_CONFIRMATION_TIMEOUT;
 
         return {
             retryInterval,
             processingInterval,
             maxTries,
             maxPendingTransactions,
-            transactionTimeout
+            confirmations,
+            confirmationTimeout
         }
     }
 
@@ -132,7 +138,8 @@ export class UnderwriterService implements OnModuleInit {
             processingInterval: chainUnderwriterConfig.processingInterval ?? defaultConfig.processingInterval,
             maxTries: chainUnderwriterConfig.maxTries ?? defaultConfig.maxTries,
             maxPendingTransactions: chainUnderwriterConfig.maxPendingTransactions ?? defaultConfig.maxPendingTransactions,
-            transactionTimeout: chainUnderwriterConfig.transactionTimeout ?? defaultConfig.transactionTimeout,
+            confirmations: chainUnderwriterConfig.confirmations ?? defaultConfig.confirmations,
+            confirmationTimeout: chainUnderwriterConfig.confirmationTimeout ?? defaultConfig.confirmationTimeout,
             privateKey: this.configService.underwriterConfig.privateKey,
             gasLimitBuffer: { default: 0, ...chainUnderwriterConfig.gasLimitBuffer},
             gasPriceAdjustmentFactor: chainUnderwriterConfig.gasPriceAdjustmentFactor,
@@ -140,6 +147,7 @@ export class UnderwriterService implements OnModuleInit {
             maxFeePerGas: chainUnderwriterConfig.maxFeePerGas,
             maxPriorityFeeAdjustmentFactor: chainUnderwriterConfig.maxPriorityFeeAdjustmentFactor,
             maxAllowedPriorityFeePerGas: chainUnderwriterConfig.maxAllowedPriorityFeePerGas,
+            priorityAdjustmentFactor: chainUnderwriterConfig.priorityAdjustmentFactor,
             loggerOptions: this.loggerService.loggerOptions
         };
     }
