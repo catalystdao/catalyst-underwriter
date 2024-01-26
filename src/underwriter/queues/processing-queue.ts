@@ -1,4 +1,4 @@
-//TODO replace this file with the following package once made public https://github.com/catalystdao/ProcessingQueue
+//TODO replace this file with an import from the GeneralisedRelayer
 export interface ProcessOrder<T> {
     order: T;
     retryCount: number;
