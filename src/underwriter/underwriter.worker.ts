@@ -1,5 +1,5 @@
 import { JsonRpcProvider, Wallet, Provider } from "ethers";
-import pino from "pino";
+import pino, { LoggerOptions } from "pino";
 import { workerData } from 'worker_threads';
 import { UnderwriterWorkerData } from "./underwriter.service";
 import { wait } from "src/common/utils";
@@ -43,7 +43,10 @@ class UnderwriterWorker {
         this.pools = this.config.pools;
 
         this.store = new Store();
-        this.logger = this.initializeLogger(this.chainId);
+        this.logger = this.initializeLogger(
+          this.chainId,
+          this.config.loggerOptions,
+        );
         this.provider = this.initializeProvider(this.config.rpc);
         this.signer = this.initializeSigner(this.config.privateKey, this.provider);
 
@@ -71,8 +74,11 @@ class UnderwriterWorker {
     // Initialization helpers
     // ********************************************************************************************
 
-    private initializeLogger(chainId: string): pino.Logger {
-        return pino(this.config.loggerOptions).child({
+    private initializeLogger(
+      chainId: string,
+      loggerOptions: LoggerOptions,
+    ): pino.Logger {
+        return pino(loggerOptions).child({
             worker: 'underwriter',
             chain: chainId,
         });
