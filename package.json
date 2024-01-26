@@ -31,7 +31,6 @@
     "js-yaml": "^4.1.0",
     "node-fetch": "2.7",
     "pino": "^8.16.1",
-    "processing-queue": "https://github.com/catalystdao/ProcessingQueue",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1"
   },
