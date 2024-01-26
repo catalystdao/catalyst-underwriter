@@ -190,12 +190,11 @@ class UnderwriterWorker {
             await this.evalQueue.addOrders(...evalOrders);
             await this.evalQueue.processOrders();
 
-            const newUnderwriteOrders = this.evalQueue.getCompletedOrders();
+            const [newUnderwriteOrders, ,] = this.evalQueue.getFinishedOrders();
             await this.underwriteQueue.addOrders(...newUnderwriteOrders);
             await this.underwriteQueue.processOrders();
 
-            await this.evalQueue.processRetries();
-            await this.underwriteQueue.processRetries();
+            this.underwriteQueue.getFinishedOrders();
 
             await wait(this.config.processingInterval);
         }
