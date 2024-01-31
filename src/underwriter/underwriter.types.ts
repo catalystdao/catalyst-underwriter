@@ -1,4 +1,4 @@
-import { BytesLike, ContractTransactionResponse } from "ethers";
+import { BytesLike } from "ethers";
 
 
 export interface Order {
@@ -36,10 +36,12 @@ export interface UnderwriteOrder extends Order {
     requeueCount?: number;
 }
 
-export interface UnderwriteOrderResult extends UnderwriteOrder {
-    tx: ContractTransactionResponse;
-    replaceTx?: ContractTransactionResponse;
-    resubmit?: boolean;
+export interface PendingApproval {
+    isApproval: boolean;
+    interface: string;
+    asset: string;
+    setAllowance: bigint;
+    requiredAllowance: bigint;
 }
 
 

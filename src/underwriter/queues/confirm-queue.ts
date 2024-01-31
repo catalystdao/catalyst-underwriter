@@ -1,11 +1,16 @@
 import { HandleOrderResult, ProcessingQueue } from './processing-queue';
-import { AbstractProvider, Wallet } from 'ethers';
+import { AbstractProvider, ContractTransactionResponse, Wallet } from 'ethers';
 import pino from 'pino';
 import { TransactionHelper } from '../transaction-helper';
-import { UnderwriteOrderResult } from '../underwriter.types';
-import { CatalystChainInterface__factory } from 'src/contracts';
 
-export class ConfirmQueue extends ProcessingQueue<UnderwriteOrderResult, null> {
+export interface PendingTransaction<T = any> {
+    data: T,
+    tx: ContractTransactionResponse;    //TODO change to TransactionResponse
+    replaceTx?: ContractTransactionResponse;    //TODO change to TransactionResponse
+    confirmationError?: any;
+}
+
+export class ConfirmQueue extends ProcessingQueue<PendingTransaction, PendingTransaction> {
 
     constructor(
         readonly retryInterval: number,
@@ -27,14 +32,15 @@ export class ConfirmQueue extends ProcessingQueue<UnderwriteOrderResult, null> {
     async init(): Promise<void> {
     }
 
-    protected async onOrderInit(order: UnderwriteOrderResult): Promise<void> {
-        order.resubmit = false;
+    protected async onOrderInit(order: PendingTransaction): Promise<void> {
+        order.replaceTx = undefined;
+        order.confirmationError = undefined;
     }
 
     protected async handleOrder(
-        order: UnderwriteOrderResult,
+        order: PendingTransaction,
         retryCount: number,
-    ): Promise<HandleOrderResult<null> | null> {
+    ): Promise<HandleOrderResult<PendingTransaction> | null> {
         // If it's the first time the order is processed, just wait for it
         if (retryCount == 0) {
             const transactionReceipt = this.provider
@@ -43,7 +49,7 @@ export class ConfirmQueue extends ProcessingQueue<UnderwriteOrderResult, null> {
                     this.confirmations,
                     this.confirmationTimeout,
                 )
-                .then((_receipt) => null);
+                .then((_receipt) => order);
 
             return { result: transactionReceipt };
         }
@@ -52,25 +58,19 @@ export class ConfirmQueue extends ProcessingQueue<UnderwriteOrderResult, null> {
         if (!order.replaceTx) {
             // Reprice the order
             const originalTx = order.tx;
-            const interfaceContract = CatalystChainInterface__factory.connect(order.interfaceAddress, this.wallet);
 
             const increasedFeeConfig =
                 this.transactionHelper.getIncreasedFeeDataForTransaction(originalTx);
 
-            order.replaceTx = await interfaceContract.underwrite(    //TODO use underwriteAndCheckConnection
-                order.toVault,
-                order.toAsset,
-                order.units,
-                order.minOut,
-                order.toAccount,
-                order.underwriteIncentiveX16,
-                order.calldata,
-                {
-                    gasLimit: originalTx.gasLimit,
-                    nonce: originalTx.nonce,
-                    ...increasedFeeConfig,
-                },
-            );
+            order.replaceTx = await this.wallet.sendTransaction({
+                type: originalTx.type,
+                to: originalTx.to,
+                nonce: originalTx.nonce,
+                gasLimit: originalTx.gasLimit,
+                data: originalTx.data,
+                value: originalTx.value,
+                ...increasedFeeConfig,
+            }) as ContractTransactionResponse;
         }
 
         // Wait for either the original or the replace transaction to fulfill
@@ -89,7 +89,7 @@ export class ConfirmQueue extends ProcessingQueue<UnderwriteOrderResult, null> {
             originalTxReceipt,
             replaceTxReceipt,
         ]).then(
-            () => null,
+            () => order,
             (aggregateError) => {
                 // If both the original/replace tx promises reject, throw the error of the replace tx.
                 throw aggregateError.errors?.[1];
@@ -100,7 +100,7 @@ export class ConfirmQueue extends ProcessingQueue<UnderwriteOrderResult, null> {
     }
 
     protected async handleFailedOrder(
-        order: UnderwriteOrderResult,
+        order: PendingTransaction,
         retryCount: number,
         error: any,
     ): Promise<boolean> {
@@ -113,17 +113,13 @@ export class ConfirmQueue extends ProcessingQueue<UnderwriteOrderResult, null> {
     }
 
     private async handleFailedOriginalOrder(
-        order: UnderwriteOrderResult,
+        order: PendingTransaction,
         retryCount: number,
         error: any,
     ): Promise<boolean> {
 
-        //TODO add underwriteId to log? (note that this depends on the AMB implementation)
         const errorDescription = {
-            fromVault: order.fromVault,
-            fromChainId: order.fromChainId,
-            swapTxHash: order.swapTxHash,
-            swapId: order.swapIdentifier,
+            txHash: order.tx.hash,
             error,
             try: retryCount + 1
         };
@@ -137,53 +133,25 @@ export class ConfirmQueue extends ProcessingQueue<UnderwriteOrderResult, null> {
             return true;
         }
 
-        //TODO Improve error filtering?
-        //TODO  - If invalid allowance => should retry
-        //TODO  - If 'recentlyUnderwritten' => should not retry
-        // If tx errors with 'CALL_EXCEPTION', drop the order
-        if (error.code === 'CALL_EXCEPTION') {
-            this.logger.info(
-                errorDescription,
-                `Error on transaction confirmation: CALL_EXCEPTION. Dropping message.`,
-            );
-            return false; // Do not retry order confirmation
-        }
-
-        // If tx errors because of an invalid nonce, requeue the order for submission
-        if (
-            error.code === 'NONCE_EXPIRED' ||
-            error.code === 'REPLACEMENT_UNDERPRICED' ||
-            error.error?.message.includes('invalid sequence') //TODO is this dangerous? (any contract may include that error)
-        ) {
-            this.logger.info(
-                errorDescription,
-                `Error on transaction confirmation: nonce error. Requeue order for submission if possible.`,
-            );
-            order.resubmit = true;
-            return false; // Do not retry order confirmation
-        }
-
         // Unknown error on confirmation. Requeue the order for submission
         this.logger.warn(
             errorDescription,
             `Error on transaction confirmation. Requeue order for submission if possible.`,
         );
-        order.resubmit = true;
+        order.confirmationError = error;
         return false; // Do not retry order confirmation
     }
 
     private async handleFailedRepricedOrder(
-        order: UnderwriteOrderResult,
+        order: PendingTransaction,
         retryCount: number,
         error: any,
     ): Promise<boolean> {
+
         const errorDescription = {
-            fromVault: order.fromVault,
-            fromChainId: order.fromChainId,
-            swapTxHash: order.swapTxHash,
-            swapId: order.swapIdentifier,
+            txHash: order.tx.hash,
+            repricedTxHash: order.replaceTx?.hash,
             error,
-            requeueCount: order.requeueCount,
             try: retryCount + 1
         };
 
@@ -196,40 +164,13 @@ export class ConfirmQueue extends ProcessingQueue<UnderwriteOrderResult, null> {
             return true;
         }
 
-        // If tx errors with 'REPLACEMENT_UNDERPRICED', retry the order, as the original tx may still be pending.
+        // If tx errors with 'REPLACEMENT_UNDERPRICED', retry the order, as the original tx may still resolve.
         if (error.code === 'REPLACEMENT_UNDERPRICED') {
             this.logger.warn(
                 errorDescription,
-                `Error on repriced transaction confirmation: REPLACEMENT_UNDERPRICED. Keep waiting until tx is rejected.`,
+                `Error on repriced transaction confirmation: REPLACEMENT_UNDERPRICED. Keep waiting until original tx is rejected.`,
             );
             return true;
-        }
-
-        //TODO Improve error filtering?
-        //TODO  - If invalid allowance => should retry
-        //TODO  - If 'recentlyUnderwritten' => should not retry
-        // If tx errors with 'CALL_EXCEPTION', drop the order
-        if (error.code === 'CALL_EXCEPTION') {
-            this.logger.info(
-                errorDescription,
-                `Error on repriced transaction confirmation: CALL_EXCEPTION. Dropping message.`,
-            );
-            return false; // Do not retry order confirmation
-        }
-
-        // If tx errors because of an invalid nonce, requeue the order for submission
-        // NOTE: it is possible for this error to occur because of the original tx being accepted. In
-        // that case, the order will error on the submitter.
-        if (
-            error.code === 'NONCE_EXPIRED' ||
-            error.error?.message.includes('invalid sequence') //TODO is this dangerous? (any contract may include that error)
-        ) {
-            this.logger.info(
-                errorDescription,
-                `Error on transaction confirmation: nonce error. Requeue order for submission if possible.`,
-            );
-            order.resubmit = true;
-            return false; // Do not retry order confirmation
         }
 
         // Unknown error on confirmation, keep waiting
@@ -241,16 +182,14 @@ export class ConfirmQueue extends ProcessingQueue<UnderwriteOrderResult, null> {
     }
 
     protected async onOrderCompletion(
-        order: UnderwriteOrderResult,
+        order: PendingTransaction,
         success: boolean,
         result: null,
         retryCount: number,
     ): Promise<void> {
         const orderDescription = {
-            originalTxHash: order.tx.hash,
-            replaceTxHash: order.replaceTx?.hash,
-            resubmit: order.resubmit,
-            requeueCount: order.requeueCount,
+            txHash: order.tx.hash,
+            repricedTxHash: order.replaceTx?.hash,
             try: retryCount + 1,
         };
 

@@ -7,11 +7,12 @@ import { PoolConfig } from "src/config/config.service";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
 import { SwapDescription } from "src/store/store.types";
-import { EvalOrder, GasFeeConfig, NewOrder, Order, UnderwriteOrder, UnderwriteOrderResult } from "./underwriter.types";
+import { EvalOrder, GasFeeConfig, NewOrder, Order, PendingApproval, UnderwriteOrder } from "./underwriter.types";
 import { EvalQueue } from "./queues/eval-queue";
 import { UnderwriteQueue } from "./queues/underwrite-queue";
 import { TransactionHelper } from "./transaction-helper";
-import { ConfirmQueue } from "./queues/confirm-queue";
+import { ConfirmQueue, PendingTransaction } from "./queues/confirm-queue";
+import { ApprovalHandler } from "./approval-handler";
 
 
 class UnderwriterWorker {
@@ -29,6 +30,7 @@ class UnderwriterWorker {
     readonly pools: PoolConfig[];
 
     readonly transactionHelper: TransactionHelper;
+    readonly approvalHandler: ApprovalHandler;
 
     readonly newOrdersQueue: NewOrder<EvalOrder>[] = [];
     readonly evalQueue: EvalQueue;
@@ -60,6 +62,14 @@ class UnderwriterWorker {
           this.provider,
           this.signer,
           this.logger,
+        );
+
+        this.approvalHandler = new ApprovalHandler(
+          this.config.retryInterval,
+          this.config.maxTries,
+          this.transactionHelper,
+          this.signer,
+          this.logger
         );
 
         [this.evalQueue, this.underwriteQueue, this.confirmQueue] = this.initializeQueues(
@@ -198,6 +208,9 @@ class UnderwriterWorker {
             await this.evalQueue.processOrders();
 
             const [newUnderwriteOrders, ,] = this.evalQueue.getFinishedOrders();
+            const approvalTransactions = await this.approvalHandler.updateAllowances(...newUnderwriteOrders);
+            await this.confirmQueue.addOrders(...approvalTransactions);
+
             await this.underwriteQueue.addOrders(...newUnderwriteOrders);
             await this.underwriteQueue.processOrders();
 
@@ -205,11 +218,11 @@ class UnderwriterWorker {
             await this.confirmQueue.addOrders(...toConfirmSubmitOrders);
             await this.confirmQueue.processOrders();
 
-            const [, unconfirmedSubmitOrders, rejectedSubmitOrders] =
+            const [confirmedSubmitOrders, unconfirmedSubmitOrders, rejectedSubmitOrders] =
               this.confirmQueue.getFinishedOrders();
       
+            await this.handleConfirmedSubmitOrders(confirmedSubmitOrders);
             await this.handleUnconfirmedSubmitOrders(unconfirmedSubmitOrders);
-      
             await this.handleRejectedSubmitOrders(rejectedSubmitOrders);
 
             await wait(this.config.processingInterval);
@@ -217,56 +230,172 @@ class UnderwriterWorker {
     }
 
     private async handleUnconfirmedSubmitOrders(
-      unconfirmedSubmitOrders: UnderwriteOrderResult[],
+      unconfirmedSubmitOrders: PendingTransaction[],
     ): Promise<void> {
+
       for (const unconfirmedOrder of unconfirmedSubmitOrders) {
-        if (unconfirmedOrder.resubmit) {
-          const requeueCount = unconfirmedOrder.requeueCount ?? 0;
-          if (requeueCount >= this.config.maxTries - 1) {
-            const orderDescription = {
-              originalTxHash: unconfirmedOrder.tx.hash,
-              replaceTxHash: unconfirmedOrder.replaceTx?.hash,
-              resubmit: unconfirmedOrder.resubmit,
-              requeueCount: requeueCount,
-            };
-  
-            this.logger.warn(
-              orderDescription,
-              `Transaction confirmation failure. Maximum number of requeues reached. Dropping message.`,
-            );
-            continue;
-          }
-  
-          const requeueOrder: UnderwriteOrder = {
-            poolId: unconfirmedOrder.poolId,
-            fromChainId: unconfirmedOrder.fromChainId,
-            fromVault: unconfirmedOrder.fromVault,
-            swapTxHash: unconfirmedOrder.swapTxHash,
-            swapIdentifier: unconfirmedOrder.swapIdentifier,
-            channelId: unconfirmedOrder.channelId,
-            toVault: unconfirmedOrder.toVault,
-            toAccount: unconfirmedOrder.toAccount,
-            fromAsset: unconfirmedOrder.fromAsset,
-            toAssetIndex: unconfirmedOrder.toAssetIndex,
-            fromAmount: unconfirmedOrder.fromAmount,
-            minOut: unconfirmedOrder.minOut,
-            units: unconfirmedOrder.units,
-            fee: unconfirmedOrder.fee,
-            underwriteIncentiveX16: unconfirmedOrder.underwriteIncentiveX16,
-            toAsset: unconfirmedOrder.toAsset,
-            toAssetAllowance: unconfirmedOrder.toAssetAllowance,
-            interfaceAddress: unconfirmedOrder.interfaceAddress,
-            calldata: unconfirmedOrder.calldata,
-            gasLimit: unconfirmedOrder.gasLimit,
-            requeueCount: requeueCount + 1,
-          };
-          await this.underwriteQueue.addOrders(requeueOrder);
+        if (unconfirmedOrder.data?.isApproval != null) {
+          await this.handleUnconfirmedApproval(unconfirmedOrder);
+        } else {
+          await this.handleUnconfirmedUnderwrite(unconfirmedOrder);
         }
       }
     }
+
+    private async handleUnconfirmedApproval(unconfirmedOrder: PendingTransaction) {
+      const pendingApproval = unconfirmedOrder.data as PendingApproval;
+
+      // Decrease the registered 'set' allowance, so that a new approval order is executed on the
+      // next 'run()' loop.
+      this.approvalHandler.registerSetAllowanceDecrease(
+        pendingApproval.interface,
+        pendingApproval.asset,
+        pendingApproval.requiredAllowance - pendingApproval.setAllowance
+      );
+    }
+
+    private async handleUnconfirmedUnderwrite(unconfirmedOrder: PendingTransaction) {
+
+      const underwriteOrder = unconfirmedOrder.data as UnderwriteOrder;
+      const resubmitUnderwrite = this.processConfirmationError(
+        unconfirmedOrder
+      );
+
+      if (resubmitUnderwrite) {
+        const requeueCount = underwriteOrder.requeueCount ?? 0;
+        if (requeueCount >= this.config.maxTries - 1) {
+          const orderDescription = {
+            originalTxHash: unconfirmedOrder.tx.hash,
+            replaceTxHash: unconfirmedOrder.replaceTx?.hash,
+            requeueCount: requeueCount,
+          };
+          
+          this.approvalHandler.registerRequiredAllowanceDecrease(
+            underwriteOrder.interfaceAddress,
+            underwriteOrder.toAsset,
+            underwriteOrder.toAssetAllowance
+          );
+
+          this.logger.warn(
+            orderDescription,
+            `Transaction confirmation failure. Maximum number of requeues reached. Dropping message.`,
+          );
+          return;
+        }
+
+        const requeueOrder: UnderwriteOrder = {
+          poolId: underwriteOrder.poolId,
+          fromChainId: underwriteOrder.fromChainId,
+          fromVault: underwriteOrder.fromVault,
+          swapTxHash: underwriteOrder.swapTxHash,
+          swapIdentifier: underwriteOrder.swapIdentifier,
+          channelId: underwriteOrder.channelId,
+          toVault: underwriteOrder.toVault,
+          toAccount: underwriteOrder.toAccount,
+          fromAsset: underwriteOrder.fromAsset,
+          toAssetIndex: underwriteOrder.toAssetIndex,
+          fromAmount: underwriteOrder.fromAmount,
+          minOut: underwriteOrder.minOut,
+          units: underwriteOrder.units,
+          fee: underwriteOrder.fee,
+          underwriteIncentiveX16: underwriteOrder.underwriteIncentiveX16,
+          toAsset: underwriteOrder.toAsset,
+          toAssetAllowance: underwriteOrder.toAssetAllowance,
+          interfaceAddress: underwriteOrder.interfaceAddress,
+          calldata: underwriteOrder.calldata,
+          gasLimit: underwriteOrder.gasLimit,
+          requeueCount: requeueCount + 1,
+        };
+        await this.underwriteQueue.addOrders(requeueOrder);
+      } else {
+        this.approvalHandler.registerRequiredAllowanceDecrease(
+          underwriteOrder.interfaceAddress,
+          underwriteOrder.toAsset,
+          underwriteOrder.toAssetAllowance
+        )
+      }
+
+    }
+
+    private async handleConfirmedSubmitOrders(
+      confirmedSubmitOrders: PendingTransaction[],
+    ): Promise<void> {
+
+      for (const confirmedOrder of confirmedSubmitOrders) {
+        // Ignore 'approval' transactions
+        if (confirmedOrder.data?.isApproval != null) continue;
+
+        const underwriteOrder = confirmedOrder.data as UnderwriteOrder;
+        this.approvalHandler.registerAllowanceUse(
+          underwriteOrder.interfaceAddress,
+          underwriteOrder.toAsset,
+          underwriteOrder.toAssetAllowance
+        );
+
+        //TODO add underwriteId to log? (note that this depends on the AMB implementation)
+        const orderDescription = {
+          fromVault: underwriteOrder.fromVault,
+          fromChainId: underwriteOrder.fromChainId,
+          swapTxHash: underwriteOrder.swapTxHash,
+          swapId: underwriteOrder.swapIdentifier,
+          originalTxHash: confirmedOrder.tx.hash,
+          replaceTxHash: confirmedOrder.replaceTx?.hash,
+        };
+
+        this.logger.debug(
+            orderDescription,
+            `Successful underwrite processing: underwrite submitted.`,
+        );
+      }
+    }
+
+    // Returns whether to resubmit the order
+    private processConfirmationError(unconfirmedOrder: PendingTransaction): boolean {
+      const error = unconfirmedOrder.confirmationError;
+      const underwriteOrder = unconfirmedOrder.data as UnderwriteOrder;
+
+      if (error == null) return false;
+
+      const errorDescription = {
+        fromVault: underwriteOrder.fromVault,
+        fromChainId: underwriteOrder.fromChainId,
+        swapTxHash: underwriteOrder.swapTxHash,
+        swapId: underwriteOrder.swapIdentifier,
+        underwriteTxHash: unconfirmedOrder.replaceTx?.hash ?? unconfirmedOrder.tx.hash
+      };
+      
+      //TODO Improve error filtering?
+      //TODO  - If invalid allowance => should retry
+      //TODO  - If 'recentlyUnderwritten' => should not retry
+      // If tx errors with 'CALL_EXCEPTION', drop the order
+      if (error.code === 'CALL_EXCEPTION') {
+        this.logger.info(
+            errorDescription,
+            `Error on transaction confirmation: CALL_EXCEPTION. Dropping message.`,
+        );
+        return false; // Do not resubmit
+      }
+
+      // If tx errors because of an invalid nonce, requeue the order for submission
+      // NOTE: it is possible for this error to occur because of the original tx being accepted. In
+      // that case, the order will error on the submitter.
+      if (
+          error.code === 'NONCE_EXPIRED' ||
+          error.code === 'REPLACEMENT_UNDERPRICED' ||
+          error.error?.message.includes('invalid sequence') //TODO is this dangerous? (any contract may include that error)
+      ) {
+          this.logger.info(
+              errorDescription,
+              `Error on transaction confirmation: nonce error. Requeue order for submission if possible.`,
+          );
+          return true;
+      }
+
+      return false;
+    }
   
     private async handleRejectedSubmitOrders(
-      rejectedSubmitOrders: UnderwriteOrderResult[],
+      rejectedSubmitOrders: PendingTransaction[],
     ): Promise<void> {
       for (const rejectedOrder of rejectedSubmitOrders) {
         await this.cancelTransaction(rejectedOrder.tx);
