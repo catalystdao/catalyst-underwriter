@@ -142,13 +142,13 @@ class ListenerWorker {
             `Listener worker started.`
         );
 
-        let startBlock = this.config.startingBlock ?? (await this.provider.getBlockNumber());
+        let startBlock = this.config.startingBlock ?? ((await this.provider.getBlockNumber()) - this.config.blockDelay);
 
         await wait(this.config.interval);
 
         while (true) {
             try {
-                let endBlock = await this.provider.getBlockNumber();
+                let endBlock = (await this.provider.getBlockNumber()) - this.config.blockDelay;
                 if (startBlock > endBlock || !endBlock) {
                     await wait(this.config.interval);
                     continue;
