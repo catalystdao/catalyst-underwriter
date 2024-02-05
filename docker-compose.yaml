@@ -1,10 +1,4 @@
 services:
-  redis:
-    image: redis:latest
-    container_name: redis
-    expose:
-      - ${REDIS_PORT}:${REDIS_PORT}
-    attach: false
 
   underwriter:
     build:
@@ -18,5 +12,9 @@ services:
       - USE_DOCKER=true
     container_name: underwriter
     restart: unless-stopped
-    depends_on:
-      - redis
+    networks:
+      - generalisedrelayer_default
+
+networks:
+  generalisedrelayer_default:
+    external: true
