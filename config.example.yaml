@@ -1,0 +1,68 @@
+# Global Underwriter configuration
+underwriter:  #TODO change name (currently confusing with the other 'underwriter' key)
+  privateKey: ""      # The privateKey of the account that will be submitting the underwrites
+  logLevel: "debug"
+  blockDelay: 5       # Delay with which to process the chain blocks
+
+  listener:
+    interval: 5000    # Interval at which to poll the chains RPCs for new events
+    maxBlocks: 1000   # Maximum number of blocks to query in a single call
+
+  underwriter:
+    retryInterval: 2000         # Time to wait before retrying a failed transaction
+    processingInterval: 100     # Throttle for the Submitter main 'run' loop
+    maxTries: 3                 # Maximum tries for a transaction
+    maxPendingTransactions: 50  # Maximum number of transactions within the 'underwrite' pipeline
+    confirmationTimeout: 30000  # Timeout for a transaction to confirm
+
+# The AMBs configuration
+# TODO the AMB configuration placement is inconsistent with the Relayer
+ambs:
+  - name: mock
+
+# Chain configuration
+chains:
+
+  - chainId: 80001
+    name: "Mumbai"
+    rpc: "https://polygon-mumbai-pokt.nodies.app"
+
+    # startingBlock   # The block number at which to start Relaying #TODO do we want this?
+
+    underwriter:
+      # rpc: "https://polygon-mumbai-bor.publicnode.com"  # RPC used specifically for underwriting. Defaults to the 'listener' rpc if not provided
+
+    # Overrides
+    listener:
+      interval: 3000
+    underwriter:
+      retryInterval: 3000
+  
+
+  - chainId: 11155111 
+    name: "Sepolia"
+    rpc: "https://eth-sepolia-public.unifra.io"
+    wormhole:
+      wormholeChainId: 10002
+
+# Pools to underwrite configuration
+pools:
+  - id: 0           # The id given to the vault (for logs only)
+    name: "Pool A"  # The name given to the vault (for logs only)
+    amb: "mock"     # The AMB used for the Pool
+    vaults:
+      - name: "Sepolia Test Vault"    # The vault name (for logs only)
+        chainId: 11155111             # The chain id in which the vault resides on
+        vaultAddress: "0x6243df63dc7e97a5968578e9ae35008af3ec69df"      # The vault address
+        interfaceAddress: "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"  # The interface address
+
+        # Mappings between the bytes32 channel id values used by the vault and the destination chain ids.
+        channels:
+          "0x0000000000000000000000000000000000000000000000000000000000013881": 80001
+
+      - name: "Mumbai Test Vault"
+        chainId: 80001
+        vaultAddress: "0x6243df63dc7e97a5968578e9ae35008af3ec69df"
+        interfaceAddress: "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
+        channels:
+          "0x0000000000000000000000000000000000000000000000000000000000AA36A7": 11155111
