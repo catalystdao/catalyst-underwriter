@@ -1,4 +1,4 @@
-import { JsonRpcProvider, Wallet, Provider, AbstractProvider, ContractTransactionResponse, ZeroAddress } from "ethers";
+import { JsonRpcProvider, Wallet, Provider, AbstractProvider, ZeroAddress, TransactionResponse } from "ethers";
 import pino, { LoggerOptions } from "pino";
 import { workerData } from 'worker_threads';
 import { UnderwriterWorkerData } from "./underwriter.service";
@@ -403,7 +403,7 @@ class UnderwriterWorker {
     }
   
     // This function does not return until the transaction of the given nonce is mined!
-    private async cancelTransaction(baseTx: ContractTransactionResponse): Promise<void> {
+    private async cancelTransaction(baseTx: TransactionResponse): Promise<void> {
       const cancelTxNonce = baseTx.nonce;
       if (cancelTxNonce == undefined) {
         // This point should never be reached.

@@ -1,12 +1,12 @@
 import { HandleOrderResult, ProcessingQueue } from './processing-queue';
-import { AbstractProvider, ContractTransactionResponse, Wallet } from 'ethers';
+import { AbstractProvider, TransactionResponse, Wallet } from 'ethers';
 import pino from 'pino';
 import { TransactionHelper } from '../transaction-helper';
 
 export interface PendingTransaction<T = any> {
     data: T,
-    tx: ContractTransactionResponse;    //TODO change to TransactionResponse
-    replaceTx?: ContractTransactionResponse;    //TODO change to TransactionResponse
+    tx: TransactionResponse;
+    replaceTx?: TransactionResponse;
     confirmationError?: any;
 }
 
@@ -70,7 +70,7 @@ export class ConfirmQueue extends ProcessingQueue<PendingTransaction, PendingTra
                 data: originalTx.data,
                 value: originalTx.value,
                 ...increasedFeeConfig,
-            }) as ContractTransactionResponse;
+            });
         }
 
         // Wait for either the original or the replace transaction to fulfill

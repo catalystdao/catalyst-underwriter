@@ -1,5 +1,5 @@
 //TODO replace this file with an import from the GeneralisedRelayer once 1) relayer is made public 2) relayer is updated to ethers 6
-import { AbstractProvider, ContractTransactionResponse, FeeData, Wallet } from 'ethers';
+import { AbstractProvider, FeeData, TransactionResponse, Wallet } from 'ethers';
 import pino from 'pino';
 import { GasFeeConfig, GasFeeOverrides } from './underwriter.types';
 
@@ -227,7 +227,7 @@ export class TransactionHelper {
   }
 
   getIncreasedFeeDataForTransaction(
-    originalTx: ContractTransactionResponse,
+    originalTx: TransactionResponse,
   ): GasFeeOverrides {
     const priorityFees = this.getFeeDataForTransaction(true);
 
