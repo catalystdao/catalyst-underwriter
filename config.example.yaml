@@ -9,11 +9,11 @@ global:
     maxBlocks: 1000   # Maximum number of blocks to query in a single call
 
   underwriter:
-    retryInterval: 2000         # Time to wait before retrying a failed transaction
+    retryInterval: 30000        # Time to wait before retrying a failed transaction
     processingInterval: 100     # Throttle for the Submitter main 'run' loop
     maxTries: 3                 # Maximum tries for a transaction
     maxPendingTransactions: 50  # Maximum number of transactions within the 'underwrite' pipeline
-    confirmationTimeout: 30000  # Timeout for a transaction to confirm
+    confirmationTimeout: 90000  # Timeout for a transaction to confirm
 
     # EIP-1559 Transactions
     maxFeePerGas: "200000000000"                 # 'maxFeePerGas' set for all transactions (for chains that support eip-1559)

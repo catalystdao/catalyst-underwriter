@@ -5,12 +5,12 @@ import { Worker } from 'worker_threads';
 import { ConfigService, PoolConfig } from 'src/config/config.service';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 
-const DEFAULT_UNDERWRITER_RETRY_INTERVAL = 2000;
+const DEFAULT_UNDERWRITER_RETRY_INTERVAL = 30000;
 const DEFAULT_UNDERWRITER_PROCESSING_INTERVAL = 100;
 const DEFAULT_UNDERWRITER_MAX_TRIES = 3;
-const DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS = 100;
+const DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS = 50;
 const DEFAULT_UNDERWRITER_CONFIRMATIONS = 1;
-const DEFAULT_UNDERWRITER_CONFIRMATION_TIMEOUT = 10 * 60000;
+const DEFAULT_UNDERWRITER_CONFIRMATION_TIMEOUT = 60000;
 
 interface DefaultUnderwriterWorkerData {
     retryInterval: number;
