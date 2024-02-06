@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import * as yaml from 'js-yaml';
 import dotenv from 'dotenv';
 
-export interface UnderwriterConfig {
+export interface GlobalConfig {
   port: number;
   privateKey: string;
   logLevel?: string;
@@ -76,7 +76,7 @@ export class ConfigService {
 
   readonly nodeEnv: string;
 
-  readonly underwriterConfig: UnderwriterConfig;
+  readonly globalConfig: GlobalConfig;
   readonly chainsConfig: Map<string, ChainConfig>;
   readonly ambsConfig: Map<string, AMBConfig>;
   readonly poolsConfig: Map<string, PoolConfig>;
@@ -87,7 +87,7 @@ export class ConfigService {
     this.loadEnvFile();
     this.rawConfig = this.loadConfigFile();
 
-    this.underwriterConfig = this.loadUnderwriterConfig();
+    this.globalConfig = this.loadGlobalConfig();
     this.chainsConfig = this.loadChainsConfig();
     this.ambsConfig = this.loadAMBsConfig();
 
@@ -127,31 +127,31 @@ export class ConfigService {
     return yaml.load(rawConfig) as Record<string, any>;
   }
 
-  private loadUnderwriterConfig(): UnderwriterConfig {
-    const rawUnderwriterConfig = this.rawConfig.underwriter;
-    if (rawUnderwriterConfig == undefined) {
+  private loadGlobalConfig(): GlobalConfig {
+    const rawGlobalConfig = this.rawConfig.global;
+    if (rawGlobalConfig == undefined) {
       throw new Error(
-        "'underwriter' configuration missing on the configuration file",
+        "'global' configuration missing on the configuration file",
       );
     }
 
-    if (rawUnderwriterConfig.privateKey == undefined) {
-      throw new Error("Invalid underwriter configuration: 'privateKey' missing.");
+    if (rawGlobalConfig.privateKey == undefined) {
+      throw new Error("Invalid global configuration: 'privateKey' missing.");
     }
 
     if (process.env.UNDERWRITER_PORT == undefined) {
       throw new Error(
-        "Invalid underwriter configuration: environment variable 'UNDERWRITER_PORT' missing",
+        "Invalid configuration: environment variable 'UNDERWRITER_PORT' missing",
       );
     }
 
     return {
       port: parseInt(process.env.UNDERWRITER_PORT),
-      privateKey: rawUnderwriterConfig.privateKey,
-      logLevel: rawUnderwriterConfig.logLevel,
-      blockDelay: rawUnderwriterConfig.blockDelay,
-      listener: rawUnderwriterConfig.listener ?? {},
-      underwriter: rawUnderwriterConfig.underwriter ?? {}
+      privateKey: rawGlobalConfig.privateKey,
+      logLevel: rawGlobalConfig.logLevel,
+      blockDelay: rawGlobalConfig.blockDelay,
+      listener: rawGlobalConfig.listener ?? {},
+      underwriter: rawGlobalConfig.underwriter ?? {}
     };
   }
 

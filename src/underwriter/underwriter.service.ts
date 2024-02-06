@@ -92,8 +92,7 @@ export class UnderwriterService implements OnModuleInit {
     }
 
     private loadDefaultWorkerConfig(): DefaultUnderwriterWorkerData {
-        const underwriterConfig = this.configService.underwriterConfig;
-        const globalUnderwriterConfig = underwriterConfig.underwriter;
+        const globalUnderwriterConfig = this.configService.globalConfig.underwriter;
 
         const retryInterval = globalUnderwriterConfig.retryInterval ?? DEFAULT_UNDERWRITER_RETRY_INTERVAL;
         const processingInterval = globalUnderwriterConfig.processingInterval ?? DEFAULT_UNDERWRITER_PROCESSING_INTERVAL;
@@ -140,7 +139,7 @@ export class UnderwriterService implements OnModuleInit {
             maxPendingTransactions: chainUnderwriterConfig.maxPendingTransactions ?? defaultConfig.maxPendingTransactions,
             confirmations: chainUnderwriterConfig.confirmations ?? defaultConfig.confirmations,
             confirmationTimeout: chainUnderwriterConfig.confirmationTimeout ?? defaultConfig.confirmationTimeout,
-            privateKey: this.configService.underwriterConfig.privateKey,
+            privateKey: this.configService.globalConfig.privateKey,
             gasLimitBuffer: { default: 0, ...chainUnderwriterConfig.gasLimitBuffer},
             gasPriceAdjustmentFactor: chainUnderwriterConfig.gasPriceAdjustmentFactor,
             maxAllowedGasPrice: chainUnderwriterConfig.maxAllowedGasPrice,

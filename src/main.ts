@@ -9,8 +9,8 @@ async function logLoadedOptions(
 ) {
   // Log the loaded configuration
   loggerService.info(
-    { config: configService.underwriterConfig },
-    `Loaded underwriter configuration (${configService.nodeEnv})`,
+    { config: configService.globalConfig },
+    `Loaded global configuration (${configService.nodeEnv})`,
   );
   loggerService.info(
     { config: Object.fromEntries(configService.chainsConfig.entries()) },
@@ -34,7 +34,7 @@ async function bootstrap() {
 
   await logLoadedOptions(configService, loggerService);
 
-  await app.listen(configService.underwriterConfig.port);
+  await app.listen(configService.globalConfig.port);
 }
 
 void bootstrap();

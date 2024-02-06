@@ -20,13 +20,13 @@ Most of the Underwriter configuration is specified within a `.yaml` file located
 > The `NODE_ENV` variable should ideally be set on the shell configuration file (i.e. `.bashrc` or equivalent), but may also be set by prepending it to the launch command, e.g. `NODE_ENV=production docker compose up`. For more information see the [Node documentation](https://nodejs.org/en/learn/getting-started/nodejs-the-difference-between-development-and-production).
 
 The `.yaml` configuration file is divided into the following sections:
-- `underwriter`: Defines the global underwriter configuration. (TODO rename)
+- `global`: Defines the global underwriter configuration.
     - The `privateKey` of the account that will submit the underwrite transactions on all chains must be defined at this point. 
     - Default configuration for the `underwriter` can also be specified at this point.
 - `ambs`: The AMBs configuration. (TODO the AMB configuration placement is inconsistent with the Relayer)
 - `chains`: Defines the configuration for each of the chains to be supported by the relayer.
     - This includes the `chainId` and the `rpc` to be used for the chain.
-    - Each chain may override the global `underwriter` configuration (those defined under the global `underwriter` configuration), and `amb` configurations.
+    - Each chain may override the global `underwriter` configuration (those defined under the `global` configuration), and `amb` configurations.
 - `pools`: The Catalyst pools of which swaps to underwrite.
     - For each vault, the `vaultAddress` and `interfaceAddress` must be specified, and also the mapping between the vault's `bytes32` channel ids to the destination `chainId`s (for all the vault's channel ids).
 

@@ -83,10 +83,10 @@ export class ListenerService implements OnModuleInit {
     }
 
     private loadDefaultWorkerConfig(): DefaultListenerWorkerData {
-        const underwriterConfig = this.configService.underwriterConfig;
-        const globalListenerConfig = underwriterConfig.listener;
+        const globalConfig = this.configService.globalConfig;
+        const globalListenerConfig = globalConfig.listener;
 
-        const blockDelay = underwriterConfig.blockDelay ?? DEFAULT_LISTENER_BLOCK_DELAY;
+        const blockDelay = globalConfig.blockDelay ?? DEFAULT_LISTENER_BLOCK_DELAY;
         const interval = globalListenerConfig.interval ?? DEFAULT_LISTENER_INTERVAL;
         const maxBlocks = globalListenerConfig.maxBlocks ?? DEFAULT_LISTENER_MAX_BLOCKS;
 
