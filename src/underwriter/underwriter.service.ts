@@ -151,12 +151,20 @@ export class UnderwriterService implements OnModuleInit {
             chainName: chainConfig.name,
             pools: filteredPools,
             rpc: chainUnderwriterConfig.rpc ?? chainConfig.rpc,
+
             retryInterval: chainUnderwriterConfig.retryInterval ?? defaultConfig.retryInterval,
-            processingInterval: chainUnderwriterConfig.processingInterval ?? defaultConfig.processingInterval,
+            processingInterval:
+                chainUnderwriterConfig.processingInterval ??
+                defaultConfig.processingInterval,
             maxTries: chainUnderwriterConfig.maxTries ?? defaultConfig.maxTries,
-            maxPendingTransactions: chainUnderwriterConfig.maxPendingTransactions ?? defaultConfig.maxPendingTransactions,
+            maxPendingTransactions:
+                chainUnderwriterConfig.maxPendingTransactions
+                ?? defaultConfig.maxPendingTransactions,
             confirmations: chainUnderwriterConfig.confirmations ?? defaultConfig.confirmations,
-            confirmationTimeout: chainUnderwriterConfig.confirmationTimeout ?? defaultConfig.confirmationTimeout,
+            confirmationTimeout:
+                chainUnderwriterConfig.confirmationTimeout ??
+                defaultConfig.confirmationTimeout,
+
             privateKey: this.configService.globalConfig.privateKey,
             
             maxFeePerGas:
