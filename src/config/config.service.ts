@@ -8,24 +8,8 @@ export interface GlobalConfig {
   privateKey: string;
   logLevel?: string;
   blockDelay?: number;
-  listener: {
-    interval?: number;
-    maxBlocks?: number;
-  };
-  underwriter: {
-    retryInterval?: number;
-    processingInterval?: number;
-    maxTries?: number;
-    maxPendingTransactions?: number;
-    confirmations?: number;
-    confirmationTimeout?: number;
-    maxFeePerGas?: number | string;
-    maxAllowedPriorityFeePerGas?: number | string;
-    maxPriorityFeeAdjustmentFactor?: number;
-    maxAllowedGasPrice?: number | string;
-    gasPriceAdjustmentFactor?: number;
-    priorityAdjustmentFactor?: number;
-  };
+  listener: ListenerGlobalConfig;
+  underwriter: UnderwriterGlobalConfig;
 }
 
 export interface AMBConfig {
@@ -39,25 +23,34 @@ export interface ChainConfig {
   rpc: string;
   startingBlock?: number;
   blockDelay?: number;
-  listener: {
-    interval: number;
-    maxBlocks: number;
-  },
-  underwriter: {
-    rpc?: string;
-    retryInterval?: number;
-    processingInterval?: number;
-    maxTries?: number;
-    maxPendingTransactions?: number;
-    confirmations?: number;
-    confirmationTimeout?: number;
-    maxFeePerGas?: number | string;
-    maxAllowedPriorityFeePerGas?: number | string;
-    maxPriorityFeeAdjustmentFactor?: number;
-    maxAllowedGasPrice?: number | string;
-    gasPriceAdjustmentFactor?: number;
-    priorityAdjustmentFactor?: number;
-  }
+  listener: ListenerConfig,
+  underwriter: UnderwriterConfig
+}
+
+export interface ListenerGlobalConfig {
+  interval?: number;
+  maxBlocks?: number;
+}
+
+export interface ListenerConfig extends ListenerGlobalConfig {}
+
+export interface UnderwriterGlobalConfig {
+  retryInterval?: number;
+  processingInterval?: number;
+  maxTries?: number;
+  maxPendingTransactions?: number;
+  confirmations?: number;
+  confirmationTimeout?: number;
+  maxFeePerGas?: number | string;
+  maxAllowedPriorityFeePerGas?: number | string;
+  maxPriorityFeeAdjustmentFactor?: number;
+  maxAllowedGasPrice?: number | string;
+  gasPriceAdjustmentFactor?: number;
+  priorityAdjustmentFactor?: number;
+}
+
+export interface UnderwriterConfig extends UnderwriterGlobalConfig {
+  rpc?: string;
 }
 
 export interface PoolConfig {
