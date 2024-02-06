@@ -134,8 +134,8 @@ export class ConfirmQueue extends ProcessingQueue<PendingTransaction, ConfirmedT
         retryCount: number,
         error: any,
     ): Promise<boolean> {
-        // ! This logic only runs if the tx has **not** been repriced.
         if (retryCount == 0) {
+            // ! This logic only runs if the tx has **not** been repriced.
             return this.handleFailedOriginalOrder(order, retryCount, error);
         } else {
             return this.handleFailedRepricedOrder(order, retryCount, error);
@@ -163,7 +163,7 @@ export class ConfirmQueue extends ProcessingQueue<PendingTransaction, ConfirmedT
             return true;
         }
 
-        // Unknown error on confirmation. Requeue the order for submission
+        // Unknown error on confirmation.
         this.logger.warn(
             errorDescription,
             `Error on transaction confirmation. Requeue order for submission if possible.`,
