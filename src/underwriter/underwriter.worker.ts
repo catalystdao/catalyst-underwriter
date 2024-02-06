@@ -326,6 +326,9 @@ class UnderwriterWorker {
         if (confirmedOrder.data?.isApproval != null) continue;
 
         const underwriteOrder = confirmedOrder.data as UnderwriteOrder;
+        // Registering the 'use' of 'toAssetAllowance is an approximation, as the allowance is an
+        // overestimate. Thus, in practice a small allowance will be left for the interface. This
+        // leftover will be removed once a new allowance for other orders is set. 
         this.approvalHandler.registerAllowanceUse(
           underwriteOrder.interfaceAddress,
           underwriteOrder.toAsset,
