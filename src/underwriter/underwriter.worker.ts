@@ -11,7 +11,7 @@ import { EvalOrder, GasFeeConfig, NewOrder, Order, PendingApproval, UnderwriteOr
 import { EvalQueue } from "./queues/eval-queue";
 import { UnderwriteQueue } from "./queues/underwrite-queue";
 import { TransactionHelper } from "./transaction-helper";
-import { ConfirmQueue, PendingTransaction } from "./queues/confirm-queue";
+import { ConfirmQueue, ConfirmedTransaction, PendingTransaction } from "./queues/confirm-queue";
 import { ApprovalHandler } from "./approval-handler";
 
 
@@ -318,7 +318,7 @@ class UnderwriterWorker {
     }
 
     private async handleConfirmedSubmitOrders(
-      confirmedSubmitOrders: PendingTransaction[],
+      confirmedSubmitOrders: ConfirmedTransaction[],
     ): Promise<void> {
 
       for (const confirmedOrder of confirmedSubmitOrders) {
@@ -338,8 +338,7 @@ class UnderwriterWorker {
           fromChainId: underwriteOrder.fromChainId,
           swapTxHash: underwriteOrder.swapTxHash,
           swapId: underwriteOrder.swapIdentifier,
-          originalTxHash: confirmedOrder.tx.hash,
-          replaceTxHash: confirmedOrder.replaceTx?.hash,
+          txHash: confirmedOrder.txReceipt.hash,
         };
 
         this.logger.debug(

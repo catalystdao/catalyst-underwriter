@@ -1,16 +1,22 @@
 import { HandleOrderResult, ProcessingQueue } from './processing-queue';
-import { AbstractProvider, TransactionResponse, Wallet } from 'ethers';
+import { AbstractProvider, TransactionReceipt, TransactionResponse, Wallet } from 'ethers';
 import pino from 'pino';
 import { TransactionHelper } from '../transaction-helper';
 
 export interface PendingTransaction<T = any> {
-    data: T,
+    data: T;
     tx: TransactionResponse;
     replaceTx?: TransactionResponse;
     confirmationError?: any;
 }
 
-export class ConfirmQueue extends ProcessingQueue<PendingTransaction, PendingTransaction> {
+export interface ConfirmedTransaction<T = any> {
+  data: T;
+  tx: TransactionResponse;
+  txReceipt: TransactionReceipt;
+}
+
+export class ConfirmQueue extends ProcessingQueue<PendingTransaction, ConfirmedTransaction> {
 
     constructor(
         readonly retryInterval: number,
@@ -27,6 +33,10 @@ export class ConfirmQueue extends ProcessingQueue<PendingTransaction, PendingTra
             maxTries,
             1, // Confirm transactions one at a time
         );
+
+        if (this.confirmations == 0) {
+            throw new Error(`'confirmations' may not be set to 0.`);
+        }
     }
 
     async init(): Promise<void> {
@@ -40,7 +50,7 @@ export class ConfirmQueue extends ProcessingQueue<PendingTransaction, PendingTra
     protected async handleOrder(
         order: PendingTransaction,
         retryCount: number,
-    ): Promise<HandleOrderResult<PendingTransaction> | null> {
+    ): Promise<HandleOrderResult<ConfirmedTransaction> | null> {
         // If it's the first time the order is processed, just wait for it
         if (retryCount == 0) {
             const transactionReceipt = this.provider
@@ -49,7 +59,16 @@ export class ConfirmQueue extends ProcessingQueue<PendingTransaction, PendingTra
                     this.confirmations,
                     this.confirmationTimeout,
                 )
-                .then((_receipt) => order);
+                .then((receipt) => {
+                    if (receipt == null) {
+                        throw new Error('Receipt is \'null\' after waiting for transaction');   // This should never happen if confirmations > 0
+                    }
+                    return {
+                        data: order.data,
+                        tx: order.tx,
+                        txReceipt: receipt,
+                    }
+                });
 
             return { result: transactionReceipt };
         }
@@ -78,18 +97,29 @@ export class ConfirmQueue extends ProcessingQueue<PendingTransaction, PendingTra
             order.tx.hash,
             this.confirmations,
             this.confirmationTimeout,
-        );
+        )
+        .then((txReceipt) => ({ tx: order.tx, txReceipt }));
         const replaceTxReceipt = this.provider.waitForTransaction(
             order.replaceTx!.hash,
             this.confirmations,
             this.confirmationTimeout,
-        );
+        )
+        .then((txReceipt) => ({ tx: order.replaceTx!, txReceipt }));
 
         const confirmationPromise = Promise.any([
             originalTxReceipt,
             replaceTxReceipt,
         ]).then(
-            () => order,
+            (result) => {
+                if (result.txReceipt == null) {
+                    throw new Error('Receipt is \'null\' after waiting for transaction');   // This should never happen if confirmations > 0
+                }
+                return {
+                    data: order.data,
+                    tx: result.tx,
+                    txReceipt: result.txReceipt,
+                }
+            },
             (aggregateError) => {
                 // If both the original/replace tx promises reject, throw the error of the replace tx.
                 throw aggregateError.errors?.[1];
