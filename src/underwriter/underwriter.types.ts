@@ -58,10 +58,10 @@ export interface GasFeeOverrides {
 }
 
 export interface GasFeeConfig {
-    gasPriceAdjustmentFactor: number | undefined;
-    maxAllowedGasPrice: bigint | undefined;
-    maxFeePerGas: bigint | undefined;
-    maxPriorityFeeAdjustmentFactor: number | undefined;
-    maxAllowedPriorityFeePerGas: bigint | undefined;
-    priorityAdjustmentFactor: number | undefined;
+    gasPriceAdjustmentFactor?: number;
+    maxAllowedGasPrice?: number | string;
+    maxFeePerGas?: number | string;
+    maxPriorityFeeAdjustmentFactor?: number;
+    maxAllowedPriorityFeePerGas?: number | string;
+    priorityAdjustmentFactor?: number;
 }

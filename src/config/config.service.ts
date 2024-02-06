@@ -19,6 +19,12 @@ export interface GlobalConfig {
     maxPendingTransactions?: number;
     confirmations?: number;
     confirmationTimeout?: number;
+    maxFeePerGas?: number | string;
+    maxAllowedPriorityFeePerGas?: number | string;
+    maxPriorityFeeAdjustmentFactor?: number;
+    maxAllowedGasPrice?: number | string;
+    gasPriceAdjustmentFactor?: number;
+    priorityAdjustmentFactor?: number;
   };
 }
 
@@ -45,12 +51,11 @@ export interface ChainConfig {
     maxPendingTransactions?: number;
     confirmations?: number;
     confirmationTimeout?: number;
-    gasLimitBuffer?: Record<string, number> & { default?: number };
-    gasPriceAdjustmentFactor?: number;
-    maxAllowedGasPrice?: bigint;
-    maxFeePerGas?: bigint;
+    maxFeePerGas?: number | string;
+    maxAllowedPriorityFeePerGas?: number | string;
     maxPriorityFeeAdjustmentFactor?: number;
-    maxAllowedPriorityFeePerGas?: bigint;
+    maxAllowedGasPrice?: number | string;
+    gasPriceAdjustmentFactor?: number;
     priorityAdjustmentFactor?: number;
   }
 }

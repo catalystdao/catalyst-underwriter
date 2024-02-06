@@ -19,6 +19,12 @@ interface DefaultUnderwriterWorkerData {
     maxPendingTransactions: number;
     confirmations: number;
     confirmationTimeout: number;
+    maxFeePerGas?: number | string;
+    maxAllowedPriorityFeePerGas?: number | string;
+    maxPriorityFeeAdjustmentFactor?: number;
+    maxAllowedGasPrice?: number | string;
+    gasPriceAdjustmentFactor?: number;
+    priorityAdjustmentFactor?: number;
 }
 
 export interface UnderwriterWorkerData {
@@ -33,13 +39,12 @@ export interface UnderwriterWorkerData {
     confirmations: number;
     confirmationTimeout: number;
     privateKey: string;
-    gasLimitBuffer: Record<string, any> & { default: number };
-    gasPriceAdjustmentFactor?: number;
-    maxAllowedGasPrice?: bigint;
-    maxFeePerGas?: bigint;
+    maxFeePerGas?: number | string;
+    maxAllowedPriorityFeePerGas?: number | string;
     maxPriorityFeeAdjustmentFactor?: number;
-    maxAllowedPriorityFeePerGas?: bigint;
-    priorityAdjustmentFactor: number | undefined;
+    maxAllowedGasPrice?: number | string;
+    gasPriceAdjustmentFactor?: number;
+    priorityAdjustmentFactor?: number;
     loggerOptions: LoggerOptions;
 }
 
@@ -101,13 +106,26 @@ export class UnderwriterService implements OnModuleInit {
         const confirmations = globalUnderwriterConfig.confirmations ?? DEFAULT_UNDERWRITER_CONFIRMATIONS;
         const confirmationTimeout = globalUnderwriterConfig.confirmationTimeout ?? DEFAULT_UNDERWRITER_CONFIRMATION_TIMEOUT;
 
+        const maxFeePerGas = globalUnderwriterConfig.maxFeePerGas;
+        const maxAllowedPriorityFeePerGas = globalUnderwriterConfig.maxAllowedPriorityFeePerGas;
+        const maxPriorityFeeAdjustmentFactor = globalUnderwriterConfig.maxPriorityFeeAdjustmentFactor;
+        const maxAllowedGasPrice = globalUnderwriterConfig.maxAllowedGasPrice;
+        const gasPriceAdjustmentFactor = globalUnderwriterConfig.gasPriceAdjustmentFactor;
+        const priorityAdjustmentFactor = globalUnderwriterConfig.priorityAdjustmentFactor;
+    
         return {
             retryInterval,
             processingInterval,
             maxTries,
             maxPendingTransactions,
             confirmations,
-            confirmationTimeout
+            confirmationTimeout,
+            maxFeePerGas,
+            maxAllowedPriorityFeePerGas,
+            maxPriorityFeeAdjustmentFactor,
+            maxAllowedGasPrice,
+            gasPriceAdjustmentFactor,
+            priorityAdjustmentFactor,
         }
     }
 
@@ -140,13 +158,31 @@ export class UnderwriterService implements OnModuleInit {
             confirmations: chainUnderwriterConfig.confirmations ?? defaultConfig.confirmations,
             confirmationTimeout: chainUnderwriterConfig.confirmationTimeout ?? defaultConfig.confirmationTimeout,
             privateKey: this.configService.globalConfig.privateKey,
-            gasLimitBuffer: { default: 0, ...chainUnderwriterConfig.gasLimitBuffer},
-            gasPriceAdjustmentFactor: chainUnderwriterConfig.gasPriceAdjustmentFactor,
-            maxAllowedGasPrice: chainUnderwriterConfig.maxAllowedGasPrice,
-            maxFeePerGas: chainUnderwriterConfig.maxFeePerGas,
-            maxPriorityFeeAdjustmentFactor: chainUnderwriterConfig.maxPriorityFeeAdjustmentFactor,
-            maxAllowedPriorityFeePerGas: chainUnderwriterConfig.maxAllowedPriorityFeePerGas,
-            priorityAdjustmentFactor: chainUnderwriterConfig.priorityAdjustmentFactor,
+            
+            maxFeePerGas:
+                chainUnderwriterConfig.maxFeePerGas ??
+                defaultConfig.maxFeePerGas,
+
+            maxPriorityFeeAdjustmentFactor: 
+                chainUnderwriterConfig.maxPriorityFeeAdjustmentFactor ??
+                defaultConfig.maxPriorityFeeAdjustmentFactor,
+
+            maxAllowedPriorityFeePerGas:
+                chainUnderwriterConfig.maxAllowedPriorityFeePerGas ??
+                defaultConfig.maxAllowedPriorityFeePerGas,
+
+            gasPriceAdjustmentFactor:
+                chainUnderwriterConfig.gasPriceAdjustmentFactor ??
+                defaultConfig.gasPriceAdjustmentFactor,
+
+            maxAllowedGasPrice:
+                chainUnderwriterConfig.maxAllowedGasPrice ??
+                defaultConfig.maxAllowedGasPrice,
+
+            priorityAdjustmentFactor:
+                chainUnderwriterConfig.priorityAdjustmentFactor ??
+                defaultConfig.priorityAdjustmentFactor,
+
             loggerOptions: this.loggerService.loggerOptions
         };
     }
