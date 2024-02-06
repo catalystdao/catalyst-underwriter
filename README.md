@@ -23,7 +23,7 @@ The `.yaml` configuration file is divided into the following sections:
 - `global`: Defines the global underwriter configuration.
     - The `privateKey` of the account that will submit the underwrite transactions on all chains must be defined at this point. 
     - Default configuration for the `underwriter` can also be specified at this point.
-- `ambs`: The AMBs configuration. (TODO the AMB configuration placement is inconsistent with the Relayer)
+- `ambs`: The AMBs configuration.
 - `chains`: Defines the configuration for each of the chains to be supported by the relayer.
     - This includes the `chainId` and the `rpc` to be used for the chain.
     - Each chain may override the global `underwriter` configuration (those defined under the `global` configuration), and `amb` configurations.

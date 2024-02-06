@@ -196,8 +196,12 @@ export class ConfigService {
       if (ambName == undefined) {
         throw new Error(`Invalid AMB configuration: 'name' missing.`);
       }
+
+      if (rawAMBConfig.enabled == false) {
+        continue;
+      }
+
       const globalProperties = rawAMBConfig;
-      delete globalProperties['name'];
 
       ambConfig.set(ambName, {
         name: ambName,

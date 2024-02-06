@@ -16,9 +16,9 @@ global:
     confirmationTimeout: 30000  # Timeout for a transaction to confirm
 
 # The AMBs configuration
-# TODO the AMB configuration placement is inconsistent with the Relayer
 ambs:
   - name: mock
+    enabled: true   # Defaults to 'true' if the key is missing
 
 # Chain configuration
 chains:
