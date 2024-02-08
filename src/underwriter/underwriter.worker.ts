@@ -476,10 +476,10 @@ class UnderwriterWorker {
                 return;
             }
 
-            this.store.getSwapStatus(
+            this.store.getSwapState(
                 swapDescription.fromChainId,
                 swapDescription.fromVault,
-                swapDescription.txHash
+                swapDescription.swapId
             ).then((swapStatus) => {
                 if (swapStatus == null) {
                     throw new Error(`No data found for the swap description ${swapDescription}.`)
@@ -489,18 +489,18 @@ class UnderwriterWorker {
                     swapStatus.poolId,
                     swapStatus.fromChainId,
                     swapStatus.fromVault,
-                    swapStatus.txHash,
-                    swapStatus.swapIdentifier,
-                    swapStatus.channelId,
+                    swapStatus.sendAssetEvent!.txHash,
+                    swapStatus.swapId,
+                    swapStatus.sendAssetEvent!.fromChannelId,
                     swapStatus.toVault,
                     swapStatus.toAccount,
                     swapStatus.fromAsset,
-                    swapStatus.toAssetIndex,
-                    swapStatus.fromAmount,
-                    swapStatus.minOut,
+                    swapStatus.sendAssetEvent!.toAssetIndex,
+                    swapStatus.sendAssetEvent!.fromAmount,
+                    swapStatus.sendAssetEvent!.minOut,
                     swapStatus.units,
-                    swapStatus.fee,
-                    swapStatus.underwriteIncentiveX16,
+                    swapStatus.sendAssetEvent!.fee,
+                    swapStatus.sendAssetEvent!.underwriteIncentiveX16,
                 );
 
             }).catch((rejection) => {

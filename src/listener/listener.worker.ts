@@ -8,6 +8,7 @@ import { ICatalystV1VaultEventsInterface, SendAssetEvent } from "src/contracts/I
 import { calcAssetSwapIdentifier, wait } from "src/common/utils";
 import { Store } from "src/store/store.lib";
 import { decodeBytes65Address } from "src/common/decode.payload";
+import { SwapState, SwapStatus } from "src/store/store.types";
 
 class ListenerWorker {
     readonly store: Store;
@@ -324,27 +325,33 @@ class ListenerWorker {
             );
             return;
         }
-    
-        await this.store.registerSendAsset(
-            vaultConfig.poolId,
-            this.chainId,
-            vaultAddress,
-            log.transactionHash,
+
+        const swapState: SwapState = {
+            poolId: vaultConfig.poolId,
+            fromChainId: this.chainId,
+            fromVault: vaultAddress,
+            status: SwapStatus.Pending,
             toChainId,
             swapId,
-            log.blockNumber,
-            log.blockHash,
-            sendAssetEvent.channelId,
             toVault,
             toAccount,
-            sendAssetEvent.fromAsset,
-            sendAssetEvent.toAssetIndex,
-            sendAssetEvent.fromAmount,
-            sendAssetEvent.minOut,
-            sendAssetEvent.units,
-            sendAssetEvent.fee,
-            sendAssetEvent.underwriteIncentiveX16
-        )
+            fromAsset: sendAssetEvent.fromAsset,
+            swapAmount: sendAssetEvent.fromAmount - sendAssetEvent.fee,
+            units: sendAssetEvent.units,
+            sendAssetEvent: {
+                txHash: log.transactionHash,
+                blockHash: log.blockHash,
+                blockNumber: log.blockNumber,
+                fromChannelId: sendAssetEvent.channelId,
+                toAssetIndex: sendAssetEvent.toAssetIndex,
+                fromAmount: sendAssetEvent.fromAmount,
+                fee: sendAssetEvent.fee,
+                minOut: sendAssetEvent.minOut,
+                underwriteIncentiveX16: sendAssetEvent.underwriteIncentiveX16,
+            },
+        }
+    
+        await this.store.saveSwapState(swapState);
     };
 
     

@@ -1,55 +1,111 @@
+//TODO store AMB data?
 
-export enum UnderwriteStatus {
-    NoUnderwrite,
-    Underwritten,
-    Fulfilled,
-    Expired
+export interface TransactionDescription {
+    txHash: string;
+    blockHash: string;
+    blockNumber: number;
 }
 
-export interface SwapStatus {
-
-    // Trusted fields (provided by the listener)
-    poolId: string;
-    fromChainId: string;
-    fromVault: string;
-    txHash: string;
-
-    // Derived from the SendAsset event
-    toChainId: string;
-    swapIdentifier: string;
-
-    // SendAsset event fields
-    channelId: string;
-    toVault: string;
-    toAccount: string;
-    fromAsset: string;
-    toAssetIndex: bigint;
-    fromAmount: bigint;
-    minOut: bigint;
-    units: bigint;
-    fee: bigint;
-    underwriteIncentiveX16: bigint;
-
-
-    // Metadata
-    eventBlockHeight: number;
-    eventBlockHash: string;
-    observedTimestamp: number;
-
-    swapComplete: boolean;
-
-    underwritten: boolean;
-    expired: boolean;
-    // observedUnderwriteStatus: UnderwriteStatus;  //TODO implement
-    //expiryTimestamp: number;  //TODO implement
-
+export enum SwapStatus {
+    Pending,
+    Completed
 }
 
 export interface SwapDescription {
     poolId: string;
     fromChainId: string;
-    fromVault: string;
-    txHash: string;
-
     toChainId: string;
+    fromVault: string;
+    swapId: string;
+}
+
+export interface SwapState {
+
+    // Trusted fields (provided by the listener)
+    poolId: string;
+    fromChainId: string;
+    fromVault: string;
+
+    // Common swap fields (derived from events)
+    status: SwapStatus;
+    toChainId: string;
+    swapId: string;
+    toVault: string;
+    toAccount: string;
+    fromAsset: string;
+    swapAmount: bigint;
+    units: bigint;
+
+    underwriteId?: string;
+    underwriteTxhash?: string;
+
+    // Event-specific details
+    sendAssetEvent?: SendAssetEventDetails;
+    receiveAssetEvent?: ReceiveAssetEventDetails;
+}
+
+export interface SendAssetEventDetails extends TransactionDescription {
+    fromChannelId: string;
+    toAssetIndex: bigint;
+    fromAmount: bigint;
+    fee: bigint;
+    minOut: bigint;
+    underwriteIncentiveX16: bigint;
+}
+
+export interface ReceiveAssetEventDetails extends TransactionDescription {
+    toChannelId: string;
+    toAsset: string;
+    toAmount: bigint;
+    sourceBlockNumberMod: number;
+}
+
+
+
+export enum UnderwriteStatus {
+    Underwritten,
+    Fulfilled,
+    Expired
+}
+
+//TODO do we need this
+export interface UnderwriteDescription {
+    poolId: string;
+    toChainId: string;
+    toInterface: string;
+    underwriteId: string;
+}
+
+export interface UnderwriteState {
+
+    // Trusted fields (provided by the listener)
+    poolId: string;
+    toChainId: string;
+    toInterface: string;
+
+    // Common underwrite fields (derived from events)
+    status: UnderwriteStatus;
+    underwriteId: string;
+
+    // Event-specific details
+    swapUnderwrittenEvent?: SwapUnderwrittenEventDetails;
+    fulfillUnderwriteEvent?: FulfillUnderwriteEventDetails;
+    expireUnderwriteEvent?: ExpireUnderwriteEventDetails;
+}
+
+export interface SwapUnderwrittenEventDetails extends TransactionDescription {
+    underwriter: string;
+    expiry: number;
+    targetVault: string;
+    toAsset: string;
+    units: bigint;
+    toAccount: string;
+    outAmount: bigint;
+};
+
+export interface FulfillUnderwriteEventDetails extends TransactionDescription {};
+
+export interface ExpireUnderwriteEventDetails extends TransactionDescription {
+    expirer: string;
+    reward: bigint;
 }

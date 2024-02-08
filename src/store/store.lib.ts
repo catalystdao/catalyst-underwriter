@@ -1,5 +1,5 @@
 import { Redis } from 'ioredis';
-import { SwapStatus, SwapDescription } from './store.types';
+import { SwapState, SwapDescription, SwapStatus, UnderwriteState, UnderwriteStatus, UnderwriteDescription } from './store.types';
 
 // Monkey patch BigInt. https://github.com/GoogleChromeLabs/jsbi/issues/30#issuecomment-1006086291
 (BigInt.prototype as any).toJSON = function () {
@@ -27,11 +27,6 @@ const DB_INDEX = 5; //TODO make customizable via config
 // 'amb': { messageIdentifier, destinationChain, payload }
 // 'key': { key, action}
 
-// Below is a list of general todos on this library.
-// TODO: add chainId to the index.
-// TODO: Carify storage types: Move Bounty type here?
-// TODO: Fix cases where bounty doesn't exist.
-
 export class Store {
     readonly redis: Redis;
     // When a redis connection is used to listen for subscriptions, it cannot be
@@ -42,9 +37,12 @@ export class Store {
 
     readonly host: string | undefined;
 
-    static readonly underwritePrefix: string = 'underwrite';
+    static readonly swapPrefix: string = 'swap';
+    static readonly activeUnderwritePrefix: string = 'activeUnderwrite';
+    static readonly completedUnderwritePrefix: string = 'completedUnderwrite';
 
     static readonly onSendAssetChannel: string = 'onSendAsset';
+    static readonly onSwapUnderwrittenChannel: string = 'onSwapUnderwritten';
 
     constructor() {
         this.host = process.env.USE_DOCKER ? 'redis' : undefined;
@@ -59,18 +57,6 @@ export class Store {
     }
 
     // ----- Translation -----
-
-    async scan(callback: (key: string) => void) {
-        const stream = this.redis.scanStream({
-            match: `${Store.underwritePrefix}:*`,
-        });
-
-        stream.on('data', (keys) => {
-            for (const key of keys) {
-                callback(key);
-            }
-        });
-    }
 
     async get(key: string) {
         return this.redis.get(key);
@@ -117,7 +103,7 @@ export class Store {
 
     async postMessage(channel: string, payload: { [key: string]: any }) {
         return this.redis.publish(
-            Store.combineString(Store.underwritePrefix, channel),
+            Store.combineString(Store.activeUnderwritePrefix, channel),
             JSON.stringify(payload),
         );
     }
@@ -126,7 +112,7 @@ export class Store {
         const redisSubscriptions = this.getOrOpenSubscription();
         // Subscribe to the channel so that we get messages.
         const channelWithprefix = Store.combineString(
-            Store.underwritePrefix,
+            Store.activeUnderwritePrefix,
             channel,
         );
         await redisSubscriptions.subscribe(channelWithprefix);
@@ -137,107 +123,258 @@ export class Store {
         });
     }
 
-    // ----- Bounties ------
 
-    async getSwapStatus(
+    // ----- Swaps ------
+
+    static getSwapStateKey(
         fromChainId: string,
         fromVault: string,
-        txHash: string
-    ): Promise<SwapStatus | null> {
-        const query = await this.redis.get(
-            Store.combineString(
-                Store.underwritePrefix,
-                fromChainId.toLowerCase(),
-                fromVault.toLowerCase(),
-                txHash.toLowerCase(),
-            ),
+        swapId: string
+    ): string {
+        return Store.combineString(
+            Store.swapPrefix,
+            fromChainId.toLowerCase(),
+            fromVault.toLowerCase(),
+            swapId.toLowerCase(),
         );
+    }
+
+    async getSwapState(
+        fromChainId: string,
+        fromVault: string,
+        swapId: string
+    ): Promise<SwapState | null> {
+        const key = Store.getSwapStateKey(
+            fromChainId,
+            fromVault,
+            swapId
+        );
+        return this.getSwapStateByKey(key);
+    }
+
+    async getSwapStateByKey(key: string): Promise<SwapState | null> {
+        const query = await this.redis.get(key);
 
         if (query == null) {
             return null;
         }
 
-        const swapStatus = JSON.parse(query);
+        const swapState = JSON.parse(query);
 
-        if (swapStatus) {
-            swapStatus.toAssetIndex = BigInt(swapStatus.toAssetIndex)
-            swapStatus.fromAmount = BigInt(swapStatus.fromAmount)
-            swapStatus.minOut = BigInt(swapStatus.minOut)
-            swapStatus.units = BigInt(swapStatus.units)
-            swapStatus.fee = BigInt(swapStatus.fee)
-            swapStatus.underwriteIncentiveX16 = BigInt(swapStatus.underwriteIncentiveX16)
+        if (swapState.sendAssetEvent) {
+            const event = swapState.sendAssetEvent;
+            event.toAssetIndex = BigInt(event.toAssetIndex);
+            event.fromAmount = BigInt(event.fromAmount);
+            event.fee = BigInt(event.fee);
+            event.minOut = BigInt(event.minOut);
+            event.underwriteIncentiveX16 = BigInt(event.underwriteIncentiveX16);
+        }
+        
+        if (swapState.receiveAssetEvent) {
+            const event = swapState.receiveAssetEvent;
+            event.toAmount = BigInt(event.toAmount);
+            
         }
 
-        return swapStatus as SwapStatus;
+        return swapState as SwapState;
+    }
+
+    async saveSwapState(state: SwapState): Promise<void> {
+
+        const key = Store.getSwapStateKey(
+            state.fromChainId,
+            state.fromVault,
+            state.swapId,
+        );
+        
+        const currentState = await this.getSwapStateByKey(key);
+        const overridingState = currentState != null;
+        const newState = overridingState ? currentState : state;
+
+        if (overridingState) {
+            //TODO contrast the saved 'common' state with the incoming data? (e.g. fromVault, fromAsset, etc...)
+            newState.sendAssetEvent = state.sendAssetEvent
+                ?? currentState.sendAssetEvent;
+            newState.receiveAssetEvent = state.receiveAssetEvent
+                ?? currentState.receiveAssetEvent;
+        }
+
+        // Update the swap 'status'
+        if (newState.receiveAssetEvent) {
+            newState.status = SwapStatus.Completed;
+        } else {
+            newState.status = SwapStatus.Pending;
+        }
+
+        await this.set(key, JSON.stringify(newState));
+
+        if (state.sendAssetEvent) {
+            const swapDescription: SwapDescription = {
+                poolId: state.poolId,
+                fromChainId: state.fromChainId,
+                toChainId: state.toChainId,
+                fromVault: state.fromVault,
+                swapId: state.swapId,
+            }
+            await this.postMessage(Store.onSendAssetChannel, swapDescription);
+        }
     }
 
 
-    //TODO allow to set if it already exists (as with the relayer)?
-    //TODO what if the 'SendAsset' event is observed after the swap complete event?
-    async registerSendAsset(
-        poolId: string,
-        fromChainId: string,
-        fromVault: string,
-        txHash: string,
+    // ----- Underwrites ------
+    static getActiveUnderwriteStateKey(
         toChainId: string,
-        swapIdentifier: string,
-        eventBlockHeight: number,
-        eventBlockHash: string,
-        channelId: string,
-        toVault: string,
-        toAccount: string,
-        fromAsset: string,
-        toAssetIndex: bigint,
-        fromAmount: bigint,
-        minOut: bigint,
-        units: bigint,
-        fee: bigint,
-        underwriteIncentiveX16: bigint
-    ) {
-
-        const swapStatus: SwapStatus = {
-            poolId,
-            fromChainId,
-            fromVault,
-            txHash,
-            toChainId,
-            swapIdentifier,
-            channelId,
-            toVault,
-            toAccount,
-            fromAsset,
-            toAssetIndex,
-            fromAmount,
-            minOut,
-            units,
-            fee,
-            underwriteIncentiveX16,
-            eventBlockHeight,
-            eventBlockHash,
-            observedTimestamp: Math.floor(Date.now() / 1000),
-            swapComplete: false,
-            underwritten: false,
-            expired: false
-        };
-
-        const key = Store.combineString(
-            Store.underwritePrefix,
-            fromChainId.toLowerCase(),
-            fromVault.toLowerCase(),
-            txHash.toLowerCase(),
+        toInterface: string,
+        underwriteId: string
+    ): string {
+        return Store.combineString(
+            Store.activeUnderwritePrefix,
+            toChainId.toLowerCase(),
+            toInterface.toLowerCase(),
+            underwriteId.toLowerCase(),
         );
+    }
 
-        const swapStatusDescription: SwapDescription = {
-            poolId,
-            fromChainId,
-            fromVault,
-            txHash,
-            toChainId
+    static getCompletedUnderwriteStateKey(
+        toChainId: string,
+        toInterface: string,
+        underwriteId: string,
+        underwriteTxHash: string
+    ): string {
+        return Store.combineString(
+            Store.completedUnderwritePrefix,
+            toChainId.toLowerCase(),
+            toInterface.toLowerCase(),
+            underwriteId.toLowerCase(),
+            underwriteTxHash.toLowerCase()
+        );
+    }
+
+    // Helper for both active and completed underwrites
+    async getUnderwriteStateByKey(key: string): Promise<UnderwriteState | null> {
+        const query = await this.redis.get(key);
+
+        if (query == null) {
+            return null;
         }
 
-        await this.set(key, JSON.stringify(swapStatus));
+        const state = JSON.parse(query);
 
-        await this.postMessage(Store.onSendAssetChannel, swapStatusDescription);
+        if (state.swapUnderwrittenEvent) {
+            const event = state.swapUnderwrittenEvent;
+            event.units = BigInt(event.units);
+            event.outAmount = BigInt(event.outAmount);
+        }
+
+        if (state.expireUnderwriteEvent) {
+            const event = state.expireUnderwriteEvent;
+            event.reward = BigInt(event.reward);
+        }
+
+        return state as UnderwriteState;
+    }
+
+    async getActiveUnderwriteState(
+        toChainId: string,
+        toInterface: string,
+        underwriteId: string
+    ): Promise<UnderwriteState | null> {
+        const key = Store.getActiveUnderwriteStateKey(
+            toChainId,
+            toInterface,
+            underwriteId
+        );
+        return this.getUnderwriteStateByKey(key);
+    }
+
+    async getCompletedUnderwriteState(
+        toChainId: string,
+        toInterface: string,
+        underwriteId: string,
+        underwriteTxHash: string,
+    ): Promise<UnderwriteState | null> {
+        const key = Store.getCompletedUnderwriteStateKey(
+            toChainId,
+            toInterface,
+            underwriteId,
+            underwriteTxHash
+        );
+        return this.getUnderwriteStateByKey(key);
+    }
+
+    async saveActiveUnderwriteState(state: UnderwriteState): Promise<void> {
+
+        const key = Store.getActiveUnderwriteStateKey(
+            state.toChainId,
+            state.toInterface,
+            state.underwriteId,
+        );
+
+        const currentState = await this.getUnderwriteStateByKey(key);
+        const overridingState = currentState != null;
+        const newState = overridingState ? currentState : state;
+
+        if (overridingState) {
+            //TODO contrast the saved 'common' state with the incoming data? (e.g. poolId, etc...)
+            newState.swapUnderwrittenEvent = state.swapUnderwrittenEvent
+                ?? currentState.swapUnderwrittenEvent;
+            newState.fulfillUnderwriteEvent = state.fulfillUnderwriteEvent
+                ?? currentState.fulfillUnderwriteEvent;
+            newState.expireUnderwriteEvent = state.expireUnderwriteEvent
+                ?? currentState.expireUnderwriteEvent;
+        }
+
+        // Make sure the resulting 'state' is properly structured. (Events must be added in 
+        // chronological order.)
+        if (!newState.swapUnderwrittenEvent) {
+            throw new Error(`Failed to update active underwrite state: no 'SwapUnderwritten' event registered.`);
+        }
+
+        if (newState.fulfillUnderwriteEvent && newState.expireUnderwriteEvent) {
+            throw new Error(`Failed to update active underwrite state: both 'FulfillUnderwrite' and 'ExpireUnderwrite' events are regsitered.`);
+        }
+
+        // Update the underwrite 'status'
+        if (newState.fulfillUnderwriteEvent) {
+            newState.status = UnderwriteStatus.Fulfilled;
+        } else if (newState.expireUnderwriteEvent) {
+            newState.status = UnderwriteStatus.Expired;
+        } else {
+            newState.status = UnderwriteStatus.Underwritten;
+        }
+
+        // If the underwrite is complete, move the state entry from the 'active' onto the 'complete' set
+        if (newState.status >= UnderwriteStatus.Fulfilled) {
+            await this.del(key);
+            await this.saveCompletedUnderwriteState(newState);
+        } else {
+            await this.set(key, JSON.stringify(newState));
+        }
+
+        if (state.swapUnderwrittenEvent) {
+            const underwriteDescription: UnderwriteDescription = {
+                poolId: state.poolId,
+                toChainId: state.toChainId,
+                toInterface: state.toInterface,
+                underwriteId: state.underwriteId,
+            }
+            await this.postMessage(Store.onSwapUnderwrittenChannel, underwriteDescription);
+        }
+    }
+
+    async saveCompletedUnderwriteState(state: UnderwriteState): Promise<void> {
+
+        const key = Store.getCompletedUnderwriteStateKey(
+            state.toChainId,
+            state.toInterface,
+            state.underwriteId,
+            state.swapUnderwrittenEvent!.txHash
+        );
+        
+        //TODO log warning if key already used? (could happen on some edge cases)
+        // const savedState = await this.getUnderwriteStateByKey(key);
+
+        await this.set(key, JSON.stringify(state));
     }
 
 }
