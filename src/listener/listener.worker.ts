@@ -3,12 +3,13 @@ import pino from "pino";
 import { workerData } from 'worker_threads';
 import { ListenerWorkerData, VaultConfig } from "./listener.service";
 import { CatalystChainInterface__factory, ICatalystV1VaultEvents__factory } from "src/contracts";
-import { CatalystChainInterfaceInterface } from "src/contracts/CatalystChainInterface";
+import { CatalystChainInterfaceInterface, ExpireUnderwriteEvent, FulfillUnderwriteEvent, SwapUnderwrittenEvent } from "src/contracts/CatalystChainInterface";
 import { ICatalystV1VaultEventsInterface, SendAssetEvent } from "src/contracts/ICatalystV1VaultEvents";
 import { calcAssetSwapIdentifier, wait } from "src/common/utils";
 import { Store } from "src/store/store.lib";
 import { decodeBytes65Address } from "src/common/decode.payload";
-import { SwapState, SwapStatus } from "src/store/store.types";
+import { ReceiveAssetEvent } from "src/contracts/CatalystVaultCommon";
+import { SwapState, SwapStatus, UnderwriteState, UnderwriteStatus } from "src/store/store.types";
 
 class ListenerWorker {
     readonly store: Store;
@@ -120,6 +121,7 @@ class ListenerWorker {
         const topics = [
             [
                 vaultInterface.getEvent('SendAsset').topicHash,
+                vaultInterface.getEvent('ReceiveAsset').topicHash,
                 chainInterfaceInterface.getEvent('SwapUnderwritten').topicHash,
                 chainInterfaceInterface.getEvent('FulfillUnderwrite').topicHash,
                 chainInterfaceInterface.getEvent('ExpireUnderwrite').topicHash
@@ -248,6 +250,10 @@ class ListenerWorker {
                 await this.handleSendAssetEvent(log, parsedLog, vaultConfig);
                 break;
 
+            case 'ReceiveAsset':
+                await this.handleReceiveAssetEvent(log, parsedLog, vaultConfig);
+                break;
+
             default:
                 this.logger.warn(
                     { name: parsedLog.name, topic: parsedLog.topic },
@@ -299,15 +305,16 @@ class ListenerWorker {
     ): Promise<void> {
 
         const vaultAddress = log.address;
-        const sendAssetEvent = parsedLog.args as unknown as SendAssetEvent.OutputObject;
+        const event = parsedLog.args as unknown as SendAssetEvent.OutputObject;
 
-        const toVault = decodeBytes65Address(sendAssetEvent.toVault);
-        const toAccount = decodeBytes65Address(sendAssetEvent.toAccount);
+        const toVault = decodeBytes65Address(event.toVault);
+        const toAccount = decodeBytes65Address(event.toAccount);
+        //TODO the way in which the hash is calculated should depend on the fromVault template
         const swapId = calcAssetSwapIdentifier(
             toAccount,
-            sendAssetEvent.units,
-            sendAssetEvent.fromAmount - sendAssetEvent.fee,
-            sendAssetEvent.fromAsset,
+            event.units,
+            event.fromAmount - event.fee,
+            event.fromAsset,
             log.blockNumber
         );
     
@@ -316,11 +323,11 @@ class ListenerWorker {
             `SendAsset event captured.`
         );
 
-        const toChainId = vaultConfig.channels[sendAssetEvent.channelId.toLowerCase()];
+        const toChainId = vaultConfig.channels[event.channelId.toLowerCase()];
 
         if (toChainId == undefined) {
             this.logger.warn(
-                { channelId: sendAssetEvent.channelId },
+                { channelId: event.channelId },
                 `Dropping SendAsset event. No mapping for the event's channelId found.`
             );
             return;
@@ -335,19 +342,81 @@ class ListenerWorker {
             swapId,
             toVault,
             toAccount,
-            fromAsset: sendAssetEvent.fromAsset,
-            swapAmount: sendAssetEvent.fromAmount - sendAssetEvent.fee,
-            units: sendAssetEvent.units,
+            fromAsset: event.fromAsset,
+            swapAmount: event.fromAmount - event.fee,
+            units: event.units,
             sendAssetEvent: {
                 txHash: log.transactionHash,
                 blockHash: log.blockHash,
                 blockNumber: log.blockNumber,
-                fromChannelId: sendAssetEvent.channelId,
-                toAssetIndex: sendAssetEvent.toAssetIndex,
-                fromAmount: sendAssetEvent.fromAmount,
-                fee: sendAssetEvent.fee,
-                minOut: sendAssetEvent.minOut,
-                underwriteIncentiveX16: sendAssetEvent.underwriteIncentiveX16,
+                fromChannelId: event.channelId,
+                toAssetIndex: event.toAssetIndex,
+                fromAmount: event.fromAmount,
+                fee: event.fee,
+                minOut: event.minOut,
+                underwriteIncentiveX16: event.underwriteIncentiveX16,
+            },
+        }
+    
+        await this.store.saveSwapState(swapState);
+    };
+
+    private async handleReceiveAssetEvent(
+        log: Log,
+        parsedLog: LogDescription,
+        vaultConfig: VaultConfig
+    ): Promise<void> {
+
+        const vaultAddress = log.address;
+        const event = parsedLog.args as unknown as ReceiveAssetEvent.OutputObject;
+
+        //TODO the way in which the hash is calculated should depend on the fromVault template
+        const fromVault = decodeBytes65Address(event.fromVault);
+        const fromAsset = decodeBytes65Address(event.fromAsset);
+
+        const swapId = calcAssetSwapIdentifier(
+            event.toAccount,
+            event.units,
+            event.fromAmount,
+            fromAsset,
+            Number(event.sourceBlockNumberMod)
+        );
+    
+        this.logger.info(
+            { vaultAddress: vaultAddress, txHash: log.transactionHash, swapId },
+            `ReceiveAsset event captured.`
+        );
+
+        const fromChainId = vaultConfig.channels[event.channelId.toLowerCase()];
+
+        if (fromChainId == undefined) {
+            this.logger.warn(
+                { channelId: event.channelId },
+                `Dropping ReceiveAsset event. No mapping for the event's channelId found.`
+            );
+            return;
+        }
+
+        const swapState: SwapState = {
+            poolId: vaultConfig.poolId,
+            fromChainId,
+            fromVault,
+            status: SwapStatus.Completed,
+            toChainId: this.chainId,
+            swapId,
+            toVault: vaultAddress,
+            toAccount: event.toAccount,
+            fromAsset,
+            swapAmount: event.fromAmount,
+            units: event.units,
+            receiveAssetEvent: {
+                txHash: log.transactionHash,
+                blockHash: log.blockHash,
+                blockNumber: log.blockNumber,
+                toChannelId: event.channelId,
+                toAsset: event.toAsset,
+                toAmount: event.toAmount,
+                sourceBlockNumberMod: Number(event.sourceBlockNumberMod),
             },
         }
     
@@ -357,46 +426,110 @@ class ListenerWorker {
     
     private async handleSwapUnderwrittenEvent (
         log: Log,
-        _parsedLog: LogDescription,
-        _vaultConfig: VaultConfig
+        parsedLog: LogDescription,
+        vaultConfig: VaultConfig
     ): Promise<void> {
+
+        const interfaceAddress = log.address;
+        const event = parsedLog.args as unknown as SwapUnderwrittenEvent.OutputObject;
+        
+        const underwriteId = event.identifier;
     
         this.logger.info(
-            { interfaceAddress: log.address },
+            { interfaceAddress: log.address, txHash: log.transactionHash, underwriteId },
             `SwapUnderwritten event captured.`
         );
     
-        // TODO
+        const underwriteState: UnderwriteState = {
+            poolId: vaultConfig.poolId,
+            toChainId: this.chainId,
+            toInterface: interfaceAddress,
+            status: UnderwriteStatus.Underwritten,
+            underwriteId,
+            swapUnderwrittenEvent: {
+                txHash: log.transactionHash,
+                blockHash: log.blockHash,
+                blockNumber: log.blockNumber,
+                underwriter: event.underwriter,
+                expiry: Number(event.expiry),
+                targetVault: event.targetVault,
+                toAsset: event.toAsset,
+                units: event.U,
+                toAccount: event.toAccount,
+                outAmount: event.outAmount,
+            },
+        }
+
+        await this.store.saveActiveUnderwriteState(underwriteState);
     };
 
     
     private async handleFulfillUnderwriteEvent (
         log: Log,
-        _parsedLog: LogDescription,
-        _vaultConfig: VaultConfig
+        parsedLog: LogDescription,
+        vaultConfig: VaultConfig
     ): Promise<void> {
+
+        const interfaceAddress = log.address;
+        const event = parsedLog.args as unknown as FulfillUnderwriteEvent.OutputObject;
+        
+        const underwriteId = event.identifier;
     
         this.logger.info(
-            { interfaceAddress: log.address },
+            { interfaceAddress: log.address, txHash: log.transactionHash, underwriteId },
             `FulfillUnderwrite event captured.`
         );
     
-        // TODO
+        const underwriteState: UnderwriteState = {
+            poolId: vaultConfig.poolId,
+            toChainId: this.chainId,
+            toInterface: interfaceAddress,
+            status: UnderwriteStatus.Underwritten,
+            underwriteId,
+            fulfillUnderwriteEvent: {
+                txHash: log.transactionHash,
+                blockHash: log.blockHash,
+                blockNumber: log.blockNumber,
+            }
+        }
+
+        await this.store.saveActiveUnderwriteState(underwriteState);
     };
 
     
     private async handleExpireUnderwriteEvent (
         log: Log,
-        _parsedLog: LogDescription,
-        _vaultConfig: VaultConfig
+        parsedLog: LogDescription,
+        vaultConfig: VaultConfig
     ): Promise<void> {
+
+        const interfaceAddress = log.address;
+        const event = parsedLog.args as unknown as ExpireUnderwriteEvent.OutputObject;
+        
+        const underwriteId = event.identifier;
     
         this.logger.info(
-            { interfaceAddress: log.address },
+            { interfaceAddress: log.address, txHash: log.transactionHash, underwriteId },
             `ExpireUnderwrite event captured.`
         );
     
-        // TODO
+        const underwriteState: UnderwriteState = {
+            poolId: vaultConfig.poolId,
+            toChainId: this.chainId,
+            toInterface: interfaceAddress,
+            status: UnderwriteStatus.Underwritten,
+            underwriteId,
+            expireUnderwriteEvent: {
+                txHash: log.transactionHash,
+                blockHash: log.blockHash,
+                blockNumber: log.blockNumber,
+                expirer: event.expirer,
+                reward: event.reward,
+
+            }
+        }
+
+        await this.store.saveActiveUnderwriteState(underwriteState);
     };
 
 }
