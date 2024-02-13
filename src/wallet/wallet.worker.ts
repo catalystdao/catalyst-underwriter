@@ -246,6 +246,8 @@ class WalletWorker {
             await this.handleConfirmedTransactions(confirmedTransactions);
             await this.handleRejectedTransactions(rejectedTransactions);
             await this.handleUnconfirmedTransactions(unconfirmedTransactions);
+
+            await wait(this.config.processingInterval);
         }
     }
 
