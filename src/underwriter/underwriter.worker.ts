@@ -34,8 +34,6 @@ class UnderwriterWorker {
     readonly evalQueue: EvalQueue;
     readonly underwriteQueue: UnderwriteQueue;
 
-    private isStalled = false;
-
 
     constructor() {
         this.config = workerData as UnderwriterWorkerData;
@@ -132,7 +130,6 @@ class UnderwriterWorker {
                 evalRetryQueue: this.evalQueue.retryQueue.length,
                 underwriteQueue: this.underwriteQueue.size,
                 underwriteRetryQueue: this.underwriteQueue.retryQueue.length,
-                isStalled: this.isStalled,
             };
             this.logger.info(status, 'Underwriter status.');
         };
