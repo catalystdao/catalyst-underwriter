@@ -53,19 +53,3 @@ export interface NewOrder<OrderType> {
     order: OrderType;
     processAt: number;
 }
-
-
-export interface GasFeeOverrides {
-    gasPrice?: bigint;
-    maxFeePerGas?: bigint;
-    maxPriorityFeePerGas?: bigint;
-}
-
-export interface GasFeeConfig {
-    gasPriceAdjustmentFactor?: number;
-    maxAllowedGasPrice?: number | string;
-    maxFeePerGas?: number | string;
-    maxPriorityFeeAdjustmentFactor?: number;
-    maxAllowedPriorityFeePerGas?: number | string;
-    priorityAdjustmentFactor?: number;
-}
