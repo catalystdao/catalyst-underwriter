@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Global, Injectable, OnModuleInit } from '@nestjs/common';
 import { join } from 'path';
 import { LoggerOptions } from 'pino';
 import { Worker, MessagePort } from 'worker_threads';
@@ -49,6 +49,7 @@ export interface WalletWorkerData {
 
 }
 
+@Global()
 @Injectable()
 export class WalletService implements OnModuleInit {
     private workers: Record<string, Worker | null> = {};
