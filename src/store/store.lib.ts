@@ -41,6 +41,7 @@ export class Store {
     static readonly activeUnderwritePrefix: string = 'activeUnderwrite';
     static readonly completedUnderwritePrefix: string = 'completedUnderwrite';
 
+    static readonly underwriterChannelPrefix: string = 'underwriter'; 
     static readonly onSendAssetChannel: string = 'onSendAsset';
     static readonly onSwapUnderwrittenChannel: string = 'onSwapUnderwritten';
 
@@ -103,7 +104,7 @@ export class Store {
 
     async postMessage(channel: string, payload: { [key: string]: any }) {
         return this.redis.publish(
-            Store.combineString(Store.activeUnderwritePrefix, channel),
+            Store.combineString(Store.underwriterChannelPrefix, channel),
             JSON.stringify(payload),
         );
     }
@@ -112,7 +113,7 @@ export class Store {
         const redisSubscriptions = this.getOrOpenSubscription();
         // Subscribe to the channel so that we get messages.
         const channelWithprefix = Store.combineString(
-            Store.activeUnderwritePrefix,
+            Store.underwriterChannelPrefix,
             channel,
         );
         await redisSubscriptions.subscribe(channelWithprefix);
