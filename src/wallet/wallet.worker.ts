@@ -69,7 +69,7 @@ class WalletWorker {
 
         this.initializePorts();
 
-        void this.initiateIntervalStatusLog();
+        this.initiateIntervalStatusLog();
     }
 
 
@@ -144,13 +144,13 @@ class WalletWorker {
     }
 
     private initializePorts(): void {
-        parentPort?.on('message', (message: WalletGetPortMessage) => {
+        parentPort!.on('message', (message: WalletGetPortMessage) => {
             const port = this.registerNewPort();
             const response: WalletGetPortResponse = {
                 messageId: message.messageId,
                 port
             };
-            parentPort?.postMessage(response, [port])
+            parentPort!.postMessage(response, [port])
         });
     }
 
