@@ -4,7 +4,7 @@ import { LoggerOptions } from 'pino';
 import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService } from 'src/config/config.service';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
-import { WalletGetPortResponse } from './wallet.types';
+import { WalletGetPortMessage, WalletGetPortResponse } from './wallet.types';
 
 const DEFAULT_WALLET_RETRY_INTERVAL = 30000;
 const DEFAULT_WALLET_PROCESSING_INTERVAL = 100;
@@ -226,7 +226,7 @@ export class WalletService implements OnModuleInit {
                 }
             };
             worker.on("message", listener);
-            worker.postMessage(messageId);
+            worker.postMessage({ messageId } as WalletGetPortMessage);
         });
 
         return portPromise;
