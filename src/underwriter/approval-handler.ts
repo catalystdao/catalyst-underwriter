@@ -1,9 +1,16 @@
 import pino from "pino";
-import { PendingApproval, UnderwriteOrder } from "./underwriter.types";
-import { Wallet } from "ethers";
-import { TransactionHelper } from "./transaction-helper";
+import { UnderwriteOrder } from "./underwriter.types";
 import { Token__factory } from "src/contracts";
-import { PendingTransaction } from "./queues/confirm-queue";
+import { TransactionResult, WalletInterface } from "src/wallet/wallet.interface";
+import { TransactionRequest } from "ethers";
+import { WalletTransactionOptions } from "src/wallet/wallet.types";
+
+interface ApprovalDescription {
+    interfaceAddress: string;
+    assetAddress: string;
+    setAllowance: bigint;
+    requiredAllowance: bigint;
+}
 
 export class ApprovalHandler {
 
@@ -13,18 +20,17 @@ export class ApprovalHandler {
     constructor(
         readonly retryInterval: number,
         readonly maxTries: number,
-        private readonly transactionHelper: TransactionHelper,
-        private readonly signer: Wallet,
+        private readonly wallet: WalletInterface,
         private readonly logger: pino.Logger
     ) {
     }
 
-    async updateAllowances(...newOrders: UnderwriteOrder[]): Promise<PendingTransaction<PendingApproval>[]> {
+    async updateAllowances(...newOrders: UnderwriteOrder[]): Promise<void> {
         for (const order of newOrders) {
             this.registerRequiredAllowanceIncrease(order.interfaceAddress, order.toAsset, order.toAssetAllowance);
         }
 
-        return this.setAllowances();
+        await this.setAllowances();
     }
 
     private registerRequiredAllowanceIncrease(interfaceAddress: string, assetAddress: string, amount: bigint): void {
@@ -106,7 +112,7 @@ export class ApprovalHandler {
     }
 
 
-    private async setAllowances(): Promise<PendingTransaction<PendingApproval>[]> {
+    private async setAllowances(): Promise<void> {
 
         // ! This function works by iterating over the 'this.requiredUnderwritingAllowances' keys
         // ! (the **required** allowances), and comparing them with the
@@ -114,9 +120,6 @@ export class ApprovalHandler {
         // ! must thus **always** contain all the keys that compose the *set* map, otherwise the 
         // ! *set* allowances map may not be iterated through fully: i.e. once an allowance is not
         // ! anymore required it must be set to 0 rather than get removed from the map.
-
-        // TODO max tries and retry interval
-        const results: PendingTransaction<PendingApproval>[] = [];
 
         for (const [interfaceAddress, requiredAssetAllowances] of this.requiredUnderwritingAllowances) {
 
@@ -142,39 +145,37 @@ export class ApprovalHandler {
                             `Setting token allowance for interface contract.`
                         );
                         const tokenContract = Token__factory.connect(
-                            assetAddress,
-                            this.signer
+                            assetAddress
                         );
-                        const approveTx = await tokenContract.approve(
+                        const txData = tokenContract.interface.encodeFunctionData("approve", [
                             interfaceAddress,
-                            requiredAllowance,   //TODO set gas limit?
-                            {
-                                nonce: this.transactionHelper.getTransactionNonce(),
-                                ...this.transactionHelper.getFeeDataForTransaction(),
-                            }
-                        );
+                            requiredAllowance,   
+                        ])
+                        const txRequest: TransactionRequest = {
+                            to: assetAddress,
+                            data: txData,
+                            //TODO set gas limit?
+                        }
+                        const approvalDescription: ApprovalDescription = {
+                            interfaceAddress,
+                            assetAddress,
+                            setAllowance,
+                            requiredAllowance,
+                        }
+                        const walletOptions: WalletTransactionOptions = {
+                            retryOnNonceConfirmationError: false    // If the tx fails to submit, do not retry as the tx order will not be maintained
+                        }
 
-                        this.transactionHelper.increaseTransactionNonce();
+                        void this.wallet.submitTransaction(txRequest, approvalDescription, walletOptions)
+                            .then(transactionResult => this.onTransactionResult(transactionResult));
 
-                        results.push({
-                            data: {
-                                isApproval: true,
-                                interface: interfaceAddress,
-                                asset: assetAddress,
-                                setAllowance,
-                                requiredAllowance,
-                            },
-                            tx: approveTx
-                        });
-
-                        await approveTx.wait(); //TODO this should not block the loop, but rather all txs should be awaited for at the end of the loop (with a timeout)
-
+                        // Increase immediately the 'set' asset allowance. This is technically not correct
+                        // until the 'approve' transaction confirms, but is done to prevent further approve
+                        // transactions for the same allowance requirement to be issued.
                         setAssetAllowances.set(assetAddress, requiredAllowance);
 
                     } catch {
-                        // TODO implement retry? If this 'approve' call fails, any orders that are executed
-                        // on the batch that follows this call that require the approvals may fail (if the allowance
-                        // is being increased.)
+                        // TODO is this required?
                     }
 
                 }
@@ -182,7 +183,39 @@ export class ApprovalHandler {
 
         }
 
-        return results;
+    }
+
+    private onTransactionResult(result: TransactionResult): void {
+        const {
+            interfaceAddress,
+            assetAddress,
+            setAllowance,
+            requiredAllowance
+        } = result.metadata as ApprovalDescription;
+
+        const logDescription = {
+            interface: interfaceAddress,
+            asset: assetAddress,
+            setAllowance,
+            requiredAllowance,
+            txHash: result.txReceipt?.hash,
+            submissionError: result.submissionError,
+            confirmationError: result.confirmationError,
+        }
+
+        if (result.submissionError || result.confirmationError) {
+            //TODO do anything else if approve tx fails?
+            this.logger.error(logDescription, 'Error on approval transaction.');
+            
+            // Since the approval has not been successful, decrease the 'set' allowance register.
+            this.registerSetAllowanceDecrease(
+                interfaceAddress,
+                assetAddress,
+                requiredAllowance - setAllowance
+            );
+        } else {
+            this.logger.debug(logDescription, 'Approval transaction success');
+        }
 
     }
     

@@ -1,7 +1,6 @@
 import { calcAssetSwapIdentifier } from 'src/common/utils';
-import { Wallet } from "ethers";
 import pino from "pino";
-import { HandleOrderResult, ProcessingQueue } from "./processing-queue";
+import { HandleOrderResult, ProcessingQueue } from "../../processing-queue/processing-queue";
 import { EvalOrder, UnderwriteOrder } from "../underwriter.types";
 import { PoolConfig } from "src/config/config.service";
 import { CatalystVaultCommon__factory } from "src/contracts";
@@ -15,7 +14,6 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         readonly pools: PoolConfig[],
         readonly retryInterval: number,
         readonly maxTries: number,
-        private readonly signer: Wallet,
         private readonly logger: pino.Logger
     ) {
         super(retryInterval, maxTries);
@@ -50,8 +48,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         }
 
         const toVaultContract = CatalystVaultCommon__factory.connect(
-            order.toVault,
-            this.signer
+            order.toVault
         );
         const toAsset = await toVaultContract._tokenIndexing(order.toAssetIndex);
 

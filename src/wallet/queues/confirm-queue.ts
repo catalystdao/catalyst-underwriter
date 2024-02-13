@@ -1,22 +1,11 @@
-import { HandleOrderResult, ProcessingQueue } from './processing-queue';
-import { AbstractProvider, TransactionReceipt, TransactionResponse, Wallet } from 'ethers';
+import { HandleOrderResult, ProcessingQueue } from '../../processing-queue/processing-queue';
+import { AbstractProvider, Wallet } from 'ethers';
 import pino from 'pino';
 import { TransactionHelper } from '../transaction-helper';
+import { ConfirmedTransaction, PendingTransaction } from '../wallet.types';
 
-export interface PendingTransaction<T = any> {
-    data: T;
-    tx: TransactionResponse;
-    replaceTx?: TransactionResponse;
-    confirmationError?: any;
-}
 
-export interface ConfirmedTransaction<T = any> {
-  data: T;
-  tx: TransactionResponse;
-  txReceipt: TransactionReceipt;
-}
-
-export class ConfirmQueue extends ProcessingQueue<PendingTransaction, ConfirmedTransaction> {
+export class TransactionQueue extends ProcessingQueue<PendingTransaction, ConfirmedTransaction> {
 
     constructor(
         readonly retryInterval: number,
@@ -43,7 +32,7 @@ export class ConfirmQueue extends ProcessingQueue<PendingTransaction, ConfirmedT
     }
 
     protected async onOrderInit(order: PendingTransaction): Promise<void> {
-        order.replaceTx = undefined;
+        order.txReplacement = undefined;
         order.confirmationError = undefined;
     }
 
@@ -64,8 +53,7 @@ export class ConfirmQueue extends ProcessingQueue<PendingTransaction, ConfirmedT
                         throw new Error('Receipt is \'null\' after waiting for transaction');   // This should never happen if confirmations > 0
                     }
                     return {
-                        data: order.data,
-                        tx: order.tx,
+                        ...order,
                         txReceipt: receipt,
                     }
                 });
@@ -74,14 +62,14 @@ export class ConfirmQueue extends ProcessingQueue<PendingTransaction, ConfirmedT
         }
 
         // Reprice the order if it hasn't been repriced
-        if (!order.replaceTx) {
+        if (!order.txReplacement) {
             // Reprice the order
             const originalTx = order.tx;
 
             const increasedFeeConfig =
                 this.transactionHelper.getIncreasedFeeDataForTransaction(originalTx);
 
-            order.replaceTx = await this.wallet.sendTransaction({
+            order.txReplacement = await this.wallet.sendTransaction({
                 type: originalTx.type,
                 to: originalTx.to,
                 nonce: originalTx.nonce,
@@ -97,14 +85,13 @@ export class ConfirmQueue extends ProcessingQueue<PendingTransaction, ConfirmedT
             order.tx.hash,
             this.confirmations,
             this.confirmationTimeout,
-        )
-        .then((txReceipt) => ({ tx: order.tx, txReceipt }));
+        ).then((txReceipt) => ({ tx: order.tx, txReceipt }));
+
         const replaceTxReceipt = this.provider.waitForTransaction(
-            order.replaceTx!.hash,
+            order.txReplacement!.hash,
             this.confirmations,
             this.confirmationTimeout,
-        )
-        .then((txReceipt) => ({ tx: order.replaceTx!, txReceipt }));
+        ).then((txReceipt) => ({ tx: order.txReplacement!, txReceipt }));
 
         const confirmationPromise = Promise.any([
             originalTxReceipt,
@@ -115,8 +102,8 @@ export class ConfirmQueue extends ProcessingQueue<PendingTransaction, ConfirmedT
                     throw new Error('Receipt is \'null\' after waiting for transaction');   // This should never happen if confirmations > 0
                 }
                 return {
-                    data: order.data,
-                    tx: result.tx,
+                    ...order,
+                    tx: result.tx,  // ! May not be the same as 'order.tx' (may be 'order.replaceTx')
                     txReceipt: result.txReceipt,
                 }
             },
@@ -166,7 +153,7 @@ export class ConfirmQueue extends ProcessingQueue<PendingTransaction, ConfirmedT
         // Unknown error on confirmation.
         this.logger.warn(
             errorDescription,
-            `Error on transaction confirmation. Requeue order for submission if possible.`,
+            `Error on transaction confirmation.`,
         );
         order.confirmationError = error;
         return false; // Do not retry order confirmation
@@ -180,7 +167,7 @@ export class ConfirmQueue extends ProcessingQueue<PendingTransaction, ConfirmedT
 
         const errorDescription = {
             txHash: order.tx.hash,
-            repricedTxHash: order.replaceTx?.hash,
+            repricedTxHash: order.txReplacement?.hash,
             error,
             try: retryCount + 1
         };
@@ -219,7 +206,7 @@ export class ConfirmQueue extends ProcessingQueue<PendingTransaction, ConfirmedT
     ): Promise<void> {
         const orderDescription = {
             txHash: order.tx.hash,
-            repricedTxHash: order.replaceTx?.hash,
+            repricedTxHash: order.txReplacement?.hash,
             try: retryCount + 1,
         };
 

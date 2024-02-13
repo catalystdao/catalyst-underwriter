@@ -1,37 +1,32 @@
-import { Wallet } from "ethers";
+import { TransactionRequest } from "ethers";
 import pino from "pino";
-import { HandleOrderResult, ProcessingQueue } from "./processing-queue";
-import { UnderwriteOrder } from "../underwriter.types";
+import { HandleOrderResult, ProcessingQueue } from "../../processing-queue/processing-queue";
+import { UnderwriteOrder, UnderwriteOrderResult } from "../underwriter.types";
 import { PoolConfig } from "src/config/config.service";
 import { CatalystChainInterface__factory } from "src/contracts";
-import { TransactionHelper } from "../transaction-helper";
-import { PendingTransaction } from "./confirm-queue";
+import { WalletInterface } from "src/wallet/wallet.interface";
 
-export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, PendingTransaction<UnderwriteOrder>> {
+export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, UnderwriteOrderResult> {
 
     constructor(
         readonly pools: PoolConfig[],
         readonly retryInterval: number,
         readonly maxTries: number,
-        private readonly transactionHelper: TransactionHelper,
-        private readonly signer: Wallet,
+        private readonly wallet: WalletInterface,
         private readonly logger: pino.Logger
     ) {
         super(retryInterval, maxTries);
     }
 
-    protected async onProcessOrders(): Promise<void> {
-        await this.transactionHelper.updateFeeData();
-    }
-
     protected async handleOrder(
         order: UnderwriteOrder,
         _retryCount: number
-    ): Promise<HandleOrderResult<PendingTransaction<UnderwriteOrder>> | null> {
+    ): Promise<HandleOrderResult<UnderwriteOrderResult> | null> {
 
-        const interfaceContract = CatalystChainInterface__factory.connect(order.interfaceAddress, this.signer);
+        const interfaceContract = CatalystChainInterface__factory.connect(order.interfaceAddress);
 
-        const tx = await interfaceContract.underwrite(    //TODO use underwriteAndCheckConnection
+        //TODO use underwriteAndCheckConnection
+        const txData = interfaceContract.interface.encodeFunctionData("underwrite", [
             order.toVault,
             order.toAsset,
             order.units,
@@ -39,16 +34,33 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, PendingTra
             order.toAccount,
             order.underwriteIncentiveX16,
             order.calldata,
-            {
-                nonce: this.transactionHelper.getTransactionNonce(),
-                gasLimit: order.gasLimit,
-                ...this.transactionHelper.getFeeDataForTransaction()
-            }
-        );
+        ]);
 
-        this.transactionHelper.increaseTransactionNonce();
+        const txRequest: TransactionRequest = {
+            to: order.interfaceAddress,
+            data: txData,
+            gasLimit: order.gasLimit,
+        };
 
-        return { result: { data: order, tx } };
+        const txPromise = this.wallet.submitTransaction(txRequest, order)
+            .then(transactionResult => {
+                if (transactionResult.submissionError) {
+                    throw transactionResult.submissionError;    //TODO wrap in a 'SubmissionError' type?
+                }
+                if (transactionResult.confirmationError) {
+                    throw transactionResult.confirmationError;    //TODO wrap in a 'ConfirmationError' type?
+                }
+
+                const order = transactionResult.metadata as UnderwriteOrder;
+
+                return {
+                    ...order,
+                    tx: transactionResult.tx,
+                    txReceipt: transactionResult.txReceipt
+                } as UnderwriteOrderResult;
+            });
+
+        return { result: txPromise };
     }
 
     protected async handleFailedOrder(order: UnderwriteOrder, retryCount: number, error: any): Promise<boolean> {
@@ -63,34 +75,18 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, PendingTra
             try: retryCount + 1
         };
 
+        this.logger.warn(errorDescription, `Error on underwrite submission.`);
+
         //TODO Improve error filtering?
         //TODO  - If invalid allowance => should retry
         //TODO  - If 'recentlyUnderwritten' => should not retry
-        if (error.code === 'CALL_EXCEPTION') {
-            this.logger.info(
-                errorDescription,
-                `Error on underwrite submission: CALL_EXCEPTION.`,
-            );
-            return false;   // Do not retry eval
-        }
-
-        if (
-            error.code === 'NONCE_EXPIRED' ||
-            error.code === 'REPLACEMENT_UNDERPRICED' ||
-            error.error?.message.includes('invalid sequence') //TODO is this dangerous? (any contract may include that error)
-        ) {
-            await this.transactionHelper.updateTransactionNonce();
-        }
-
-        this.logger.warn(errorDescription, `Error on underwrite submission.`);
-
-        return true;
+        return false;
     }
 
     protected async onOrderCompletion(
         order: UnderwriteOrder,
         success: boolean,
-        result: PendingTransaction<UnderwriteOrder> | null,
+        result: UnderwriteOrderResult | null,
         retryCount: number
     ): Promise<void> {
 

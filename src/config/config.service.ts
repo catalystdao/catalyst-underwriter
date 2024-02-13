@@ -39,7 +39,7 @@ export interface UnderwriterGlobalConfig {
   processingInterval?: number;
   maxTries?: number;
   maxPendingTransactions?: number;
-  confirmations?: number;
+  confirmations?: number; //TODO move tx options to 'wallet' config
   confirmationTimeout?: number;
   maxFeePerGas?: number | string;
   maxAllowedPriorityFeePerGas?: number | string;

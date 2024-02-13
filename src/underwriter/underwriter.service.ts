@@ -1,30 +1,21 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { join } from 'path';
 import { LoggerOptions } from 'pino';
-import { Worker } from 'worker_threads';
+import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService, PoolConfig } from 'src/config/config.service';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
+import { WalletService } from 'src/wallet/wallet.service';
 
 const DEFAULT_UNDERWRITER_RETRY_INTERVAL = 30000;
 const DEFAULT_UNDERWRITER_PROCESSING_INTERVAL = 100;
 const DEFAULT_UNDERWRITER_MAX_TRIES = 3;
 const DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS = 50;
-const DEFAULT_UNDERWRITER_CONFIRMATIONS = 1;
-const DEFAULT_UNDERWRITER_CONFIRMATION_TIMEOUT = 60000;
 
 interface DefaultUnderwriterWorkerData {
     retryInterval: number;
     processingInterval: number;
     maxTries: number;
     maxPendingTransactions: number;
-    confirmations: number;
-    confirmationTimeout: number;
-    maxFeePerGas?: number | string;
-    maxAllowedPriorityFeePerGas?: number | string;
-    maxPriorityFeeAdjustmentFactor?: number;
-    maxAllowedGasPrice?: number | string;
-    gasPriceAdjustmentFactor?: number;
-    priorityAdjustmentFactor?: number;
 }
 
 export interface UnderwriterWorkerData {
@@ -36,15 +27,7 @@ export interface UnderwriterWorkerData {
     processingInterval: number;
     maxTries: number;
     maxPendingTransactions: number;
-    confirmations: number;
-    confirmationTimeout: number;
-    privateKey: string;
-    maxFeePerGas?: number | string;
-    maxAllowedPriorityFeePerGas?: number | string;
-    maxPriorityFeeAdjustmentFactor?: number;
-    maxAllowedGasPrice?: number | string;
-    gasPriceAdjustmentFactor?: number;
-    priorityAdjustmentFactor?: number;
+    walletPort: MessagePort;
     loggerOptions: LoggerOptions;
 }
 
@@ -55,28 +38,30 @@ export class UnderwriterService implements OnModuleInit {
 
     constructor(
         private readonly configService: ConfigService,
+        private readonly walletService: WalletService,
         private readonly loggerService: LoggerService,
     ) { }
 
-    onModuleInit() {
+    async onModuleInit() {
         this.loggerService.info(`Starting Underwriter on all chains...`);
 
-        this.initializeWorkers();
+        await this.initializeWorkers();
 
         this.initiateIntervalStatusLog();
     }
 
-    private initializeWorkers(): void {
+    private async initializeWorkers(): Promise<void> {
         const defaultWorkerConfig = this.loadDefaultWorkerConfig();
 
         const pools = this.loadPools();
 
         for (const [chainId, ] of this.configService.chainsConfig) {
 
-            const workerData = this.loadWorkerConfig(chainId, pools, defaultWorkerConfig);
+            const workerData = await this.loadWorkerConfig(chainId, pools, defaultWorkerConfig);
 
             const worker = new Worker(join(__dirname, 'underwriter.worker.js'), {
-                workerData
+                workerData,
+                transferList: [workerData.walletPort]
             });
             this.workers[chainId] = worker;
 
@@ -103,37 +88,20 @@ export class UnderwriterService implements OnModuleInit {
         const processingInterval = globalUnderwriterConfig.processingInterval ?? DEFAULT_UNDERWRITER_PROCESSING_INTERVAL;
         const maxTries = globalUnderwriterConfig.maxTries ?? DEFAULT_UNDERWRITER_MAX_TRIES;
         const maxPendingTransactions = globalUnderwriterConfig.maxPendingTransactions ?? DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS;
-        const confirmations = globalUnderwriterConfig.confirmations ?? DEFAULT_UNDERWRITER_CONFIRMATIONS;
-        const confirmationTimeout = globalUnderwriterConfig.confirmationTimeout ?? DEFAULT_UNDERWRITER_CONFIRMATION_TIMEOUT;
-
-        const maxFeePerGas = globalUnderwriterConfig.maxFeePerGas;
-        const maxAllowedPriorityFeePerGas = globalUnderwriterConfig.maxAllowedPriorityFeePerGas;
-        const maxPriorityFeeAdjustmentFactor = globalUnderwriterConfig.maxPriorityFeeAdjustmentFactor;
-        const maxAllowedGasPrice = globalUnderwriterConfig.maxAllowedGasPrice;
-        const gasPriceAdjustmentFactor = globalUnderwriterConfig.gasPriceAdjustmentFactor;
-        const priorityAdjustmentFactor = globalUnderwriterConfig.priorityAdjustmentFactor;
     
         return {
             retryInterval,
             processingInterval,
             maxTries,
-            maxPendingTransactions,
-            confirmations,
-            confirmationTimeout,
-            maxFeePerGas,
-            maxAllowedPriorityFeePerGas,
-            maxPriorityFeeAdjustmentFactor,
-            maxAllowedGasPrice,
-            gasPriceAdjustmentFactor,
-            priorityAdjustmentFactor,
+            maxPendingTransactions
         }
     }
 
-    private loadWorkerConfig(
+    private async loadWorkerConfig(
         chainId: string,
         pools: PoolConfig[],
         defaultConfig: DefaultUnderwriterWorkerData
-    ): UnderwriterWorkerData {
+    ): Promise<UnderwriterWorkerData> {
 
         const chainConfig = this.configService.chainsConfig.get(chainId);
         if (chainConfig == undefined) {
@@ -160,37 +128,8 @@ export class UnderwriterService implements OnModuleInit {
             maxPendingTransactions:
                 chainUnderwriterConfig.maxPendingTransactions
                 ?? defaultConfig.maxPendingTransactions,
-            confirmations: chainUnderwriterConfig.confirmations ?? defaultConfig.confirmations,
-            confirmationTimeout:
-                chainUnderwriterConfig.confirmationTimeout ??
-                defaultConfig.confirmationTimeout,
 
-            privateKey: this.configService.globalConfig.privateKey,
-            
-            maxFeePerGas:
-                chainUnderwriterConfig.maxFeePerGas ??
-                defaultConfig.maxFeePerGas,
-
-            maxPriorityFeeAdjustmentFactor: 
-                chainUnderwriterConfig.maxPriorityFeeAdjustmentFactor ??
-                defaultConfig.maxPriorityFeeAdjustmentFactor,
-
-            maxAllowedPriorityFeePerGas:
-                chainUnderwriterConfig.maxAllowedPriorityFeePerGas ??
-                defaultConfig.maxAllowedPriorityFeePerGas,
-
-            gasPriceAdjustmentFactor:
-                chainUnderwriterConfig.gasPriceAdjustmentFactor ??
-                defaultConfig.gasPriceAdjustmentFactor,
-
-            maxAllowedGasPrice:
-                chainUnderwriterConfig.maxAllowedGasPrice ??
-                defaultConfig.maxAllowedGasPrice,
-
-            priorityAdjustmentFactor:
-                chainUnderwriterConfig.priorityAdjustmentFactor ??
-                defaultConfig.priorityAdjustmentFactor,
-
+            walletPort: await this.walletService.attachToWallet(chainId),
             loggerOptions: this.loggerService.loggerOptions
         };
     }

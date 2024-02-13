@@ -1,4 +1,4 @@
-import { BytesLike } from "ethers";
+import { BytesLike, TransactionReceipt, TransactionResponse } from "ethers";
 
 
 export interface Order {
@@ -33,7 +33,11 @@ export interface UnderwriteOrder extends Order {
     toAsset: string;
     toAssetAllowance: bigint;
     interfaceAddress: string;
-    requeueCount?: number;
+}
+
+export interface UnderwriteOrderResult extends UnderwriteOrder {
+    tx: TransactionResponse;
+    txReceipt: TransactionReceipt;
 }
 
 export interface PendingApproval {
