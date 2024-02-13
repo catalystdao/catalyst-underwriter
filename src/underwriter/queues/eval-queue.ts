@@ -7,6 +7,7 @@ import { CatalystVaultCommon__factory } from "src/contracts";
 import fetch from 'node-fetch';
 import { CatalystContext, catalystParse } from 'src/common/decode.catalyst';
 import { parsePayload } from 'src/common/decode.payload';
+import { JsonRpcProvider } from 'ethers';
 
 export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
@@ -14,6 +15,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         readonly pools: PoolConfig[],
         readonly retryInterval: number,
         readonly maxTries: number,
+        private readonly provider: JsonRpcProvider,
         private readonly logger: pino.Logger
     ) {
         super(retryInterval, maxTries);
@@ -48,7 +50,8 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         }
 
         const toVaultContract = CatalystVaultCommon__factory.connect(
-            order.toVault
+            order.toVault,
+            this.provider
         );
         const toAsset = await toVaultContract._tokenIndexing(order.toAssetIndex);
 

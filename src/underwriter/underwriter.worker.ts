@@ -66,6 +66,7 @@ class UnderwriterWorker {
             this.config.retryInterval,
             this.config.maxTries,
             this.wallet,
+            this.provider,
             this.logger
         );
 
@@ -100,12 +101,14 @@ class UnderwriterWorker {
         retryInterval: number,
         maxTries: number,
         wallet: WalletInterface,
+        provider: JsonRpcProvider,
         logger: pino.Logger,
     ): [EvalQueue, UnderwriteQueue] {
         const evalQueue = new EvalQueue(
             pools,
             retryInterval,
             maxTries,
+            provider,
             logger
         );
 
@@ -114,6 +117,7 @@ class UnderwriterWorker {
             retryInterval,
             maxTries,
             wallet,
+            provider,
             logger
         );
 

@@ -1,4 +1,4 @@
-import { TransactionRequest } from "ethers";
+import { JsonRpcProvider, TransactionRequest } from "ethers";
 import pino from "pino";
 import { HandleOrderResult, ProcessingQueue } from "../../processing-queue/processing-queue";
 import { UnderwriteOrder, UnderwriteOrderResult } from "../underwriter.types";
@@ -13,6 +13,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
         readonly retryInterval: number,
         readonly maxTries: number,
         private readonly wallet: WalletInterface,
+        private readonly provider: JsonRpcProvider,
         private readonly logger: pino.Logger
     ) {
         super(retryInterval, maxTries);
@@ -23,7 +24,10 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
         _retryCount: number
     ): Promise<HandleOrderResult<UnderwriteOrderResult> | null> {
 
-        const interfaceContract = CatalystChainInterface__factory.connect(order.interfaceAddress);
+        const interfaceContract = CatalystChainInterface__factory.connect(
+            order.interfaceAddress,
+            this.provider
+        );
 
         //TODO use underwriteAndCheckConnection
         const txData = interfaceContract.interface.encodeFunctionData("underwrite", [
