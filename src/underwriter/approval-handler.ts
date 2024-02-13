@@ -19,7 +19,6 @@ export class ApprovalHandler {
 
     constructor(
         readonly retryInterval: number,
-        readonly maxTries: number,
         private readonly wallet: WalletInterface,
         private readonly logger: pino.Logger
     ) {
