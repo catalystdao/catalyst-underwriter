@@ -164,15 +164,15 @@ class UnderwriterWorker {
             await this.underwriteQueue.processOrders();
             const [confirmedOrders, rejectedOrders, ] = this.underwriteQueue.getFinishedOrders();
 
-            await this.handleConfirmedSubmitOrders(confirmedOrders);
-            await this.handleRejectedSubmitOrders(rejectedOrders);
+            await this.handleConfirmedOrders(confirmedOrders);
+            await this.handleRejectedOrders(rejectedOrders);
 
             await wait(this.config.processingInterval);
         }
     }
 
 
-    private async handleConfirmedSubmitOrders(
+    private async handleConfirmedOrders(
       confirmedSubmitOrders: UnderwriteOrderResult[],
     ): Promise<void> {
 
@@ -202,7 +202,7 @@ class UnderwriterWorker {
       }
     }
 
-    private async handleRejectedSubmitOrders(
+    private async handleRejectedOrders(
       rejectedSubmitOrders: UnderwriteOrder[],
     ): Promise<void> {
 
