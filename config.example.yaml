@@ -9,10 +9,16 @@ global:
     maxBlocks: 1000   # Maximum number of blocks to query in a single call
 
   underwriter:
+    retryInterval: 30000        # Time to wait before retrying an underwrite
+    processingInterval: 100     # Throttle for the Underwriter main 'run' loop
+    maxTries: 3                 # Maximum tries for an underwrite
+    maxPendingTransactions: 50  # Maximum number of orders within the 'underwrite' pipeline
+
+  wallet:
     retryInterval: 30000        # Time to wait before retrying a failed transaction
-    processingInterval: 100     # Throttle for the Submitter main 'run' loop
+    processingInterval: 100     # Throttle for the Wallet main 'run' loop
     maxTries: 3                 # Maximum tries for a transaction
-    maxPendingTransactions: 50  # Maximum number of transactions within the 'underwrite' pipeline
+    maxPendingTransactions: 50  # Maximum number of transactions within the 'submit' pipeline
     confirmationTimeout: 90000  # Timeout for a transaction to confirm
 
     # EIP-1559 Transactions
@@ -55,6 +61,8 @@ chains:
     listener:
       interval: 3000
     underwriter:
+      retryInterval: 3000
+    wallet:
       retryInterval: 3000
   
 

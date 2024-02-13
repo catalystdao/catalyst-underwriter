@@ -97,7 +97,7 @@ export class WalletService implements OnModuleInit {
     }
 
     private loadDefaultWorkerConfig(): DefaultWalletWorkerData {
-        const globalWalletConfig = this.configService.globalConfig.underwriter; //TODO replace 'underwrite' with 'wallet'
+        const globalWalletConfig = this.configService.globalConfig.wallet;
 
         const retryInterval = globalWalletConfig.retryInterval ?? DEFAULT_WALLET_RETRY_INTERVAL;
         const processingInterval = globalWalletConfig.processingInterval ?? DEFAULT_WALLET_PROCESSING_INTERVAL;
@@ -139,7 +139,7 @@ export class WalletService implements OnModuleInit {
             throw new Error(`Unable to load config for chain ${chainId}`);
         }
 
-        const chainWalletConfig = chainConfig.underwriter; //TODO replace 'underwrite' with 'wallet'
+        const chainWalletConfig = chainConfig.wallet;
         return {
             chainId,
             chainName: chainConfig.name,

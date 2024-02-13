@@ -10,6 +10,7 @@ export interface GlobalConfig {
   blockDelay?: number;
   listener: ListenerGlobalConfig;
   underwriter: UnderwriterGlobalConfig;
+  wallet: WalletGlobalConfig;
 }
 
 export interface AMBConfig {
@@ -23,8 +24,9 @@ export interface ChainConfig {
   rpc: string;
   startingBlock?: number;
   blockDelay?: number;
-  listener: ListenerConfig,
-  underwriter: UnderwriterConfig
+  listener: ListenerConfig;
+  underwriter: UnderwriterConfig;
+  wallet: WalletConfig;
 }
 
 export interface ListenerGlobalConfig {
@@ -39,7 +41,18 @@ export interface UnderwriterGlobalConfig {
   processingInterval?: number;
   maxTries?: number;
   maxPendingTransactions?: number;
-  confirmations?: number; //TODO move tx options to 'wallet' config
+}
+
+export interface UnderwriterConfig extends UnderwriterGlobalConfig {
+  rpc?: string;
+}
+
+export interface WalletGlobalConfig {
+  retryInterval?: number;
+  processingInterval?: number;
+  maxTries?: number;
+  maxPendingTransactions?: number;
+  confirmations?: number;
   confirmationTimeout?: number;
   maxFeePerGas?: number | string;
   maxAllowedPriorityFeePerGas?: number | string;
@@ -49,8 +62,8 @@ export interface UnderwriterGlobalConfig {
   priorityAdjustmentFactor?: number;
 }
 
-export interface UnderwriterConfig extends UnderwriterGlobalConfig {
-  rpc?: string;
+export interface WalletConfig extends WalletGlobalConfig {
+  rpc?: string; //TODO merge with 'underwrite' rpc?
 }
 
 export interface PoolConfig {
@@ -149,7 +162,8 @@ export class ConfigService {
       logLevel: rawGlobalConfig.logLevel,
       blockDelay: rawGlobalConfig.blockDelay,
       listener: rawGlobalConfig.listener ?? {},
-      underwriter: rawGlobalConfig.underwriter ?? {}
+      underwriter: rawGlobalConfig.underwriter ?? {},
+      wallet: rawGlobalConfig.wallet ?? {}
     };
   }
 
@@ -178,6 +192,7 @@ export class ConfigService {
         blockDelay: rawChainConfig.blockDelay,
         listener: rawChainConfig.listener ?? {},        //TODO 'listener' object should be verified
         underwriter: rawChainConfig.underwriter ?? {},  //TODO 'underwriter' object should be verified
+        wallet: rawChainConfig.wallet ?? {},            //TODO 'wallet' object should be verified
       });
     }
 
