@@ -4,6 +4,7 @@ import { LoggerModule } from './logger/logger.module';
 import { ListenerModule } from './listener/listener.module';
 import { UnderwriterModule } from './underwriter/underwriter.module';
 import { WalletModule } from './wallet/wallet.module';
+import { ExpirerModule } from './expirer/expirer.module';
 
 @Module({
   imports: [
@@ -11,7 +12,8 @@ import { WalletModule } from './wallet/wallet.module';
     LoggerModule,
     ListenerModule,
     WalletModule,
-    UnderwriterModule
+    UnderwriterModule,
+    ExpirerModule
   ],
   controllers: [],
   providers: [],
