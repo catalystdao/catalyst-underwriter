@@ -18,3 +18,20 @@ export const calcAssetSwapIdentifier = (
         ),
     );
 };
+
+export const calcUnderwriteIdentifier = (
+    targetVault: string,
+    toAsset: string,
+    units: bigint,
+    minOut: bigint,
+    toAccount: string,
+    underwriteIncentiveX16: bigint,
+    cdata: string
+) => {
+    return keccak256(
+        AbiCoder.defaultAbiCoder().encode(
+            ['address', 'address', 'uint256', 'uint256', 'address', 'uint16', 'bytes'],
+            [targetVault, toAsset, units, minOut, toAccount, underwriteIncentiveX16, cdata],
+        ),
+    )
+}

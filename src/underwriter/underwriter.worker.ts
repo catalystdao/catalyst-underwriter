@@ -59,10 +59,12 @@ class UnderwriterWorker {
         );
 
         [this.evalQueue, this.underwriteQueue] = this.initializeQueues(
+            this.chainId,
             this.pools,
             this.config.retryInterval,
             this.config.maxTries,
             this.wallet,
+            this.store,
             this.provider,
             this.logger
         );
@@ -94,17 +96,21 @@ class UnderwriterWorker {
     }
 
     private initializeQueues(
+        chainId: string,
         pools: PoolConfig[],
         retryInterval: number,
         maxTries: number,
         wallet: WalletInterface,
+        store: Store,
         provider: JsonRpcProvider,
         logger: pino.Logger,
     ): [EvalQueue, UnderwriteQueue] {
         const evalQueue = new EvalQueue(
+            chainId,
             pools,
             retryInterval,
             maxTries,
+            store,
             provider,
             logger
         );

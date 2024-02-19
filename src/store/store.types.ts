@@ -36,6 +36,9 @@ export interface SwapState {
     swapAmount: bigint;
     units: bigint;
 
+    toAsset?: string;
+    calldata?: string;
+
     underwriteId?: string;
     underwriteTxhash?: string;
 
@@ -68,12 +71,19 @@ export enum UnderwriteStatus {
     Expired
 }
 
-//TODO do we need this
-export interface UnderwriteDescription {
+export interface ActiveUnderwriteDescription {
     poolId: string;
     toChainId: string;
     toInterface: string;
     underwriteId: string;
+}
+
+export interface CompletedUnderwriteDescription {
+    poolId: string;
+    toChainId: string;
+    toInterface: string;
+    underwriteId: string;
+    underwriteTxHash: string;
 }
 
 export interface UnderwriteState {

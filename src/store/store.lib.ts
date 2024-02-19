@@ -1,5 +1,5 @@
 import { Redis } from 'ioredis';
-import { SwapState, SwapDescription, SwapStatus, UnderwriteState, UnderwriteStatus, UnderwriteDescription } from './store.types';
+import { SwapState, SwapDescription, SwapStatus, UnderwriteState, UnderwriteStatus, ActiveUnderwriteDescription, CompletedUnderwriteDescription } from './store.types';
 
 // Monkey patch BigInt. https://github.com/GoogleChromeLabs/jsbi/issues/30#issuecomment-1006086291
 (BigInt.prototype as any).toJSON = function () {
@@ -38,6 +38,8 @@ export class Store {
     readonly host: string | undefined;
 
     static readonly swapPrefix: string = 'swap';
+    static readonly activeUnderwriteToSwapDescriptionPrefix: string = 'activeUnderwriteToSwap';
+    static readonly completedUnderwriteToSwapDescriptionPrefix: string = 'completedUnderwriteToSwap';
     static readonly activeUnderwritePrefix: string = 'activeUnderwrite';
     static readonly completedUnderwritePrefix: string = 'completedUnderwrite';
 
@@ -221,8 +223,151 @@ export class Store {
         }
     }
 
+    async saveAdditionalSwapData(
+        fromChainId: string,
+        fromVault: string,
+        swapId: string,
+        toAsset: string,
+        calldata: string
+    ): Promise<void> {
+
+        const key = Store.getSwapStateKey(
+            fromChainId,
+            fromVault,
+            swapId,
+        );
+        
+        const state = await this.getSwapStateByKey(key);
+
+        if (state == null) {
+            throw new Error(`Unable to store additional swap data: swap state not found (fromChainId: ${fromChainId}, fromVault: ${fromVault}, swapId: ${swapId}.`);
+        }
+
+        state.toAsset = toAsset;
+        state.calldata = calldata;
+
+        await this.set(key, JSON.stringify(state));
+    }
+
+    async getSwapStateByActiveUnderwrite(
+        toChainId: string,
+        toInterface: string,
+        underwriteId: string,
+    ): Promise<SwapState | null> {
+        const swapDescription = await this.getSwapDescriptionByActiveUnderwrite(
+            toChainId,
+            toInterface,
+            underwriteId,
+        );
+
+        if (swapDescription == null) return null;
+
+        return this.getSwapState(
+            swapDescription.fromChainId,
+            swapDescription.fromVault,
+            swapDescription.swapId,
+        );
+    }
+
 
     // ----- Underwrites ------
+    static getSwapDescriptionByActiveUnderwriteKey(
+        toChainId: string,
+        toInterface: string,
+        underwriteId: string,
+    ): string {
+        return Store.combineString(
+            Store.activeUnderwriteToSwapDescriptionPrefix,
+            toChainId.toLowerCase(),
+            toInterface.toLowerCase(),
+            underwriteId.toLowerCase(),
+        );
+    }
+
+    static getSwapDescriptionByCompletedUnderwriteKey(
+        toChainId: string,
+        toInterface: string,
+        underwriteId: string,
+        underwriteTxHash: string,
+    ): string {
+        return Store.combineString(
+            Store.completedUnderwriteToSwapDescriptionPrefix,
+            toChainId.toLowerCase(),
+            toInterface.toLowerCase(),
+            underwriteId.toLowerCase(),
+            underwriteTxHash.toLowerCase(),
+        );
+    }
+
+    async getSwapDescriptionByActiveUnderwrite(
+        toChainId: string,
+        toInterface: string,
+        underwriteId: string,
+    ): Promise<SwapDescription | null> {
+        const key = Store.getSwapDescriptionByActiveUnderwriteKey(
+            toChainId,
+            toInterface,
+            underwriteId,
+        );
+        return this.getSwapDescriptionByKey(key);
+    }
+
+    async getSwapDescriptionByCompletedUnderwrite(
+        toChainId: string,
+        toInterface: string,
+        underwriteId: string,
+        underwriteTxHash: string,
+    ): Promise<SwapDescription | null> {
+        const key = Store.getSwapDescriptionByCompletedUnderwriteKey(
+            toChainId,
+            toInterface,
+            underwriteId,
+            underwriteTxHash,
+        );
+        return this.getSwapDescriptionByKey(key);
+    }
+
+    async getSwapDescriptionByKey(key: string): Promise<SwapDescription | null> {
+        const query = await this.redis.get(key);
+
+        if (query == null) {
+            return null;
+        }
+
+        const swapDescription = JSON.parse(query);
+
+        //TODO validate data?
+        return swapDescription as SwapDescription;
+    }
+
+    async saveSwapDescriptionByActiveUnderwrite(
+        underwriteDescription: ActiveUnderwriteDescription,
+        swapDescription: SwapDescription
+    ): Promise<void> {
+        const key = Store.getSwapDescriptionByActiveUnderwriteKey(
+            underwriteDescription.toChainId,
+            underwriteDescription.toInterface,
+            underwriteDescription.underwriteId,
+        );
+
+        await this.set(key, JSON.stringify(swapDescription));
+    }
+
+    async saveSwapDescriptionByCompletedUnderwrite(
+        underwriteDescription: CompletedUnderwriteDescription,
+        swapDescription: SwapDescription
+    ): Promise<void> {
+        const key = Store.getSwapDescriptionByCompletedUnderwriteKey(
+            underwriteDescription.toChainId,
+            underwriteDescription.toInterface,
+            underwriteDescription.underwriteId,
+            underwriteDescription.underwriteTxHash,
+        );
+
+        await this.set(key, JSON.stringify(swapDescription));
+    }
+
+
     static getActiveUnderwriteStateKey(
         toChainId: string,
         toInterface: string,
@@ -346,6 +491,30 @@ export class Store {
 
         // If the underwrite is complete, move the state entry from the 'active' onto the 'complete' set
         if (newState.status >= UnderwriteStatus.Fulfilled) {
+
+            // Also update the active-underwrite-to-swap map
+            const swapMapKey = Store.getSwapDescriptionByActiveUnderwriteKey(
+                state.toChainId,
+                state.toInterface,
+                state.underwriteId,
+            );
+            const swapDescription = await this.getSwapDescriptionByKey(swapMapKey);
+            if (swapDescription != null) {
+                await this.del(swapMapKey);
+
+                const underwriteDescription: CompletedUnderwriteDescription = {
+                    poolId: state.poolId,
+                    toChainId: state.toChainId,
+                    toInterface: state.toInterface,
+                    underwriteId: state.underwriteId,
+                    underwriteTxHash: state.swapUnderwrittenEvent!.txHash
+                };
+                await this.saveSwapDescriptionByCompletedUnderwrite(
+                    underwriteDescription,
+                    swapDescription
+                );
+            }
+
             await this.del(key);
             await this.saveCompletedUnderwriteState(newState);
         } else {
@@ -353,11 +522,11 @@ export class Store {
         }
 
         if (state.swapUnderwrittenEvent) {
-            const underwriteDescription: UnderwriteDescription = {
+            const underwriteDescription: ActiveUnderwriteDescription = {
                 poolId: state.poolId,
                 toChainId: state.toChainId,
                 toInterface: state.toInterface,
-                underwriteId: state.underwriteId,
+                underwriteId: state.underwriteId
             }
             await this.postMessage(Store.onSwapUnderwrittenChannel, underwriteDescription);
         }

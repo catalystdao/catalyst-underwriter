@@ -1,4 +1,4 @@
-import { calcAssetSwapIdentifier } from 'src/common/utils';
+import { calcAssetSwapIdentifier, calcUnderwriteIdentifier } from 'src/common/utils';
 import pino from "pino";
 import { HandleOrderResult, ProcessingQueue } from "../../processing-queue/processing-queue";
 import { EvalOrder, UnderwriteOrder } from "../underwriter.types";
@@ -8,13 +8,16 @@ import fetch from 'node-fetch';
 import { CatalystContext, catalystParse } from 'src/common/decode.catalyst';
 import { parsePayload } from 'src/common/decode.payload';
 import { JsonRpcProvider } from 'ethers';
+import { Store } from 'src/store/store.lib';
 
 export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
     constructor(
+        readonly chainId: string,
         readonly pools: PoolConfig[],
         readonly retryInterval: number,
         readonly maxTries: number,
+        private readonly store: Store,
         private readonly provider: JsonRpcProvider,
         private readonly logger: pino.Logger
     ) {
@@ -55,6 +58,20 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         );
         const toAsset = await toVaultContract._tokenIndexing(order.toAssetIndex);
 
+        // Save the 'toAsset' and 'calldata' for later use by the expirer
+        await this.saveAdditionalSwapData(
+            order,
+            toAsset,
+            calldata,
+        );
+
+        // Save the map 'underwrite-to-swap' for later use by the expirer
+        await this.saveSwapDescriptionByActiveUnderwrite(
+            order,
+            toAsset,
+            interfaceAddress,
+            calldata
+        );
 
         // Estimate return
         const expectedReturn = await toVaultContract.calcReceiveAsset(toAsset, order.units);
@@ -201,6 +218,54 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         }
 
         return undefined;
+    }
+
+    private async saveAdditionalSwapData(
+        order: EvalOrder,
+        toAsset: string,
+        calldata: string
+    ): Promise<void> {
+        await this.store.saveAdditionalSwapData(
+            order.fromChainId,
+            order.fromVault,
+            order.swapIdentifier,
+            toAsset,
+            calldata,
+        );
+    }
+
+    private async saveSwapDescriptionByActiveUnderwrite(
+        order: EvalOrder,
+        toAsset: string,
+        toInterface: string,
+        calldata: string,
+    ): Promise<void> {
+        const expectedUnderwriteId = calcUnderwriteIdentifier(
+            order.toVault,
+            toAsset,
+            order.units,
+            order.minOut,
+            order.toAccount,
+            order.underwriteIncentiveX16,
+            calldata
+        );
+
+        await this.store.saveSwapDescriptionByActiveUnderwrite(
+            {
+                poolId: order.poolId,
+                toChainId: this.chainId,
+                toInterface,
+                underwriteId: expectedUnderwriteId,
+            },
+            {
+                poolId: order.poolId,
+                fromChainId: order.fromChainId,
+                toChainId: this.chainId,
+                fromVault: order.fromVault,
+                swapId: order.swapIdentifier,
+            }
+        );
+
     }
 
 }
