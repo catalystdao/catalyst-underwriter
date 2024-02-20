@@ -163,6 +163,8 @@ export class Store {
         }
 
         const swapState = JSON.parse(query);
+        swapState.swapAmount = BigInt(swapState.swapAmount);
+        swapState.units = BigInt(swapState.units);
 
         if (swapState.sendAssetEvent) {
             const event = swapState.sendAssetEvent;
