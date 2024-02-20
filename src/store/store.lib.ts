@@ -505,11 +505,11 @@ export class Store {
                 await this.del(swapMapKey);
 
                 const underwriteDescription: CompletedUnderwriteDescription = {
-                    poolId: state.poolId,
-                    toChainId: state.toChainId,
-                    toInterface: state.toInterface,
-                    underwriteId: state.underwriteId,
-                    underwriteTxHash: state.swapUnderwrittenEvent!.txHash
+                    poolId: newState.poolId,
+                    toChainId: newState.toChainId,
+                    toInterface: newState.toInterface,
+                    underwriteId: newState.underwriteId,
+                    underwriteTxHash: newState.swapUnderwrittenEvent!.txHash
                 };
                 await this.saveSwapDescriptionByCompletedUnderwrite(
                     underwriteDescription,
