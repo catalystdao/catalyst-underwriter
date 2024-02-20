@@ -53,6 +53,7 @@ export interface ExpirerGlobalConfig {
   processingInterval?: number;
   maxTries?: number;
   maxPendingTransactions?: number;
+  expireBlocksMargin?: number;
 }
 
 export interface ExpirerConfig extends ExpirerGlobalConfig {

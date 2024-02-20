@@ -26,6 +26,7 @@ class UnderwriterWorker {
 
     readonly pools: PoolConfig[];
 
+    readonly underwriterPublicKey: string;
     readonly wallet: WalletInterface;
 
     readonly newOrdersQueue: ExpireEvalOrder[] = [];
@@ -48,6 +49,7 @@ class UnderwriterWorker {
         );
         this.provider = this.initializeProvider(this.config.rpc);
 
+        this.underwriterPublicKey = this.config.underwriterPublicKey.toLowerCase();
         this.wallet = new WalletInterface(this.config.walletPort);
 
         [this.evalQueue, this.expirerQueue] = this.initializeQueues(
@@ -211,24 +213,31 @@ class UnderwriterWorker {
                 return;
             }
 
-            //TODO currently expiring orders as soon as they are observed (for testing)
-            //TODO implement 'when to expire' logic
             this.addExpireOrder(
                 underwriteDescription.poolId,
                 underwriteDescription.toChainId,
                 underwriteDescription.toInterface,
-                underwriteDescription.underwriteId
+                underwriteDescription.underwriter,
+                underwriteDescription.underwriteId,
+                underwriteDescription.expiry
             );
 
         });
     }
 
+    private getCurrentBlockNumber(): number {
+        return 0;   //TODO implement
+    }
+
     private processNewOrdersQueue(): ExpireEvalOrder[] {
         const capacity = this.getExpirerCapacity();
+        const currentBlockNumber = this.getCurrentBlockNumber();
 
         let i;
         for (i = 0; i < this.newOrdersQueue.length; i++) {
-            if (i + 1 > capacity) {
+            const nextNewOrder = this.newOrdersQueue[i];
+
+            if (nextNewOrder.expireAt > currentBlockNumber || i + 1 > capacity) {
                 break;
             }
         }
@@ -249,21 +258,37 @@ class UnderwriterWorker {
         poolId: string,
         toChainId: string,
         toInterface: string,
+        underwriter: string,
         underwriteId: string,
+        expiry: number,
     ) {
         this.logger.debug(
             { poolId, toChainId, toInterface, underwriteId },
             `Expire underwrite order received.`
         );
 
-        const order: ExpireEvalOrder = {
+        const expireAt = underwriter.toLowerCase() == this.underwriterPublicKey
+            ? expiry - this.config.expireBlocksMargin
+            : expiry;
+
+        const newOrder: ExpireEvalOrder = {
             poolId,
             toChainId,
             toInterface,
             underwriteId,
+            expireAt
         };
 
-        this.newOrdersQueue.push(order);
+        // Insert the new order into the 'newOrdersQueue' keeping the queue order.
+        const insertIndex = this.newOrdersQueue.findIndex(order => {
+            return order.expireAt > newOrder.expireAt;
+        });
+
+        if (insertIndex == -1) {
+            this.newOrdersQueue.push(newOrder);
+        } else {
+            this.newOrdersQueue.splice(insertIndex, 0, newOrder);
+        }
     }
 
 }

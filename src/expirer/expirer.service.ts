@@ -11,13 +11,14 @@ export const DEFAULT_EXPIRER_RETRY_INTERVAL = DEFAULT_UNDERWRITER_RETRY_INTERVAL
 export const DEFAULT_EXPIRER_PROCESSING_INTERVAL = DEFAULT_UNDERWRITER_PROCESSING_INTERVAL;
 export const DEFAULT_EXPIRER_MAX_TRIES = DEFAULT_UNDERWRITER_MAX_TRIES;
 export const DEFAULT_EXPIRER_MAX_PENDING_TRANSACTIONS = DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS;
-
+export const DEFAULT_EXPIRER_EXPIRE_BLOCK_MARGIN = 20;
 
 interface DefaultExpirerWorkerData {
     retryInterval: number;
     processingInterval: number;
     maxTries: number;
     maxPendingTransactions: number;
+    expireBlocksMargin: number;
 }
 
 export interface ExpirerWorkerData {
@@ -29,6 +30,8 @@ export interface ExpirerWorkerData {
     processingInterval: number;
     maxTries: number;
     maxPendingTransactions: number;
+    expireBlocksMargin: number;
+    underwriterPublicKey: string;
     walletPort: MessagePort;
     loggerOptions: LoggerOptions;
 }
@@ -98,12 +101,15 @@ export class ExpirerService implements OnModuleInit {
         const maxPendingTransactions = globalExpirerConfig.maxPendingTransactions
             ?? globalUnderwriterConfig.maxPendingTransactions
             ?? DEFAULT_EXPIRER_MAX_PENDING_TRANSACTIONS;
+        const expireBlocksMargin = globalExpirerConfig.expireBlocksMargin
+            ?? DEFAULT_EXPIRER_EXPIRE_BLOCK_MARGIN;
     
         return {
             retryInterval,
             processingInterval,
             maxTries,
-            maxPendingTransactions
+            maxPendingTransactions,
+            expireBlocksMargin
         }
     }
 
@@ -144,7 +150,10 @@ export class ExpirerService implements OnModuleInit {
             maxPendingTransactions: chainExpirerConfig.maxPendingTransactions
                 ?? chainUnderwriterConfig.maxPendingTransactions
                 ?? defaultConfig.maxPendingTransactions,
+            expireBlocksMargin: chainExpirerConfig.expireBlocksMargin
+                ?? defaultConfig.expireBlocksMargin,
 
+            underwriterPublicKey: this.walletService.publicKey,
             walletPort: await this.walletService.attachToWallet(chainId),
             loggerOptions: this.loggerService.loggerOptions
         };

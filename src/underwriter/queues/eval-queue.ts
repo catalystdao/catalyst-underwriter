@@ -250,7 +250,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             calldata
         );
 
-        await this.store.saveSwapDescriptionByActiveUnderwrite(
+        await this.store.saveSwapDescriptionByExpectedUnderwrite(
             {
                 poolId: order.poolId,
                 toChainId: this.chainId,

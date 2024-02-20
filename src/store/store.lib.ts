@@ -1,5 +1,5 @@
 import { Redis } from 'ioredis';
-import { SwapState, SwapDescription, SwapStatus, UnderwriteState, UnderwriteStatus, ActiveUnderwriteDescription, CompletedUnderwriteDescription } from './store.types';
+import { SwapState, SwapDescription, SwapStatus, UnderwriteState, UnderwriteStatus, ActiveUnderwriteDescription, CompletedUnderwriteDescription, ExpectedUnderwriteDescription } from './store.types';
 
 // Monkey patch BigInt. https://github.com/GoogleChromeLabs/jsbi/issues/30#issuecomment-1006086291
 (BigInt.prototype as any).toJSON = function () {
@@ -38,7 +38,7 @@ export class Store {
     readonly host: string | undefined;
 
     static readonly swapPrefix: string = 'swap';
-    static readonly activeUnderwriteToSwapDescriptionPrefix: string = 'activeUnderwriteToSwap';
+    static readonly expectedUnderwriteToSwapDescriptionPrefix: string = 'expectedUnderwriteToSwap';
     static readonly completedUnderwriteToSwapDescriptionPrefix: string = 'completedUnderwriteToSwap';
     static readonly activeUnderwritePrefix: string = 'activeUnderwrite';
     static readonly completedUnderwritePrefix: string = 'completedUnderwrite';
@@ -251,12 +251,12 @@ export class Store {
         await this.set(key, JSON.stringify(state));
     }
 
-    async getSwapStateByActiveUnderwrite(
+    async getSwapStateByExpectedUnderwrite(
         toChainId: string,
         toInterface: string,
         underwriteId: string,
     ): Promise<SwapState | null> {
-        const swapDescription = await this.getSwapDescriptionByActiveUnderwrite(
+        const swapDescription = await this.getSwapDescriptionByExpectedUnderwrite(
             toChainId,
             toInterface,
             underwriteId,
@@ -273,13 +273,13 @@ export class Store {
 
 
     // ----- Underwrites ------
-    static getSwapDescriptionByActiveUnderwriteKey(
+    static getSwapDescriptionByExpectedUnderwriteKey(
         toChainId: string,
         toInterface: string,
         underwriteId: string,
     ): string {
         return Store.combineString(
-            Store.activeUnderwriteToSwapDescriptionPrefix,
+            Store.expectedUnderwriteToSwapDescriptionPrefix,
             toChainId.toLowerCase(),
             toInterface.toLowerCase(),
             underwriteId.toLowerCase(),
@@ -301,12 +301,12 @@ export class Store {
         );
     }
 
-    async getSwapDescriptionByActiveUnderwrite(
+    async getSwapDescriptionByExpectedUnderwrite(
         toChainId: string,
         toInterface: string,
         underwriteId: string,
     ): Promise<SwapDescription | null> {
-        const key = Store.getSwapDescriptionByActiveUnderwriteKey(
+        const key = Store.getSwapDescriptionByExpectedUnderwriteKey(
             toChainId,
             toInterface,
             underwriteId,
@@ -342,11 +342,11 @@ export class Store {
         return swapDescription as SwapDescription;
     }
 
-    async saveSwapDescriptionByActiveUnderwrite(
-        underwriteDescription: ActiveUnderwriteDescription,
+    async saveSwapDescriptionByExpectedUnderwrite(
+        underwriteDescription: ExpectedUnderwriteDescription,
         swapDescription: SwapDescription
     ): Promise<void> {
-        const key = Store.getSwapDescriptionByActiveUnderwriteKey(
+        const key = Store.getSwapDescriptionByExpectedUnderwriteKey(
             underwriteDescription.toChainId,
             underwriteDescription.toInterface,
             underwriteDescription.underwriteId,
@@ -491,11 +491,11 @@ export class Store {
             newState.status = UnderwriteStatus.Underwritten;
         }
 
-        // If the underwrite is complete, move the state entry from the 'active' onto the 'complete' set
+        // If the underwrite is complete, move the state entry from the 'expected' onto the 'complete' set
         if (newState.status >= UnderwriteStatus.Fulfilled) {
 
-            // Also update the active-underwrite-to-swap map
-            const swapMapKey = Store.getSwapDescriptionByActiveUnderwriteKey(
+            // Also update the expected-underwrite-to-swap map
+            const swapMapKey = Store.getSwapDescriptionByExpectedUnderwriteKey(
                 state.toChainId,
                 state.toInterface,
                 state.underwriteId,
@@ -508,6 +508,7 @@ export class Store {
                     poolId: newState.poolId,
                     toChainId: newState.toChainId,
                     toInterface: newState.toInterface,
+                    underwriter: newState.swapUnderwrittenEvent!.underwriter,
                     underwriteId: newState.underwriteId,
                     underwriteTxHash: newState.swapUnderwrittenEvent!.txHash
                 };
@@ -528,7 +529,9 @@ export class Store {
                 poolId: state.poolId,
                 toChainId: state.toChainId,
                 toInterface: state.toInterface,
-                underwriteId: state.underwriteId
+                underwriter: state.swapUnderwrittenEvent!.underwriter,
+                underwriteId: state.underwriteId,
+                expiry: state.swapUnderwrittenEvent!.expiry,
             }
             await this.postMessage(Store.onSwapUnderwrittenChannel, underwriteDescription);
         }

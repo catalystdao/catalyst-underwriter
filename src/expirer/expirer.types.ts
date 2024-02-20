@@ -5,6 +5,7 @@ export interface ExpireEvalOrder {
     toChainId: string;
     toInterface: string;
     underwriteId: string;
+    expireAt: number;
 }
 
 export interface ExpireOrder extends ExpireEvalOrder {

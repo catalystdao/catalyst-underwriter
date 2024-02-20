@@ -15,7 +15,7 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
     }
     
     protected async handleOrder(order: ExpireEvalOrder, retryCount: number): Promise<HandleOrderResult<ExpireOrder> | null> {
-        const swapState = await this.store.getSwapStateByActiveUnderwrite(
+        const swapState = await this.store.getSwapStateByExpectedUnderwrite(
             order.toChainId,
             order.toInterface,
             order.underwriteId
@@ -44,6 +44,7 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
                 toChainId: order.toChainId,
                 toInterface: order.toInterface,
                 underwriteId: order.underwriteId,
+                expireAt: order.expireAt,
                 fromChainId: swapState.fromChainId,
                 fromVault: swapState.fromVault,
                 channelId: swapState.sendAssetEvent.fromChannelId,

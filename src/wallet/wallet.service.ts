@@ -5,6 +5,7 @@ import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService } from 'src/config/config.service';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { WalletGetPortMessage, WalletGetPortResponse } from './wallet.types';
+import { Wallet } from 'ethers';
 
 const DEFAULT_WALLET_RETRY_INTERVAL = 30000;
 const DEFAULT_WALLET_PROCESSING_INTERVAL = 100;
@@ -55,10 +56,14 @@ export class WalletService implements OnModuleInit {
     private workers: Record<string, Worker | null> = {};
     private requestPortMessageId = 0;
 
+    readonly publicKey: string;
+
     constructor(
         private readonly configService: ConfigService,
         private readonly loggerService: LoggerService,
-    ) {}
+    ) {
+        this.publicKey = (new Wallet(this.configService.globalConfig.privateKey)).address;
+    }
 
     onModuleInit() {
         this.loggerService.info(`Starting Wallets on all chains...`);

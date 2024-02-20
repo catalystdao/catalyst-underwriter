@@ -71,11 +71,20 @@ export enum UnderwriteStatus {
     Expired
 }
 
-export interface ActiveUnderwriteDescription {
+export interface ExpectedUnderwriteDescription {
     poolId: string;
     toChainId: string;
     toInterface: string;
     underwriteId: string;
+}
+
+export interface ActiveUnderwriteDescription {
+    poolId: string;
+    toChainId: string;
+    toInterface: string;
+    underwriter: string;
+    underwriteId: string;
+    expiry: number;
 }
 
 export interface CompletedUnderwriteDescription {
@@ -83,6 +92,7 @@ export interface CompletedUnderwriteDescription {
     toChainId: string;
     toInterface: string;
     underwriteId: string;
+    underwriter: string;
     underwriteTxHash: string;
 }
 
