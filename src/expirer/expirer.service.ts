@@ -130,7 +130,7 @@ export class ExpirerService implements OnModuleInit {
             chainId,
             chainName: chainConfig.name,
             pools: filteredPools,
-            rpc: chainUnderwriterConfig.rpc ?? chainConfig.rpc,
+            rpc: chainConfig.rpc,
 
             retryInterval: chainExpirerConfig.retryInterval
                 ?? chainUnderwriterConfig.retryInterval

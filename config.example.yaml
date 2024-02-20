@@ -61,9 +61,6 @@ chains:
 
     # startingBlock   # The block number at which to start Relaying #TODO do we want this?
 
-    underwriter:
-      # rpc: "https://polygon-mumbai-bor.publicnode.com"  # RPC used specifically for underwriting. Defaults to the 'listener' rpc if not provided
-
     # Overrides
     listener:
       interval: 3000
@@ -72,6 +69,7 @@ chains:
     expirer:
       retryInterval: 3000
     wallet:
+      # rpc: "https://polygon-mumbai-bor.publicnode.com"  # RPC used specifically for transaction submission. Defaults to the 'chain' rpc if not provided
       retryInterval: 3000
   
 

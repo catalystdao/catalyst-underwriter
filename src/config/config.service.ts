@@ -46,7 +46,6 @@ export interface UnderwriterGlobalConfig {
 }
 
 export interface UnderwriterConfig extends UnderwriterGlobalConfig {
-  rpc?: string; //TODO overhaul. remove?
 }
 
 export interface ExpirerGlobalConfig {
@@ -75,7 +74,7 @@ export interface WalletGlobalConfig {
 }
 
 export interface WalletConfig extends WalletGlobalConfig {
-  rpc?: string; //TODO merge with 'underwrite' rpc?
+  rpc?: string;
 }
 
 export interface PoolConfig {

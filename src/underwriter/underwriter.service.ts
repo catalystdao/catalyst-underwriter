@@ -118,7 +118,7 @@ export class UnderwriterService implements OnModuleInit {
             chainId,
             chainName: chainConfig.name,
             pools: filteredPools,
-            rpc: chainUnderwriterConfig.rpc ?? chainConfig.rpc,
+            rpc: chainConfig.rpc,
 
             retryInterval: chainUnderwriterConfig.retryInterval ?? defaultConfig.retryInterval,
             processingInterval:
