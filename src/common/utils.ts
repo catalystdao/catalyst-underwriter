@@ -1,4 +1,4 @@
-import { AbiCoder, keccak256 } from "ethers";
+import { keccak256 } from "ethers";
 
 export const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -11,12 +11,14 @@ export const calcAssetSwapIdentifier = (
     fromAsset: string,
     blockNumber: number,
 ) => {
-    return keccak256(
-        AbiCoder.defaultAbiCoder().encode(
-            ['bytes', 'uint256', 'uint256', 'address', 'uint32'],
-            [toAccount, units, swapAmount, fromAsset, blockNumber % (2**32)],
-        ),
-    );
+    const encodedBytes = '0x'
+        + toAccount.slice(2)
+        + units.toString(16).padStart(64, '0')
+        + swapAmount.toString(16).padStart(64, '0')
+        + fromAsset.slice(2)
+        + (blockNumber % (2**32)).toString(16).padStart(8, '0');
+
+    return keccak256(encodedBytes);
 };
 
 export const calcUnderwriteIdentifier = (
@@ -28,10 +30,14 @@ export const calcUnderwriteIdentifier = (
     underwriteIncentiveX16: bigint,
     cdata: string
 ) => {
-    return keccak256(
-        AbiCoder.defaultAbiCoder().encode(
-            ['address', 'address', 'uint256', 'uint256', 'address', 'uint16', 'bytes'],
-            [targetVault, toAsset, units, minOut, toAccount, underwriteIncentiveX16, cdata],
-        ),
-    )
+    const encodedBytes = '0x'
+        + targetVault.slice(2)
+        + toAsset.slice(2)
+        + units.toString(16).padStart(64, '0')
+        + minOut.toString(16).padStart(64, '0')
+        + toAccount.slice(2)
+        + underwriteIncentiveX16.toString(16).padStart(4, '0')
+        + cdata.slice(2);
+
+    return keccak256(encodedBytes);
 }
