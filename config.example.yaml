@@ -14,6 +14,13 @@ global:
     maxTries: 3                 # Maximum tries for an underwrite
     maxPendingTransactions: 50  # Maximum number of orders within the 'underwrite' pipeline
 
+  expirer:
+    # ! The following properties default to the values of the 'underwriter' if missing
+    retryInterval: 30000        # Time to wait before retrying an expiry
+    processingInterval: 100     # Throttle for the Expirer main 'run' loop
+    maxTries: 3                 # Maximum tries for an expiry
+    maxPendingTransactions: 50  # Maximum number of orders within the 'expire' pipeline
+
   wallet:
     retryInterval: 30000        # Time to wait before retrying a failed transaction
     processingInterval: 100     # Throttle for the Wallet main 'run' loop
@@ -61,6 +68,8 @@ chains:
     listener:
       interval: 3000
     underwriter:
+      retryInterval: 3000
+    expirer:
       retryInterval: 3000
     wallet:
       retryInterval: 3000

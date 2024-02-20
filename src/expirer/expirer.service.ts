@@ -5,11 +5,12 @@ import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService, PoolConfig } from "src/config/config.service";
 import { LoggerService, STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { WalletService } from "src/wallet/wallet.service";
+import { DEFAULT_UNDERWRITER_RETRY_INTERVAL, DEFAULT_UNDERWRITER_PROCESSING_INTERVAL, DEFAULT_UNDERWRITER_MAX_TRIES, DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS } from "src/underwriter/underwriter.service";
 
-const DEFAULT_EXPIRER_RETRY_INTERVAL = 30000;
-const DEFAULT_EXPIRER_PROCESSING_INTERVAL = 100;
-const DEFAULT_EXPIRER_MAX_TRIES = 3;
-const DEFAULT_EXPIRER_MAX_PENDING_TRANSACTIONS = 50;
+export const DEFAULT_EXPIRER_RETRY_INTERVAL = DEFAULT_UNDERWRITER_RETRY_INTERVAL;
+export const DEFAULT_EXPIRER_PROCESSING_INTERVAL = DEFAULT_UNDERWRITER_PROCESSING_INTERVAL;
+export const DEFAULT_EXPIRER_MAX_TRIES = DEFAULT_UNDERWRITER_MAX_TRIES;
+export const DEFAULT_EXPIRER_MAX_PENDING_TRANSACTIONS = DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS;
 
 
 interface DefaultExpirerWorkerData {
@@ -82,12 +83,21 @@ export class ExpirerService implements OnModuleInit {
     }
 
     private loadDefaultWorkerConfig(): DefaultExpirerWorkerData {
-        const globalUnderwriterConfig = this.configService.globalConfig.underwriter;    //TODO add 'expirer' specific config
+        const globalExpirerConfig = this.configService.globalConfig.expirer;
+        const globalUnderwriterConfig = this.configService.globalConfig.underwriter;
 
-        const retryInterval = globalUnderwriterConfig.retryInterval ?? DEFAULT_EXPIRER_RETRY_INTERVAL;
-        const processingInterval = globalUnderwriterConfig.processingInterval ?? DEFAULT_EXPIRER_PROCESSING_INTERVAL;
-        const maxTries = globalUnderwriterConfig.maxTries ?? DEFAULT_EXPIRER_MAX_TRIES;
-        const maxPendingTransactions = globalUnderwriterConfig.maxPendingTransactions ?? DEFAULT_EXPIRER_MAX_PENDING_TRANSACTIONS;
+        const retryInterval = globalExpirerConfig.retryInterval
+            ?? globalUnderwriterConfig.retryInterval
+            ?? DEFAULT_EXPIRER_RETRY_INTERVAL;
+        const processingInterval = globalExpirerConfig.processingInterval
+            ?? globalUnderwriterConfig.processingInterval
+            ?? DEFAULT_EXPIRER_PROCESSING_INTERVAL;
+        const maxTries = globalExpirerConfig.maxTries
+            ?? globalUnderwriterConfig.maxTries
+            ?? DEFAULT_EXPIRER_MAX_TRIES;
+        const maxPendingTransactions = globalExpirerConfig.maxPendingTransactions
+            ?? globalUnderwriterConfig.maxPendingTransactions
+            ?? DEFAULT_EXPIRER_MAX_PENDING_TRANSACTIONS;
     
         return {
             retryInterval,
@@ -114,6 +124,7 @@ export class ExpirerService implements OnModuleInit {
             return pool.vaults.some((vault) => vault.chainId == chainId)
         });
 
+        const chainExpirerConfig = chainConfig.expirer;
         const chainUnderwriterConfig = chainConfig.underwriter;
         return {
             chainId,
@@ -121,13 +132,17 @@ export class ExpirerService implements OnModuleInit {
             pools: filteredPools,
             rpc: chainUnderwriterConfig.rpc ?? chainConfig.rpc,
 
-            retryInterval: chainUnderwriterConfig.retryInterval ?? defaultConfig.retryInterval,
-            processingInterval:
-                chainUnderwriterConfig.processingInterval ??
-                defaultConfig.processingInterval,
-            maxTries: chainUnderwriterConfig.maxTries ?? defaultConfig.maxTries,
-            maxPendingTransactions:
-                chainUnderwriterConfig.maxPendingTransactions
+            retryInterval: chainExpirerConfig.retryInterval
+                ?? chainUnderwriterConfig.retryInterval
+                ?? defaultConfig.retryInterval,
+            processingInterval: chainExpirerConfig.processingInterval
+                ?? chainUnderwriterConfig.processingInterval
+                ?? defaultConfig.processingInterval,
+            maxTries: chainExpirerConfig.maxTries
+                ?? chainUnderwriterConfig.maxTries
+                ?? defaultConfig.maxTries,
+            maxPendingTransactions: chainExpirerConfig.maxPendingTransactions
+                ?? chainUnderwriterConfig.maxPendingTransactions
                 ?? defaultConfig.maxPendingTransactions,
 
             walletPort: await this.walletService.attachToWallet(chainId),

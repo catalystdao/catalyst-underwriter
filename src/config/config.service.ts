@@ -10,6 +10,7 @@ export interface GlobalConfig {
   blockDelay?: number;
   listener: ListenerGlobalConfig;
   underwriter: UnderwriterGlobalConfig;
+  expirer: ExpirerGlobalConfig;
   wallet: WalletGlobalConfig;
 }
 
@@ -26,6 +27,7 @@ export interface ChainConfig {
   blockDelay?: number;
   listener: ListenerConfig;
   underwriter: UnderwriterConfig;
+  expirer: ExpirerConfig;
   wallet: WalletConfig;
 }
 
@@ -44,7 +46,17 @@ export interface UnderwriterGlobalConfig {
 }
 
 export interface UnderwriterConfig extends UnderwriterGlobalConfig {
-  rpc?: string;
+  rpc?: string; //TODO overhaul. remove?
+}
+
+export interface ExpirerGlobalConfig {
+  retryInterval?: number;
+  processingInterval?: number;
+  maxTries?: number;
+  maxPendingTransactions?: number;
+}
+
+export interface ExpirerConfig extends ExpirerGlobalConfig {
 }
 
 export interface WalletGlobalConfig {
@@ -163,6 +175,7 @@ export class ConfigService {
       blockDelay: rawGlobalConfig.blockDelay,
       listener: rawGlobalConfig.listener ?? {},
       underwriter: rawGlobalConfig.underwriter ?? {},
+      expirer: rawGlobalConfig.expirer ?? {},
       wallet: rawGlobalConfig.wallet ?? {}
     };
   }
@@ -192,6 +205,7 @@ export class ConfigService {
         blockDelay: rawChainConfig.blockDelay,
         listener: rawChainConfig.listener ?? {},        //TODO 'listener' object should be verified
         underwriter: rawChainConfig.underwriter ?? {},  //TODO 'underwriter' object should be verified
+        expirer: rawChainConfig.expirer ?? {},          //TODO 'expirer' object should be verified
         wallet: rawChainConfig.wallet ?? {},            //TODO 'wallet' object should be verified
       });
     }

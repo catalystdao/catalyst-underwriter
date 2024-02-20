@@ -6,10 +6,10 @@ import { ConfigService, PoolConfig } from 'src/config/config.service';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { WalletService } from 'src/wallet/wallet.service';
 
-const DEFAULT_UNDERWRITER_RETRY_INTERVAL = 30000;
-const DEFAULT_UNDERWRITER_PROCESSING_INTERVAL = 100;
-const DEFAULT_UNDERWRITER_MAX_TRIES = 3;
-const DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS = 50;
+export const DEFAULT_UNDERWRITER_RETRY_INTERVAL = 30000;
+export const DEFAULT_UNDERWRITER_PROCESSING_INTERVAL = 100;
+export const DEFAULT_UNDERWRITER_MAX_TRIES = 3;
+export const DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS = 50;
 
 interface DefaultUnderwriterWorkerData {
     retryInterval: number;
