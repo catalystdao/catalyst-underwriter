@@ -6,6 +6,7 @@ import { ConfigService, PoolConfig } from "src/config/config.service";
 import { LoggerService, STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { WalletService } from "src/wallet/wallet.service";
 import { DEFAULT_UNDERWRITER_RETRY_INTERVAL, DEFAULT_UNDERWRITER_PROCESSING_INTERVAL, DEFAULT_UNDERWRITER_MAX_TRIES, DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS } from "src/underwriter/underwriter.service";
+import { MonitorService } from "src/monitor/monitor.service";
 
 export const DEFAULT_EXPIRER_RETRY_INTERVAL = DEFAULT_UNDERWRITER_RETRY_INTERVAL;
 export const DEFAULT_EXPIRER_PROCESSING_INTERVAL = DEFAULT_UNDERWRITER_PROCESSING_INTERVAL;
@@ -32,6 +33,7 @@ export interface ExpirerWorkerData {
     maxPendingTransactions: number;
     expireBlocksMargin: number;
     underwriterPublicKey: string;
+    monitorPort: MessagePort;
     walletPort: MessagePort;
     loggerOptions: LoggerOptions;
 }
@@ -42,6 +44,7 @@ export class ExpirerService implements OnModuleInit {
 
     constructor(
         private readonly configService: ConfigService,
+        private readonly monitorService: MonitorService,
         private readonly walletService: WalletService,
         private readonly loggerService: LoggerService,
     ) {}
@@ -154,6 +157,7 @@ export class ExpirerService implements OnModuleInit {
                 ?? defaultConfig.expireBlocksMargin,
 
             underwriterPublicKey: this.walletService.publicKey,
+            monitorPort: await this.monitorService.attachToMonitor(chainId),
             walletPort: await this.walletService.attachToWallet(chainId),
             loggerOptions: this.loggerService.loggerOptions
         };

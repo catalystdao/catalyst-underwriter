@@ -1,6 +1,6 @@
 import { JsonRpcProvider } from "ethers";
 import pino, { LoggerOptions } from "pino";
-import { workerData } from 'worker_threads';
+import { workerData, MessagePort } from 'worker_threads';
 import { wait } from "src/common/utils";
 import { PoolConfig } from "src/config/config.service";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
@@ -11,6 +11,7 @@ import { WalletInterface } from "src/wallet/wallet.interface";
 import { ExpirerWorkerData } from "./expirer.service";
 import { ExpireOrder, ExpireOrderResult, ExpireEvalOrder } from "./expirer.types";
 import { EvalQueue } from "./queues/eval-queue";
+import { MonitorInterface, MonitorStatus } from "src/monitor/monitor.interface";
 
 
 class UnderwriterWorker {
@@ -25,6 +26,8 @@ class UnderwriterWorker {
     readonly chainName: string;
 
     readonly pools: PoolConfig[];
+
+    private currentStatus: MonitorStatus | null;
 
     readonly underwriterPublicKey: string;
     readonly wallet: WalletInterface;
@@ -61,6 +64,8 @@ class UnderwriterWorker {
             this.store,
             this.logger
         );
+
+        this.startListeningToMonitor(this.config.monitorPort);
 
         void this.initiateIntervalStatusLog();
     }
@@ -115,6 +120,13 @@ class UnderwriterWorker {
         );
 
         return [evalQueue, expirerQueue];
+    }
+
+    private startListeningToMonitor(port: MessagePort): void {
+        const monitor = new MonitorInterface(port);
+        monitor.addListener((status) => {
+            this.currentStatus = status;
+        });
     }
 
     private initiateIntervalStatusLog(): void {
@@ -226,7 +238,7 @@ class UnderwriterWorker {
     }
 
     private getCurrentBlockNumber(): number {
-        return 0;   //TODO implement
+        return this.currentStatus?.blockNumber ?? -1;
     }
 
     private processNewOrdersQueue(): ExpireEvalOrder[] {
