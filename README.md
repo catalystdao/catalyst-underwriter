@@ -19,6 +19,7 @@ Most of the Underwriter configuration is specified within a `.yaml` file located
 
 > The `NODE_ENV` variable should ideally be set on the shell configuration file (i.e. `.bashrc` or equivalent), but may also be set by prepending it to the launch command, e.g. `NODE_ENV=production docker compose up`. For more information see the [Node documentation](https://nodejs.org/en/learn/getting-started/nodejs-the-difference-between-development-and-production).
 
+### TODO add 'monitor'
 The `.yaml` configuration file is divided into the following sections:
 - `global`: Defines the global underwriter configuration.
     - The `privateKey` of the account that will submit the underwrite transactions on all chains must be defined at this point. 
@@ -69,6 +70,8 @@ For further insight into the requirements for running the Underwriter see the `d
 The Underwriter is devided into 2 main services: `Listener` and `Submitter`. These services work together to get the Catalyst swap events and submit their corresponding underwrites on the destination chain. The services are run in parallel and communicate using Redis. Wherever it makes sense, chains are allocated seperate workers to ensure a chain fault doesn't propagate and impact the performance on other chains.
 
 > 🏗️ The Underwriter is still on a very early development stage. Further services will be added as development progresses.
+
+### TODO add 'Monitor'
 
 ### Listener
 

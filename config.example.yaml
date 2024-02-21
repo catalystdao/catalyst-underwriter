@@ -4,9 +4,13 @@ global:
   logLevel: "debug"
   blockDelay: 5       # Delay with which to process the chain blocks
 
+  # TODO the monitor should be moved to the 'Relayer'
+  monitor:
+    interval: 5000    # Interval at which to update the chains status fromt the RPCs
+
   listener:
-    interval: 5000    # Interval at which to poll the chains RPCs for new events
-    maxBlocks: 1000   # Maximum number of blocks to query in a single call
+    processingInterval: 100     # Throttle for the Listener main 'run' loop
+    maxBlocks: 1000             # Maximum number of blocks to query in a single call
 
   underwriter:
     retryInterval: 30000        # Time to wait before retrying an underwrite
