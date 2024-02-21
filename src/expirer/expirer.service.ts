@@ -68,7 +68,7 @@ export class ExpirerService implements OnModuleInit {
 
             const worker = new Worker(join(__dirname, 'expirer.worker.js'), {
                 workerData,
-                transferList: [workerData.walletPort]
+                transferList: [workerData.monitorPort, workerData.walletPort]
             });
             this.workers[chainId] = worker;
 
