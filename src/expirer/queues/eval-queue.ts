@@ -2,6 +2,7 @@ import { HandleOrderResult, ProcessingQueue } from "src/processing-queue/process
 import { ExpireOrder, ExpireEvalOrder } from "../expirer.types";
 import pino from "pino";
 import { Store } from "src/store/store.lib";
+import { UnderwriteStatus } from "src/store/store.types";
 
 export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
 
@@ -15,11 +16,29 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
     }
     
     protected async handleOrder(order: ExpireEvalOrder, retryCount: number): Promise<HandleOrderResult<ExpireOrder> | null> {
-        const swapState = await this.store.getSwapStateByExpectedUnderwrite(
+        // NOTE: the 'activeUnderwriteState' is not unique. After an underwrite fulfills, a new
+        // underwrite with the same 'state' can be created. Expiry cancellation of `fulfilled`
+        // underwrites should not be left to be handled at this point, rather it should be done as
+        // soon as the underwrite is fulfilled/expired (i.e. it should be removed from the
+        // `newOrdersQueue` of the main expirer worker).
+        const activeUnderwriteStatePromise = this.store.getActiveUnderwriteState(
             order.toChainId,
             order.toInterface,
             order.underwriteId
         );
+        const swapStatePromise = this.store.getSwapStateByExpectedUnderwrite(
+            order.toChainId,
+            order.toInterface,
+            order.underwriteId
+        );
+
+        const [activeUnderwriteState, swapState] = await Promise.all([activeUnderwriteStatePromise, swapStatePromise]);
+
+        const isUnderwritePending = activeUnderwriteState != null
+            && activeUnderwriteState.status == UnderwriteStatus.Underwritten
+        if (!isUnderwritePending) {
+            return null;
+        }
 
         if (swapState == undefined) {
             throw new Error(`Expire evaluation fail: swap's state not found (toChainId: ${order.toChainId}, toInterface: ${order.toInterface}, underwriteId: ${order.underwriteId})`)
