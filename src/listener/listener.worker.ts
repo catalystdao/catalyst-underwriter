@@ -1,6 +1,6 @@
 import { JsonRpcProvider, Log, LogDescription } from "ethers";
 import pino from "pino";
-import { workerData } from 'worker_threads';
+import { workerData, MessagePort } from 'worker_threads';
 import { ListenerWorkerData, VaultConfig } from "./listener.service";
 import { CatalystChainInterface__factory, ICatalystV1VaultEvents__factory } from "src/contracts";
 import { CatalystChainInterfaceInterface, ExpireUnderwriteEvent, FulfillUnderwriteEvent, SwapUnderwrittenEvent } from "src/contracts/CatalystChainInterface";
@@ -10,6 +10,7 @@ import { Store } from "src/store/store.lib";
 import { decodeBytes65Address } from "src/common/decode.payload";
 import { ReceiveAssetEvent } from "src/contracts/CatalystVaultCommon";
 import { SwapState, SwapStatus, UnderwriteState, UnderwriteStatus } from "src/store/store.types";
+import { MonitorInterface, MonitorStatus } from "src/monitor/monitor.interface";
 
 class ListenerWorker {
     readonly store: Store;
@@ -29,6 +30,9 @@ class ListenerWorker {
     readonly addresses: string[];
     readonly topics: string[][];
 
+    private readonly monitor: MonitorInterface;
+    private currentStatus: MonitorStatus | null;
+
 
     constructor() {
         this.config = workerData as ListenerWorkerData;
@@ -47,6 +51,8 @@ class ListenerWorker {
         this.vaultEventsInterface = contractTypes.vaultInterface;
         this.chainInterfaceEventsInterface = contractTypes.chainInterfaceInterface;
         this.topics = contractTypes.topics;
+
+        this.monitor = this.attachToMonitor(this.config.monitorPort);
     }
 
 
@@ -135,6 +141,16 @@ class ListenerWorker {
         }
     }
 
+    private attachToMonitor(port: MessagePort): MonitorInterface {
+        const monitor = new MonitorInterface(port);
+
+        monitor.addListener((status) => {
+            this.currentStatus = status;
+        })
+
+        return monitor;
+    }
+
 
 
     // Main handler
@@ -145,15 +161,24 @@ class ListenerWorker {
             `Listener worker started.`
         );
 
-        let startBlock = this.config.startingBlock ?? ((await this.provider.getBlockNumber()) - this.config.blockDelay);
-
-        await wait(this.config.interval);
+        let startBlock = null;
+        while (startBlock == null) {
+            // Do not initialize 'startBlock' whilst 'currentStatus' is null, even if
+            // 'startingBlock' is specified.
+            if (this.currentStatus != null) {
+                startBlock = (
+                    this.config.startingBlock ?? this.currentStatus.blockNumber
+                );
+            }
+            
+            await wait(this.config.processingInterval);
+        }
 
         while (true) {
             try {
-                let endBlock = (await this.provider.getBlockNumber()) - this.config.blockDelay;
-                if (startBlock > endBlock || !endBlock) {
-                    await wait(this.config.interval);
+                let endBlock = this.currentStatus?.blockNumber;
+                if (!endBlock || startBlock > endBlock) {
+                    await wait(this.config.processingInterval);
                     continue;
                 }
 
@@ -179,7 +204,7 @@ class ListenerWorker {
                 this.logger.error(error, `Failed on listener.service`);
             }
 
-            await wait(this.config.interval);
+            await wait(this.config.processingInterval);
         }
     }
 

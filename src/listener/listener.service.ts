@@ -1,18 +1,17 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { join } from 'path';
 import { LoggerOptions } from 'pino';
-import { Worker } from 'worker_threads';
+import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService } from 'src/config/config.service';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
+import { MonitorService } from 'src/monitor/monitor.service';
 
-export const DEFAULT_LISTENER_INTERVAL = 5000;
-export const DEFAULT_LISTENER_BLOCK_DELAY = 0;
 export const DEFAULT_LISTENER_MAX_BLOCKS = null;
+export const DEFAULT_LISTENER_PROCESSING_INTERVAL = 100;
 
 
 interface DefaultListenerWorkerData {
-    interval: number,
-    blockDelay: number,
+    processingInterval: number,
     maxBlocks: number | null
 }
 
@@ -28,10 +27,10 @@ export interface ListenerWorkerData {
     chainName: string,
     rpc: string,
     startingBlock?: number,
-    blockDelay: number,
-    interval: number,
+    processingInterval: number,
     maxBlocks: number | null,
     vaultConfigs: VaultConfig[],
+    monitorPort: MessagePort;
     loggerOptions: LoggerOptions
 }
 
@@ -41,28 +40,30 @@ export class ListenerService implements OnModuleInit {
 
     constructor(
         private readonly configService: ConfigService,
+        private readonly monitorService: MonitorService,
         private readonly loggerService: LoggerService,
     ) { }
 
-    onModuleInit() {
+    async onModuleInit() {
         this.loggerService.info(`Starting Listener on all chains...`);
 
-        this.initializeWorkers();
+        await this.initializeWorkers();
 
         this.initiateIntervalStatusLog();
     }
 
-    private initializeWorkers(): void {
+    private async initializeWorkers(): Promise<void> {
         const defaultWorkerConfig = this.loadDefaultWorkerConfig();
 
         const vaultConfigs = this.loadVaultConfigs();
 
         for (const [chainId, chainVaultConfigs] of Object.entries(vaultConfigs)) {
 
-            const workerData = this.loadWorkerConfig(chainId, chainVaultConfigs, defaultWorkerConfig);
+            const workerData = await this.loadWorkerConfig(chainId, chainVaultConfigs, defaultWorkerConfig);
 
             const worker = new Worker(join(__dirname, 'listener.worker.js'), {
-                workerData
+                workerData,
+                transferList: [workerData.monitorPort]
             });
             this.workers[chainId] = worker;
 
@@ -86,22 +87,20 @@ export class ListenerService implements OnModuleInit {
         const globalConfig = this.configService.globalConfig;
         const globalListenerConfig = globalConfig.listener;
 
-        const blockDelay = globalConfig.blockDelay ?? DEFAULT_LISTENER_BLOCK_DELAY;
-        const interval = globalListenerConfig.interval ?? DEFAULT_LISTENER_INTERVAL;
+        const processingInterval = globalListenerConfig.processingInterval ?? DEFAULT_LISTENER_PROCESSING_INTERVAL;
         const maxBlocks = globalListenerConfig.maxBlocks ?? DEFAULT_LISTENER_MAX_BLOCKS;
 
         return {
-            interval,
-            blockDelay,
+            processingInterval,
             maxBlocks
         }
     }
 
-    private loadWorkerConfig(
+    private async loadWorkerConfig(
         chainId: string,
         vaultConfigs: VaultConfig[],
         defaultConfig: DefaultListenerWorkerData
-    ): ListenerWorkerData {
+    ): Promise<ListenerWorkerData> {
 
         const chainConfig = this.configService.chainsConfig.get(chainId);
         if (chainConfig == undefined) {
@@ -114,10 +113,10 @@ export class ListenerService implements OnModuleInit {
             chainName: chainConfig.name,
             rpc: chainConfig.rpc,
             startingBlock: chainConfig.startingBlock,
-            blockDelay: chainConfig.blockDelay ?? defaultConfig.blockDelay,
-            interval: chainListenerConfig.interval ?? defaultConfig.interval,
+            processingInterval: chainListenerConfig.processingInterval ?? defaultConfig.processingInterval,
             maxBlocks: chainListenerConfig.maxBlocks ?? defaultConfig.maxBlocks,
             vaultConfigs,
+            monitorPort: await this.monitorService.attachToMonitor(chainId),
             loggerOptions: this.loggerService.loggerOptions
         };
     }

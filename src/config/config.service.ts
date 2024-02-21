@@ -8,6 +8,7 @@ export interface GlobalConfig {
   privateKey: string;
   logLevel?: string;
   blockDelay?: number;
+  monitor: MonitorGlobalConfig;
   listener: ListenerGlobalConfig;
   underwriter: UnderwriterGlobalConfig;
   wallet: WalletGlobalConfig;
@@ -24,13 +25,20 @@ export interface ChainConfig {
   rpc: string;
   startingBlock?: number;
   blockDelay?: number;
+  monitor: MonitorConfig;
   listener: ListenerConfig;
   underwriter: UnderwriterConfig;
   wallet: WalletConfig;
 }
 
-export interface ListenerGlobalConfig {
+export interface MonitorGlobalConfig {
   interval?: number;
+}
+
+export interface MonitorConfig extends MonitorGlobalConfig {}
+
+export interface ListenerGlobalConfig {
+  processingInterval?: number;
   maxBlocks?: number;
 }
 
@@ -161,6 +169,7 @@ export class ConfigService {
       privateKey: rawGlobalConfig.privateKey,
       logLevel: rawGlobalConfig.logLevel,
       blockDelay: rawGlobalConfig.blockDelay,
+      monitor: rawGlobalConfig.monitor ?? {},
       listener: rawGlobalConfig.listener ?? {},
       underwriter: rawGlobalConfig.underwriter ?? {},
       wallet: rawGlobalConfig.wallet ?? {}
@@ -190,6 +199,7 @@ export class ConfigService {
         rpc: rawChainConfig.rpc,
         startingBlock: rawChainConfig.startingBlock,
         blockDelay: rawChainConfig.blockDelay,
+        monitor: rawChainConfig.monitor ?? {},          //TODO 'monitor' object should be verified
         listener: rawChainConfig.listener ?? {},        //TODO 'listener' object should be verified
         underwriter: rawChainConfig.underwriter ?? {},  //TODO 'underwriter' object should be verified
         wallet: rawChainConfig.wallet ?? {},            //TODO 'wallet' object should be verified
