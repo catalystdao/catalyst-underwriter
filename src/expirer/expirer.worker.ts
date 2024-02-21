@@ -122,11 +122,14 @@ class UnderwriterWorker {
         return [evalQueue, expirerQueue];
     }
 
-    private startListeningToMonitor(port: MessagePort): void {
+    private startListeningToMonitor(port: MessagePort): MonitorInterface {
         const monitor = new MonitorInterface(port);
+
         monitor.addListener((status) => {
             this.currentStatus = status;
         });
+
+        return monitor;
     }
 
     private initiateIntervalStatusLog(): void {

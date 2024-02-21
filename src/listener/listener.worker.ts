@@ -30,7 +30,6 @@ class ListenerWorker {
     readonly addresses: string[];
     readonly topics: string[][];
 
-    private readonly monitor: MonitorInterface;
     private currentStatus: MonitorStatus | null;
 
 
@@ -52,7 +51,7 @@ class ListenerWorker {
         this.chainInterfaceEventsInterface = contractTypes.chainInterfaceInterface;
         this.topics = contractTypes.topics;
 
-        this.monitor = this.attachToMonitor(this.config.monitorPort);
+        this.startListeningToMonitor(this.config.monitorPort);
     }
 
 
@@ -141,12 +140,12 @@ class ListenerWorker {
         }
     }
 
-    private attachToMonitor(port: MessagePort): MonitorInterface {
+    private startListeningToMonitor(port: MessagePort): MonitorInterface {
         const monitor = new MonitorInterface(port);
 
         monitor.addListener((status) => {
             this.currentStatus = status;
-        })
+        });
 
         return monitor;
     }
