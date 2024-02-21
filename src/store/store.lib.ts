@@ -46,6 +46,7 @@ export class Store {
     static readonly underwriterChannelPrefix: string = 'underwriter'; 
     static readonly onSendAssetChannel: string = 'onSendAsset';
     static readonly onSwapUnderwrittenChannel: string = 'onSwapUnderwritten';
+    static readonly onSwapUnderwriteCompleteChannel: string = 'onSwapUnderwriteComplete';
 
     constructor() {
         this.host = process.env.USE_DOCKER ? 'redis' : undefined;
@@ -494,6 +495,15 @@ export class Store {
         // If the underwrite is complete, move the state entry from the 'expected' onto the 'complete' set
         if (newState.status >= UnderwriteStatus.Fulfilled) {
 
+            const underwriteDescription: CompletedUnderwriteDescription = {
+                poolId: newState.poolId,
+                toChainId: newState.toChainId,
+                toInterface: newState.toInterface,
+                underwriter: newState.swapUnderwrittenEvent!.underwriter,
+                underwriteId: newState.underwriteId,
+                underwriteTxHash: newState.swapUnderwrittenEvent!.txHash
+            };
+
             // Also update the expected-underwrite-to-swap map
             const swapMapKey = Store.getSwapDescriptionByExpectedUnderwriteKey(
                 state.toChainId,
@@ -503,15 +513,6 @@ export class Store {
             const swapDescription = await this.getSwapDescriptionByKey(swapMapKey);
             if (swapDescription != null) {
                 await this.del(swapMapKey);
-
-                const underwriteDescription: CompletedUnderwriteDescription = {
-                    poolId: newState.poolId,
-                    toChainId: newState.toChainId,
-                    toInterface: newState.toInterface,
-                    underwriter: newState.swapUnderwrittenEvent!.underwriter,
-                    underwriteId: newState.underwriteId,
-                    underwriteTxHash: newState.swapUnderwrittenEvent!.txHash
-                };
                 await this.saveSwapDescriptionByCompletedUnderwrite(
                     underwriteDescription,
                     swapDescription
@@ -520,6 +521,8 @@ export class Store {
 
             await this.del(key);
             await this.saveCompletedUnderwriteState(newState);
+
+            await this.postMessage(Store.onSwapUnderwriteCompleteChannel, underwriteDescription);
         } else {
             await this.set(key, JSON.stringify(newState));
         }

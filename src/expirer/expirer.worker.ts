@@ -5,7 +5,7 @@ import { wait } from "src/common/utils";
 import { PoolConfig } from "src/config/config.service";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
-import { ActiveUnderwriteDescription } from "src/store/store.types";
+import { ActiveUnderwriteDescription, CompletedUnderwriteDescription } from "src/store/store.types";
 import { ExpireQueue } from "./queues/expire-queue";
 import { WalletInterface } from "src/wallet/wallet.interface";
 import { ExpirerWorkerData } from "./expirer.service";
@@ -238,6 +238,21 @@ class UnderwriterWorker {
             );
 
         });
+
+        await this.store.on(Store.onSwapUnderwriteCompleteChannel, (underwriteDescription: CompletedUnderwriteDescription) => {
+
+            if (underwriteDescription.toChainId != this.chainId) {
+                return;
+            }
+
+            this.removeExpireOrder(
+                underwriteDescription.poolId,
+                underwriteDescription.toInterface,
+                underwriteDescription.underwriteId,
+            );
+
+        });
+
     }
 
     private getCurrentBlockNumber(): number {
@@ -278,7 +293,7 @@ class UnderwriterWorker {
         expiry: number,
     ) {
         this.logger.debug(
-            { poolId, toChainId, toInterface, underwriteId },
+            { poolId, toInterface, underwriteId },
             `Expire underwrite order received.`
         );
 
@@ -303,6 +318,30 @@ class UnderwriterWorker {
             this.newOrdersQueue.push(newOrder);
         } else {
             this.newOrdersQueue.splice(insertIndex, 0, newOrder);
+        }
+    }
+
+    private removeExpireOrder(
+        poolId: string,
+        toInterface: string,
+        underwriteId: string,
+    ) {
+        this.logger.debug(
+            { poolId, toInterface, underwriteId },
+            `Expire underwrite order removal received.`
+        );
+        
+        const removalIndex = this.newOrdersQueue.findIndex(order => {
+            return order.toInterface == toInterface && order.underwriteId == underwriteId;
+        });
+
+        if (removalIndex != -1) {
+            this.newOrdersQueue.splice(removalIndex, 1);
+        } else {
+            this.logger.warn(
+                { toInterface, underwriteId },
+                `No pending expire order for the given underwrite.`
+            );
         }
     }
 
