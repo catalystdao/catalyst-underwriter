@@ -20,6 +20,7 @@ Most of the Underwriter configuration is specified within a `.yaml` file located
 > The `NODE_ENV` variable should ideally be set on the shell configuration file (i.e. `.bashrc` or equivalent), but may also be set by prepending it to the launch command, e.g. `NODE_ENV=production docker compose up`. For more information see the [Node documentation](https://nodejs.org/en/learn/getting-started/nodejs-the-difference-between-development-and-production).
 
 ### TODO add 'monitor'
+### TODO add 'expirer'
 The `.yaml` configuration file is divided into the following sections:
 - `global`: Defines the global underwriter configuration.
     - The `privateKey` of the account that will submit the underwrite transactions on all chains must be defined at this point. 
@@ -72,6 +73,7 @@ The Underwriter is devided into 2 main services: `Listener` and `Submitter`. The
 > 🏗️ The Underwriter is still on a very early development stage. Further services will be added as development progresses.
 
 ### TODO add 'Monitor'
+### TODO add 'Expirer'
 
 ### Listener
 
