@@ -333,7 +333,7 @@ class UnderwriterWorker {
             `Underwrite order received.`
         );
 
-        const sourceIdentifier = this.getSourceIdentifierOfSwap(poolId, fromChainId, toVault);
+        const sourceIdentifier = this.getSourceIdentifierOfSwap(poolId, fromChainId);
         if (sourceIdentifier == undefined) {
             this.logger.warn(
                 { poolId, fromVault, fromChainId, swapTxHash, swapId: swapIdentifier },
@@ -373,14 +373,13 @@ class UnderwriterWorker {
     private getSourceIdentifierOfSwap(
         poolId: string,
         fromChainId: string,
-        toVault: string,
     ): string | undefined {
         const poolConfig = this.pools.find((pool) => pool.id == poolId);
         if (poolConfig == undefined) {
             return undefined;
         }
 
-        const vaultConfig = poolConfig.vaults.find((vault) => vault.vaultAddress == toVault.toLowerCase());
+        const vaultConfig = poolConfig.vaults.find((vault) => vault.chainId == this.chainId);
         if (vaultConfig == undefined) {
             return undefined;
         }
