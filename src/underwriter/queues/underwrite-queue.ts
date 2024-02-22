@@ -5,6 +5,7 @@ import { UnderwriteOrder, UnderwriteOrderResult } from "../underwriter.types";
 import { PoolConfig } from "src/config/config.service";
 import { CatalystChainInterface__factory } from "src/contracts";
 import { WalletInterface } from "src/wallet/wallet.interface";
+import { encodeBytes65Address } from "src/common/decode.payload";
 
 export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, UnderwriteOrderResult> {
 
@@ -30,8 +31,9 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
             this.provider
         );
 
-        //TODO use underwriteAndCheckConnection
-        const txData = interfaceContract.interface.encodeFunctionData("underwrite", [
+        const txData = interfaceContract.interface.encodeFunctionData("underwriteAndCheckConnection", [
+            order.sourceIdentifier,
+            encodeBytes65Address(order.fromVault),
             order.toVault,
             order.toAsset,
             order.units,

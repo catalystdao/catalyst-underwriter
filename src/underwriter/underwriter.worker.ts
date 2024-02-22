@@ -333,6 +333,15 @@ class UnderwriterWorker {
             `Underwrite order received.`
         );
 
+        const sourceIdentifier = this.getSourceIdentifierOfSwap(poolId, fromChainId, toVault);
+        if (sourceIdentifier == undefined) {
+            this.logger.warn(
+                { poolId, fromVault, fromChainId, swapTxHash, swapId: swapIdentifier },
+                'Unable to find the \'sourceIdentifier\' corresponding to the received asset swap. Skipping underwrite.'
+            );
+            return;
+        }
+
         const order: Order = {
             poolId,
             fromChainId,
@@ -340,6 +349,7 @@ class UnderwriterWorker {
             swapTxHash,
             swapBlockNumber,
             swapIdentifier,
+            sourceIdentifier,
             channelId,
             toVault,
             toAccount,
@@ -358,6 +368,28 @@ class UnderwriterWorker {
             processAt: Date.now() + processDelay,
             order
         });
+    }
+
+    private getSourceIdentifierOfSwap(
+        poolId: string,
+        fromChainId: string,
+        toVault: string,
+    ): string | undefined {
+        const poolConfig = this.pools.find((pool) => pool.id == poolId);
+        if (poolConfig == undefined) {
+            return undefined;
+        }
+
+        const vaultConfig = poolConfig.vaults.find((vault) => vault.vaultAddress == toVault.toLowerCase());
+        if (vaultConfig == undefined) {
+            return undefined;
+        }
+
+        for (const [channelId, chainId] of Object.entries(vaultConfig.channels)) {
+            if (chainId == fromChainId) return channelId;
+        }
+
+        return undefined;
     }
 
 }

@@ -11,6 +11,20 @@ export function decodeBytes65Address(addressBytes65: string): string {
     return "0x" + workingAddress.slice(startingPoint);
 }
 
+export function encodeBytes65Address(address: string): string {
+    let workingAddress = address;
+    if (address.slice(0, 2) === "0x") workingAddress = address.slice(2);
+    if (workingAddress.length % 2 != 0) {
+        throw new Error('Invalid address provided: hex representation length must be even.')
+    }
+
+    const length = address.length / 2;
+    const encodedLength = length.toString(16).padStart(2, '0');
+    const encodedAddress = `0x${encodedLength}${workingAddress.padStart(128, '0')}`
+
+    return encodedAddress;
+}
+
 export function encodeRelayerAddress(relayerAddress: string): string {
     return "0x" + relayerAddress.slice(relayerAddress.length-20*2);
 }

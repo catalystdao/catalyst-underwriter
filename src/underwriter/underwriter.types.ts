@@ -11,6 +11,7 @@ export interface Order {
 
     // Derived from the SendAsset event
     swapIdentifier: string;
+    sourceIdentifier: string;
 
     // SendAsset event fields
     channelId: string;
