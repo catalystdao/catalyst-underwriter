@@ -2,7 +2,10 @@
 global:
   privateKey: ""      # The privateKey of the account that will be submitting the underwrites
   logLevel: "debug"
-  blockDelay: 5       # Delay with which to process the chain blocks
+  blockDelay: 5       # Delay with which to process the chain blocks. Use this to prevent handling
+                      # blocks that eventually reorg.
+                      # TODO If the 'monitor' service is moved to the Relayer, this config must
+                      # TODO be implemented on the 'listener' directly.
 
   # TODO the monitor should be moved to the 'Relayer'
   monitor:
