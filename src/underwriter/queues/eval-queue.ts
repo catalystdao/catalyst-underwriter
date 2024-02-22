@@ -9,50 +9,20 @@ import { CatalystContext, catalystParse } from 'src/common/decode.catalyst';
 import { parsePayload } from 'src/common/decode.payload';
 import { JsonRpcProvider } from 'ethers';
 import { Store } from 'src/store/store.lib';
-import { MonitorInterface, MonitorStatus } from 'src/monitor/monitor.interface';
 
 export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
-
-    private currentStatus: MonitorStatus | null;
 
     constructor(
         readonly chainId: string,
         readonly pools: PoolConfig[],
         readonly retryInterval: number,
         readonly maxTries: number,
-        readonly monitor: MonitorInterface,
         private readonly underwriteBlocksMargin: number,
         private readonly store: Store,
         private readonly provider: JsonRpcProvider,
         private readonly logger: pino.Logger
     ) {
         super(retryInterval, maxTries);
-        this.startListeningToMonitor(monitor);
-    }
-
-    async init(): Promise<void> {
-        return new Promise(resolve => {
-            const interval = setInterval(() => {
-                if (this.currentStatus != null) {
-                    clearInterval(interval);
-                    resolve();
-                }
-            }, 50);
-        });
-    }
-
-    private startListeningToMonitor(monitor: MonitorInterface) {
-        monitor.addListener((status) => {
-            this.currentStatus = status;
-        });
-    }
-
-    private getCurrentBlockNumber(): number {
-        // ! 'Infinity' used as fallback, as the 'current block number' is used to determine
-        // whether too much time has passed before executing an underwrite. Note this case should
-        // never  be reached as the 'init()' method always waits for the 'currentStatus' to be
-        // initialized.
-        return this.currentStatus?.blockNumber ?? Infinity;
     }
 
     protected async handleOrder(order: EvalOrder, retryCount: number): Promise<HandleOrderResult<UnderwriteOrder> | null> {
@@ -105,7 +75,15 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         );
 
         // Never underwrite if too much time has passed since the original swap transaction
-        if (this.getCurrentBlockNumber() > order.swapBlockNumber + this.underwriteBlocksMargin) {
+        if (order.swapObservedAtBlockNumber > order.swapBlockNumber + this.underwriteBlocksMargin) {
+            this.logger.warn(
+                {
+                    swapId: order.swapIdentifier,
+                    swapTxHash: order.swapTxHash,
+                    swapBlockNumber: order.swapBlockNumber,
+                },
+                "Skipping underwrite: too many blocks have passed since the swap transaction."
+            );
             return null;
         }
 

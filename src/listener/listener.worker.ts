@@ -379,6 +379,7 @@ class ListenerWorker {
                 fee: event.fee,
                 minOut: event.minOut,
                 underwriteIncentiveX16: event.underwriteIncentiveX16,
+                observedAtBlockNumber: this.currentStatus!.blockNumber
             },
         }
     

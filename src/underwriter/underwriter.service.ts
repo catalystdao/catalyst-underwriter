@@ -5,7 +5,6 @@ import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService, PoolConfig } from 'src/config/config.service';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { WalletService } from 'src/wallet/wallet.service';
-import { MonitorService } from 'src/monitor/monitor.service';
 
 export const DEFAULT_UNDERWRITER_RETRY_INTERVAL = 30000;
 export const DEFAULT_UNDERWRITER_PROCESSING_INTERVAL = 100;
@@ -34,7 +33,6 @@ export interface UnderwriterWorkerData {
     maxPendingTransactions: number;
     underwriteBlocksMargin: number;
     maxSubmissionDelay: number;
-    monitorPort: MessagePort;
     walletPort: MessagePort;
     loggerOptions: LoggerOptions;
 }
@@ -46,7 +44,6 @@ export class UnderwriterService implements OnModuleInit {
 
     constructor(
         private readonly configService: ConfigService,
-        private readonly monitorService: MonitorService,
         private readonly walletService: WalletService,
         private readonly loggerService: LoggerService,
     ) { }
@@ -70,7 +67,7 @@ export class UnderwriterService implements OnModuleInit {
 
             const worker = new Worker(join(__dirname, 'underwriter.worker.js'), {
                 workerData,
-                transferList: [workerData.monitorPort, workerData.walletPort]
+                transferList: [workerData.walletPort]
             });
             this.workers[chainId] = worker;
 
@@ -148,7 +145,6 @@ export class UnderwriterService implements OnModuleInit {
                 chainUnderwriterConfig.maxSubmissionDelay
                 ?? defaultConfig.maxSubmissionDelay,
 
-            monitorPort: await this.monitorService.attachToMonitor(chainId),
             walletPort: await this.walletService.attachToWallet(chainId),
             loggerOptions: this.loggerService.loggerOptions
         };

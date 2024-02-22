@@ -54,6 +54,7 @@ export interface SendAssetEventDetails extends TransactionDescription {
     fee: bigint;
     minOut: bigint;
     underwriteIncentiveX16: bigint;
+    observedAtBlockNumber: number;
 }
 
 export interface ReceiveAssetEventDetails extends TransactionDescription {
