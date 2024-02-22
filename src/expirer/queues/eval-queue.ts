@@ -56,6 +56,8 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
             throw new Error(`Expire evaluation fail: swap's SendAsset event not found (toChainId: ${order.toChainId}, toInterface: ${order.toInterface}, underwriteId: ${order.underwriteId})`)
         }
 
+        //TODO simulate expiry?
+
         //TODO check if already expired/makes economical sense to expire
         if (true) {
             const result: ExpireOrder = {
