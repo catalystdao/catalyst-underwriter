@@ -51,6 +51,7 @@ export interface UnderwriterGlobalConfig {
   processingInterval?: number;
   maxTries?: number;
   maxPendingTransactions?: number;
+  underwriteBlocksMargin?: number;
 }
 
 export interface UnderwriterConfig extends UnderwriterGlobalConfig {

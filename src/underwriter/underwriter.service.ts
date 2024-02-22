@@ -5,17 +5,20 @@ import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService, PoolConfig } from 'src/config/config.service';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { WalletService } from 'src/wallet/wallet.service';
+import { MonitorService } from 'src/monitor/monitor.service';
 
 export const DEFAULT_UNDERWRITER_RETRY_INTERVAL = 30000;
 export const DEFAULT_UNDERWRITER_PROCESSING_INTERVAL = 100;
 export const DEFAULT_UNDERWRITER_MAX_TRIES = 3;
 export const DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS = 50;
+export const DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN = 50;
 
 interface DefaultUnderwriterWorkerData {
     retryInterval: number;
     processingInterval: number;
     maxTries: number;
     maxPendingTransactions: number;
+    underwriteBlocksMargin: number;
 }
 
 export interface UnderwriterWorkerData {
@@ -27,6 +30,8 @@ export interface UnderwriterWorkerData {
     processingInterval: number;
     maxTries: number;
     maxPendingTransactions: number;
+    underwriteBlocksMargin: number;
+    monitorPort: MessagePort;
     walletPort: MessagePort;
     loggerOptions: LoggerOptions;
 }
@@ -38,6 +43,7 @@ export class UnderwriterService implements OnModuleInit {
 
     constructor(
         private readonly configService: ConfigService,
+        private readonly monitorService: MonitorService,
         private readonly walletService: WalletService,
         private readonly loggerService: LoggerService,
     ) { }
@@ -61,7 +67,7 @@ export class UnderwriterService implements OnModuleInit {
 
             const worker = new Worker(join(__dirname, 'underwriter.worker.js'), {
                 workerData,
-                transferList: [workerData.walletPort]
+                transferList: [workerData.monitorPort, workerData.walletPort]
             });
             this.workers[chainId] = worker;
 
@@ -88,12 +94,14 @@ export class UnderwriterService implements OnModuleInit {
         const processingInterval = globalUnderwriterConfig.processingInterval ?? DEFAULT_UNDERWRITER_PROCESSING_INTERVAL;
         const maxTries = globalUnderwriterConfig.maxTries ?? DEFAULT_UNDERWRITER_MAX_TRIES;
         const maxPendingTransactions = globalUnderwriterConfig.maxPendingTransactions ?? DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS;
+        const underwriteBlocksMargin = globalUnderwriterConfig.underwriteBlocksMargin ?? DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN;
     
         return {
             retryInterval,
             processingInterval,
             maxTries,
-            maxPendingTransactions
+            maxPendingTransactions,
+            underwriteBlocksMargin
         }
     }
 
@@ -128,7 +136,11 @@ export class UnderwriterService implements OnModuleInit {
             maxPendingTransactions:
                 chainUnderwriterConfig.maxPendingTransactions
                 ?? defaultConfig.maxPendingTransactions,
+            underwriteBlocksMargin:
+                chainUnderwriterConfig.underwriteBlocksMargin
+                ?? defaultConfig.underwriteBlocksMargin,
 
+            monitorPort: await this.monitorService.attachToMonitor(chainId),
             walletPort: await this.walletService.attachToWallet(chainId),
             loggerOptions: this.loggerService.loggerOptions
         };

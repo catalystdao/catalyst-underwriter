@@ -12,6 +12,7 @@ import { EvalQueue } from "./queues/eval-queue";
 import { UnderwriteQueue } from "./queues/underwrite-queue";
 import { ApprovalHandler } from "./approval-handler";
 import { WalletInterface } from "src/wallet/wallet.interface";
+import { MonitorInterface } from "src/monitor/monitor.interface";
 
 
 class UnderwriterWorker {
@@ -28,6 +29,7 @@ class UnderwriterWorker {
     readonly pools: PoolConfig[];
 
     readonly wallet: WalletInterface;
+    readonly monitor: MonitorInterface;
     readonly approvalHandler: ApprovalHandler;
 
     readonly newOrdersQueue: NewOrder<EvalOrder>[] = [];
@@ -50,6 +52,7 @@ class UnderwriterWorker {
         );
         this.provider = this.initializeProvider(this.config.rpc);
 
+        this.monitor = new MonitorInterface(this.config.monitorPort);
         this.wallet = new WalletInterface(this.config.walletPort);
 
         this.approvalHandler = new ApprovalHandler(
@@ -63,6 +66,8 @@ class UnderwriterWorker {
             this.pools,
             this.config.retryInterval,
             this.config.maxTries,
+            this.config.underwriteBlocksMargin,
+            this.monitor,
             this.wallet,
             this.store,
             this.provider,
@@ -100,6 +105,8 @@ class UnderwriterWorker {
         pools: PoolConfig[],
         retryInterval: number,
         maxTries: number,
+        underwriteBlocksMargin: number,
+        monitor: MonitorInterface,
         wallet: WalletInterface,
         store: Store,
         provider: JsonRpcProvider,
@@ -110,6 +117,8 @@ class UnderwriterWorker {
             pools,
             retryInterval,
             maxTries,
+            monitor,
+            underwriteBlocksMargin,
             store,
             provider,
             logger
@@ -244,6 +253,7 @@ class UnderwriterWorker {
                     swapStatus.fromChainId,
                     swapStatus.fromVault,
                     swapStatus.sendAssetEvent!.txHash,
+                    swapStatus.sendAssetEvent!.blockNumber,
                     swapStatus.swapId,
                     swapStatus.sendAssetEvent!.fromChannelId,
                     swapStatus.toVault,
@@ -302,6 +312,7 @@ class UnderwriterWorker {
         fromChainId: string,
         fromVault: string,
         swapTxHash: string,
+        swapBlockNumber: number,
         swapIdentifier: string,
         channelId: string,
         toVault: string,
@@ -324,6 +335,7 @@ class UnderwriterWorker {
             fromChainId,
             fromVault,
             swapTxHash,
+            swapBlockNumber,
             swapIdentifier,
             channelId,
             toVault,
