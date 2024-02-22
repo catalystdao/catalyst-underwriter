@@ -8,16 +8,16 @@ import { MonitorModule } from './monitor/monitor.module';
 import { ExpirerModule } from './expirer/expirer.module';
 
 @Module({
-  imports: [
-    ConfigModule,
-    LoggerModule,
-    MonitorModule,
-    ListenerModule,
-    WalletModule,
-    UnderwriterModule,
-    ExpirerModule
-  ],
-  controllers: [],
-  providers: [],
+    imports: [
+        ConfigModule,
+        LoggerModule,
+        MonitorModule,
+        ListenerModule,
+        WalletModule,
+        UnderwriterModule,
+        ExpirerModule
+    ],
+    controllers: [],
+    providers: [],
 })
 export class AppModule {}

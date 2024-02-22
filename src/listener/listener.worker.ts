@@ -119,7 +119,7 @@ class ListenerWorker {
         vaultInterface: ICatalystV1VaultEventsInterface,
         chainInterfaceInterface: CatalystChainInterfaceInterface,
         topics: string[][]
-    } {
+        } {
 
         const vaultInterface = ICatalystV1VaultEvents__factory.createInterface();
         const chainInterfaceInterface = CatalystChainInterface__factory.createInterface();

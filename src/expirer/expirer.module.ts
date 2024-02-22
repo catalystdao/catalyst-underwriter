@@ -4,7 +4,7 @@ import { WalletModule } from 'src/wallet/wallet.module';
 import { MonitorModule } from 'src/monitor/monitor.module';
 
 @Module({
-  providers: [ExpirerService],
-  imports: [MonitorModule, WalletModule],
+    providers: [ExpirerService],
+    imports: [MonitorModule, WalletModule],
 })
 export class ExpirerModule {}

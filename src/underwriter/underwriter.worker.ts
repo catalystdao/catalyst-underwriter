@@ -45,17 +45,17 @@ class UnderwriterWorker {
 
         this.store = new Store();
         this.logger = this.initializeLogger(
-          this.chainId,
-          this.config.loggerOptions,
+            this.chainId,
+            this.config.loggerOptions,
         );
         this.provider = this.initializeProvider(this.config.rpc);
 
         this.wallet = new WalletInterface(this.config.walletPort);
 
         this.approvalHandler = new ApprovalHandler(
-          this.config.retryInterval,
-          this.wallet,
-          this.logger
+            this.config.retryInterval,
+            this.wallet,
+            this.logger
         );
 
         [this.evalQueue, this.underwriteQueue] = this.initializeQueues(
@@ -78,8 +78,8 @@ class UnderwriterWorker {
     // ********************************************************************************************
 
     private initializeLogger(
-      chainId: string,
-      loggerOptions: LoggerOptions,
+        chainId: string,
+        loggerOptions: LoggerOptions,
     ): pino.Logger {
         return pino(loggerOptions).child({
             worker: 'underwriter',
@@ -179,46 +179,46 @@ class UnderwriterWorker {
 
 
     private async handleConfirmedOrders(
-      confirmedSubmitOrders: UnderwriteOrderResult[],
+        confirmedSubmitOrders: UnderwriteOrderResult[],
     ): Promise<void> {
 
-      for (const confirmedOrder of confirmedSubmitOrders) {
+        for (const confirmedOrder of confirmedSubmitOrders) {
         // Registering the 'use' of 'toAssetAllowance is an approximation, as the allowance is an
         // overestimate. Thus, in practice a small allowance will be left for the interface. This
         // leftover will be removed once a new allowance for other orders is set. 
-        this.approvalHandler.registerAllowanceUse(
-          confirmedOrder.interfaceAddress,
-          confirmedOrder.toAsset,
-          confirmedOrder.toAssetAllowance
-        );
+            this.approvalHandler.registerAllowanceUse(
+                confirmedOrder.interfaceAddress,
+                confirmedOrder.toAsset,
+                confirmedOrder.toAssetAllowance
+            );
 
-        //TODO add underwriteId to log? (note that this depends on the AMB implementation)
-        const orderDescription = {
-          fromVault: confirmedOrder.fromVault,
-          fromChainId: confirmedOrder.fromChainId,
-          swapTxHash: confirmedOrder.swapTxHash,
-          swapId: confirmedOrder.swapIdentifier,
-          txHash: confirmedOrder.txReceipt.hash,
-        };
+            //TODO add underwriteId to log? (note that this depends on the AMB implementation)
+            const orderDescription = {
+                fromVault: confirmedOrder.fromVault,
+                fromChainId: confirmedOrder.fromChainId,
+                swapTxHash: confirmedOrder.swapTxHash,
+                swapId: confirmedOrder.swapIdentifier,
+                txHash: confirmedOrder.txReceipt.hash,
+            };
 
-        this.logger.debug(
-            orderDescription,
-            `Successful underwrite processing: underwrite submitted.`,
-        );
-      }
+            this.logger.debug(
+                orderDescription,
+                `Successful underwrite processing: underwrite submitted.`,
+            );
+        }
     }
 
     private async handleRejectedOrders(
-      rejectedSubmitOrders: UnderwriteOrder[],
+        rejectedSubmitOrders: UnderwriteOrder[],
     ): Promise<void> {
 
-      for (const rejectedOrder of rejectedSubmitOrders) {
-          this.approvalHandler.registerRequiredAllowanceDecrease(
-            rejectedOrder.interfaceAddress,
-            rejectedOrder.toAsset,
-            rejectedOrder.toAssetAllowance
-          )
-      }
+        for (const rejectedOrder of rejectedSubmitOrders) {
+            this.approvalHandler.registerRequiredAllowanceDecrease(
+                rejectedOrder.interfaceAddress,
+                rejectedOrder.toAsset,
+                rejectedOrder.toAssetAllowance
+            )
+        }
     }
 
     private async listenForOrders(): Promise<void> {

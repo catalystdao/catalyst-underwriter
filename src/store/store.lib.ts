@@ -98,7 +98,7 @@ export class Store {
     }
 
     static getChannel(channel: string, describer: string): string {
-      return Store.combineString(channel, describer);
+        return Store.combineString(channel, describer);
     }
 
     static combineString(...vals: string[]) {

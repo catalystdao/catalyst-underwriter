@@ -3,7 +3,7 @@ import { ListenerService } from './listener.service';
 import { MonitorModule } from 'src/monitor/monitor.module';
 
 @Module({
-  providers: [ListenerService],
-  imports: [MonitorModule],
+    providers: [ListenerService],
+    imports: [MonitorModule],
 })
 export class ListenerModule {}
