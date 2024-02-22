@@ -18,7 +18,7 @@ export function encodeBytes65Address(address: string): string {
         throw new Error('Invalid address provided: hex representation length must be even.')
     }
 
-    const length = address.length / 2;
+    const length = workingAddress.length / 2;
     const encodedLength = length.toString(16).padStart(2, '0');
     const encodedAddress = `0x${encodedLength}${workingAddress.padStart(128, '0')}`
 
