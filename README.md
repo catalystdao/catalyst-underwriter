@@ -19,16 +19,14 @@ Most of the Underwriter configuration is specified within a `.yaml` file located
 
 > The `NODE_ENV` variable should ideally be set on the shell configuration file (i.e. `.bashrc` or equivalent), but may also be set by prepending it to the launch command, e.g. `NODE_ENV=production docker compose up`. For more information see the [Node documentation](https://nodejs.org/en/learn/getting-started/nodejs-the-difference-between-development-and-production).
 
-### TODO add 'monitor'
-### TODO add 'expirer'
 The `.yaml` configuration file is divided into the following sections:
 - `global`: Defines the global underwriter configuration.
     - The `privateKey` of the account that will submit the underwrite transactions on all chains must be defined at this point. 
-    - Default configuration for the `underwriter` can also be specified at this point.
+    - Default configuration for the `monitor`, `listener`, `underwriter`, `expirer` and `wallet` can also be specified at this point.
 - `ambs`: The AMBs configuration.
 - `chains`: Defines the configuration for each of the chains to be supported by the relayer.
     - This includes the `chainId` and the `rpc` to be used for the chain.
-    - Each chain may override the global `underwriter` configuration (those defined under the `global` configuration), and `amb` configurations.
+    - Each chain may override the global services configurations (those defined under the `global` configuration), and `amb` configurations.
 - `pools`: The Catalyst pools of which swaps to underwrite.
     - For each vault, the `vaultAddress` and `interfaceAddress` must be specified, and also the mapping between the vault's `bytes32` channel ids to the destination `chainId`s (for all the vault's channel ids).
 
@@ -68,12 +66,9 @@ For further insight into the requirements for running the Underwriter see the `d
 
 ## Underwriter Structure
 
-The Underwriter is devided into 2 main services: `Listener` and `Submitter`. These services work together to get the Catalyst swap events and submit their corresponding underwrites on the destination chain. The services are run in parallel and communicate using Redis. Wherever it makes sense, chains are allocated seperate workers to ensure a chain fault doesn't propagate and impact the performance on other chains.
+The Underwriter is devided into 3 main services: the `Listener`, the `Submitter` and the `Expirer`. These services work together to get the Catalyst swap events and submit their corresponding underwrites on the destination chain. The services are run in parallel and communicate using Redis. Wherever it makes sense, chains are allocated seperate workers to ensure a chain fault doesn't propagate and impact the performance on other chains.
 
 > 🏗️ The Underwriter is still on a very early development stage. Further services will be added as development progresses.
-
-### TODO add 'Monitor'
-### TODO add 'Expirer'
 
 ### Listener
 
@@ -93,18 +88,39 @@ The Underwriter service gets recently executed swap information from Redis. For 
 1. Gets the full corresponding AMB message from the Relayer.
 2. Estimates the token amount required for underwriting.
 3. Simulates the transaction to get a gas estimate. (TODO)
-4. Performs the underwrite if the evaluation is successful using the [`underwriteAndCheckConnection`](https://github.com/catalystdao/catalyst/blob/27b4d0a2bca177aff00def8cd745623bfbf7cb6b/evm/src/CatalystChainInterface.sol#L646) method of the CatalystChainInterface contract. (TODO - currently using `underwrite` instead of `underwriteAndCheckConnection`)
+4. Performs the underwrite if the evaluation is successful using the [`underwriteAndCheckConnection`](https://github.com/catalystdao/catalyst/blob/27b4d0a2bca177aff00def8cd745623bfbf7cb6b/evm/src/CatalystChainInterface.sol#L646) method of the CatalystChainInterface contract.
 5. Confirms that the underwrite transaction is mined.
 
 To make the Underwriter as resilitent as possible to RPC failures/connection errors, each evaluation, underwrite and confirmation step is tried up to `maxTries` times with a `retryInterval` delay between tries (these default to `3` and `2000` ms, but can be modified on the Underwriter config).
 
-The Underwriter additionally limits the maximum number of transactions within the 'submission' pipeline (i.e. transactions that have been started to be processed and are not completed), and will not accept any further underwrite orders once reached (TODO add a deadline to underwrite execution). If a submitted transactions fails to commit within the number of specified tries and timeout, the Underwriter will attempt to cancel the transaction.
+The Underwriter additionally limits the maximum number of transactions within the 'submission' pipeline (i.e. transactions that have been started to be processed and are not completed), and will not accept any further underwrite orders once reached. If a submitted transactions fails to commit within the number of specified tries and timeout, the Underwriter will attempt to cancel the transaction.
 > ⚠️ If the Underwriter fails to cancel a transaction, the Underwriter pipeline will stall and no further orders will be processed until the stuck transaction is resolved.
+
+### Expirer
+The expirer objective is to resolve any expired underwrites. For underwrites made by this underwriter, the expiry is executed at a configurable `expireBlocksMargin` interval *before* the expiry deadline. Everytime an underwrite is captured by the `listener` service, an `expire` order is scheduled by the expirer. If the underwrite is fulfilled, the `expire` order is discarded, otherwise it is executed at the effective expiry time.
+
+### Further Services
+
+#### Monitor
+The monitor service is responsible for polling at a configurable interval the most recent block information of each chain, and then it broadcasts this information to the other services of the underwriter.
+
+> 🏗️ In the future this service will be moved to the Relayer, which will be able to also inform on the state of the different providers (e.g. RPCs, chains, AMBs).
+
+#### Wallet
+The wallet service is in charge for submitting the transactions to the RPCs as requested by the other services of the underwriter. For each transaction:
+1. The transaction is submitted with configurable fee parameters (see the 'Automatic transaction pricing' section below for more information). 
+2. The transaction confirmation is awaited. 
+3. If the transaction takes a long time to confirm, the transaction is automatically repriced with higher fee parameters (see the 'Transaction repricing' section below for more information). 
+4. If the transaction continues to not be mined, the wallet will try to cancel the transaction (if cancellation fails, the wallet pipeline stalls until the transaction nonce is processed).
+
+For each transaction, the wallet may be instructed to:
+- Retry the transaction if it fails because of an 'invalid nonce' error. (Note that this may not be desired, as the resulting transaction will be out of order with respect to the other submitted transactions)
+- Discard the transaction if too much time passes between the time when the transaction is requested to when the transaction is actually submitted (e.g. might happen because of a long mining times or a wallet 'stall').
 
 ## Further features
 
 ### Automatic transaction pricing
-The Underwriter has the ability to automatically set the relay transactions gas pricing.
+The Underwriter has the ability to automatically set the transactions gas pricing.
 #### EIP-1559 transactions
 - The `maxFeePerGas` configuration sets the transaction `maxFeePerGas` property. This defines the maximum fee to be paid per gas for a transaction (including both the base fee and the miner fee). If not set, no `maxFeePerGas` is set on the transaction.
 - The `maxPriorityFeeAdjustmentFactor` determines the amount by which to modify the queried recommended `maxPriorityFee` from the rpc. If not set, no `maxPriorityFee` is set on the transaction.
