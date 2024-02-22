@@ -68,6 +68,7 @@ class UnderwriterWorker {
             this.config.maxTries,
             this.config.underwriteBlocksMargin,
             this.monitor,
+            this.config.maxSubmissionDelay,
             this.wallet,
             this.store,
             this.provider,
@@ -107,6 +108,7 @@ class UnderwriterWorker {
         maxTries: number,
         underwriteBlocksMargin: number,
         monitor: MonitorInterface,
+        maxSubmissionDelay: number,
         wallet: WalletInterface,
         store: Store,
         provider: JsonRpcProvider,
@@ -128,6 +130,7 @@ class UnderwriterWorker {
             pools,
             retryInterval,
             maxTries,
+            maxSubmissionDelay,
             wallet,
             provider,
             logger

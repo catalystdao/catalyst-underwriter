@@ -12,6 +12,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
         readonly pools: PoolConfig[],
         readonly retryInterval: number,
         readonly maxTries: number,
+        private readonly maxSubmissionDelay: number,
         private readonly wallet: WalletInterface,
         private readonly provider: JsonRpcProvider,
         private readonly logger: pino.Logger
@@ -46,23 +47,26 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
             gasLimit: order.gasLimit,
         };
 
-        const txPromise = this.wallet.submitTransaction(txRequest, order)
-            .then(transactionResult => {
-                if (transactionResult.submissionError) {
-                    throw transactionResult.submissionError;    //TODO wrap in a 'SubmissionError' type?
-                }
-                if (transactionResult.confirmationError) {
-                    throw transactionResult.confirmationError;    //TODO wrap in a 'ConfirmationError' type?
-                }
+        const txPromise = this.wallet.submitTransaction(
+            txRequest,
+            order,
+            { deadline: Date.now() + this.maxSubmissionDelay }
+        ).then(transactionResult => {
+            if (transactionResult.submissionError) {
+                throw transactionResult.submissionError;    //TODO wrap in a 'SubmissionError' type?
+            }
+            if (transactionResult.confirmationError) {
+                throw transactionResult.confirmationError;    //TODO wrap in a 'ConfirmationError' type?
+            }
 
-                const order = transactionResult.metadata as UnderwriteOrder;
+            const order = transactionResult.metadata as UnderwriteOrder;
 
-                return {
-                    ...order,
-                    tx: transactionResult.tx,
-                    txReceipt: transactionResult.txReceipt
-                } as UnderwriteOrderResult;
-            });
+            return {
+                ...order,
+                tx: transactionResult.tx,
+                txReceipt: transactionResult.txReceipt
+            } as UnderwriteOrderResult;
+        });
 
         return { result: txPromise };
     }

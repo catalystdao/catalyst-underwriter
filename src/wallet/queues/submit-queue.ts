@@ -29,6 +29,11 @@ export class SubmitQueue extends ProcessingQueue<WalletTransactionRequest, Pendi
         _retryCount: number
     ): Promise<HandleOrderResult<PendingTransaction> | null> {
 
+        const txDeadline = order.options.deadline ?? Infinity;
+        if (Date.now() > txDeadline) {
+            throw new Error('Transaction submission deadline exceeded.');
+        }
+
         const request: TransactionRequest = {
             ...order.txRequest,
 
@@ -51,6 +56,16 @@ export class SubmitQueue extends ProcessingQueue<WalletTransactionRequest, Pendi
             error,
             try: retryCount + 1
         };
+
+        if (typeof error.message == 'string') {
+            if (error.message == 'Transaction submission deadline exceeded.') {
+                this.logger.warn(
+                    errorDescription,
+                    'Transaction submission deadline exceeded.'
+                );
+                return false;   // Do not retry submission
+            }
+        }
 
         if (
             error.code === 'NONCE_EXPIRED' ||

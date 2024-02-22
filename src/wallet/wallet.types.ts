@@ -38,6 +38,7 @@ export interface WalletTransactionRequestResponse<T = any> {
 // ************************************************************************************************
 export interface WalletTransactionOptions {
     retryOnNonceConfirmationError?: boolean;    // Default: true, NOTE: this will cause the transaction to be executed out of order
+    deadline?: number;                          // Default: undefined (i.e. no deadline)
 }
 
 export interface WalletTransactionRequest<T = any> {

@@ -19,6 +19,7 @@ global:
     maxPendingTransactions: 50  # Maximum number of orders within the 'underwrite' pipeline
     underwriteBlocksMargin: 50  # Number of blocks after a swap's execution before which it is
                                 # allowed to be underwritten.
+    maxSubmissionDelay: 300000  # Maximum time for the wallet to submit the 'underwrite' transaction.
 
   expirer:
     # ! The following properties default to the values of the 'underwriter' if missing

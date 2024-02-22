@@ -12,6 +12,7 @@ export const DEFAULT_UNDERWRITER_PROCESSING_INTERVAL = 100;
 export const DEFAULT_UNDERWRITER_MAX_TRIES = 3;
 export const DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS = 50;
 export const DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN = 50;
+export const DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY = 300000;
 
 interface DefaultUnderwriterWorkerData {
     retryInterval: number;
@@ -19,6 +20,7 @@ interface DefaultUnderwriterWorkerData {
     maxTries: number;
     maxPendingTransactions: number;
     underwriteBlocksMargin: number;
+    maxSubmissionDelay: number;
 }
 
 export interface UnderwriterWorkerData {
@@ -31,6 +33,7 @@ export interface UnderwriterWorkerData {
     maxTries: number;
     maxPendingTransactions: number;
     underwriteBlocksMargin: number;
+    maxSubmissionDelay: number;
     monitorPort: MessagePort;
     walletPort: MessagePort;
     loggerOptions: LoggerOptions;
@@ -95,13 +98,15 @@ export class UnderwriterService implements OnModuleInit {
         const maxTries = globalUnderwriterConfig.maxTries ?? DEFAULT_UNDERWRITER_MAX_TRIES;
         const maxPendingTransactions = globalUnderwriterConfig.maxPendingTransactions ?? DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS;
         const underwriteBlocksMargin = globalUnderwriterConfig.underwriteBlocksMargin ?? DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN;
+        const maxSubmissionDelay = globalUnderwriterConfig.maxSubmissionDelay ?? DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY;
     
         return {
             retryInterval,
             processingInterval,
             maxTries,
             maxPendingTransactions,
-            underwriteBlocksMargin
+            underwriteBlocksMargin,
+            maxSubmissionDelay,
         }
     }
 
@@ -139,6 +144,9 @@ export class UnderwriterService implements OnModuleInit {
             underwriteBlocksMargin:
                 chainUnderwriterConfig.underwriteBlocksMargin
                 ?? defaultConfig.underwriteBlocksMargin,
+            maxSubmissionDelay:
+                chainUnderwriterConfig.maxSubmissionDelay
+                ?? defaultConfig.maxSubmissionDelay,
 
             monitorPort: await this.monitorService.attachToMonitor(chainId),
             walletPort: await this.walletService.attachToWallet(chainId),
