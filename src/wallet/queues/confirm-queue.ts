@@ -42,21 +42,18 @@ export class TransactionQueue extends ProcessingQueue<PendingTransaction, Confir
     ): Promise<HandleOrderResult<ConfirmedTransaction> | null> {
         // If it's the first time the order is processed, just wait for it
         if (retryCount == 0) {
-            const transactionReceipt = this.provider
-                .waitForTransaction(
-                    order.tx.hash,
-                    this.confirmations,
-                    this.confirmationTimeout,
-                )
-                .then((receipt) => {
-                    if (receipt == null) {
-                        throw new Error('Receipt is \'null\' after waiting for transaction');   // This should never happen if confirmations > 0
-                    }
-                    return {
-                        ...order,
-                        txReceipt: receipt,
-                    }
-                });
+            const transactionReceipt = order.tx.wait(
+                this.confirmations,
+                this.confirmationTimeout,
+            ).then((receipt) => {
+                if (receipt == null) {
+                    throw new Error('Receipt is \'null\' after waiting for transaction');   // This should never happen if confirmations > 0
+                }
+                return {
+                    ...order,
+                    txReceipt: receipt,
+                }
+            });
 
             return { result: transactionReceipt };
         }
@@ -81,14 +78,12 @@ export class TransactionQueue extends ProcessingQueue<PendingTransaction, Confir
         }
 
         // Wait for either the original or the replace transaction to fulfill
-        const originalTxReceipt = this.provider.waitForTransaction(
-            order.tx.hash,
+        const originalTxReceipt = order.tx.wait(
             this.confirmations,
             this.confirmationTimeout,
         ).then((txReceipt) => ({ tx: order.tx, txReceipt }));
 
-        const replaceTxReceipt = this.provider.waitForTransaction(
-            order.txReplacement!.hash,
+        const replaceTxReceipt = order.txReplacement!.wait(
             this.confirmations,
             this.confirmationTimeout,
         ).then((txReceipt) => ({ tx: order.txReplacement!, txReceipt }));

@@ -399,8 +399,7 @@ class WalletWorker {
                     ...this.transactionHelper.getIncreasedFeeDataForTransaction(baseTx),
                 });
 
-                const receipt = await this.provider.waitForTransaction(
-                    tx.hash,
+                const receipt = await tx.wait(
                     this.config.confirmations,
                     this.config.confirmationTimeout,
                 );
