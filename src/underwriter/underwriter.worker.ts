@@ -3,7 +3,7 @@ import pino, { LoggerOptions } from "pino";
 import { workerData } from 'worker_threads';
 import { UnderwriterWorkerData } from "./underwriter.service";
 import { wait } from "src/common/utils";
-import { PoolConfig } from "src/config/config.service";
+import { PoolConfig, TokenConfig } from "src/config/config.service";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
 import { SwapDescription } from "src/store/store.types";
@@ -25,6 +25,7 @@ class UnderwriterWorker {
     readonly chainId: string;
     readonly chainName: string;
 
+    readonly tokens: Record<string, TokenConfig>;
     readonly pools: PoolConfig[];
 
     readonly wallet: WalletInterface;
@@ -41,6 +42,7 @@ class UnderwriterWorker {
         this.chainId = this.config.chainId;
         this.chainName = this.config.chainName;
 
+        this.tokens = this.config.tokens;
         this.pools = this.config.pools;
 
         this.store = new Store();
@@ -60,6 +62,7 @@ class UnderwriterWorker {
 
         [this.evalQueue, this.underwriteQueue] = this.initializeQueues(
             this.chainId,
+            this.tokens,
             this.pools,
             this.config.retryInterval,
             this.config.maxTries,
@@ -100,6 +103,7 @@ class UnderwriterWorker {
 
     private initializeQueues(
         chainId: string,
+        tokens: Record<string, TokenConfig>,
         pools: PoolConfig[],
         retryInterval: number,
         maxTries: number,
@@ -113,6 +117,7 @@ class UnderwriterWorker {
     ): [EvalQueue, UnderwriteQueue] {
         const evalQueue = new EvalQueue(
             chainId,
+            tokens,
             pools,
             retryInterval,
             maxTries,

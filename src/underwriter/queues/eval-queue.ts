@@ -2,7 +2,7 @@ import { calcAssetSwapIdentifier, calcUnderwriteIdentifier } from 'src/common/ut
 import pino from "pino";
 import { HandleOrderResult, ProcessingQueue } from "../../processing-queue/processing-queue";
 import { EvalOrder, UnderwriteOrder } from "../underwriter.types";
-import { PoolConfig } from "src/config/config.service";
+import { PoolConfig, TokenConfig } from "src/config/config.service";
 import { CatalystVaultCommon__factory } from "src/contracts";
 import fetch from 'node-fetch';
 import { CatalystContext, catalystParse } from 'src/common/decode.catalyst';
@@ -14,6 +14,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
     constructor(
         readonly chainId: string,
+        readonly tokens: Record<string, TokenConfig>,
         readonly pools: PoolConfig[],
         readonly retryInterval: number,
         readonly maxTries: number,
@@ -85,6 +86,20 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
                     swapBlockNumber: order.swapBlockNumber,
                 },
                 "Skipping underwrite: too many blocks have passed since the swap transaction."
+            );
+            return null;
+        }
+
+        // Verify the token to underwrite is supported
+        if (this.tokens[toAsset.toLowerCase()] == undefined) {
+            this.logger.warn(
+                {
+                    swapId: order.swapIdentifier,
+                    swapTxHash: order.swapTxHash,
+                    swapBlockNumber: order.swapBlockNumber,
+                    toAsset
+                },
+                "Skipping underwrite: token to underwrite not supported."
             );
             return null;
         }

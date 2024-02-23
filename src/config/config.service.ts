@@ -20,11 +20,16 @@ export interface AMBConfig {
   globalProperties: Record<string, any>;
 }
 
+export interface TokenConfig {
+    approvalBuffer?: bigint;
+}
+
 export interface ChainConfig {
   chainId: string;
   name: string;
   rpc: string;
   blockDelay?: number;
+  tokens: Record<string, TokenConfig>,
   monitor: MonitorConfig;
   listener: ListenerConfig;
   underwriter: UnderwriterConfig;
@@ -208,11 +213,32 @@ export class ConfigService {
                     `Invalid chain configuration for chain '${rawChainConfig.chainId}': 'rpc' missing.`,
                 );
             }
+
+            const tokensConfig: Record<string, TokenConfig> = {};
+            for (const rawTokenConfig of rawChainConfig.tokens) {
+                if (rawTokenConfig.name == undefined) {
+                    throw new Error(`Invalid token configuration: 'name' missing.`);
+                }
+                if (rawTokenConfig.address == undefined) {
+                    throw new Error(
+                        `Invalid token configuration for token '${rawTokenConfig.name}': 'address' missing.`
+                    )
+                }
+
+                const tokenConfig: TokenConfig = {};
+                if (rawTokenConfig.approvalBuffer != undefined) {
+                    tokenConfig.approvalBuffer = BigInt(rawTokenConfig.approvalBuffer);
+                }
+
+                tokensConfig[rawTokenConfig.address.toLowerCase()] = tokenConfig;
+            }
+
             chainConfig.set(rawChainConfig.chainId.toString(), {
                 chainId: rawChainConfig.chainId.toString(),
                 name: rawChainConfig.name,
                 rpc: rawChainConfig.rpc,
                 blockDelay: rawChainConfig.blockDelay,
+                tokens: tokensConfig,
                 monitor: rawChainConfig.monitor ?? {},          //TODO 'monitor' object should be verified
                 listener: rawChainConfig.listener ?? {},        //TODO 'listener' object should be verified
                 underwriter: rawChainConfig.underwriter ?? {},  //TODO 'underwriter' object should be verified

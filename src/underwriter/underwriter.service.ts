@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { join } from 'path';
 import { LoggerOptions } from 'pino';
 import { Worker, MessagePort } from 'worker_threads';
-import { ConfigService, PoolConfig } from 'src/config/config.service';
+import { ConfigService, PoolConfig, TokenConfig } from 'src/config/config.service';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { WalletService } from 'src/wallet/wallet.service';
 import { Wallet } from 'ethers';
@@ -27,6 +27,7 @@ interface DefaultUnderwriterWorkerData {
 export interface UnderwriterWorkerData {
     chainId: string,
     chainName: string,
+    tokens: Record<string, TokenConfig>,
     pools: PoolConfig[],
     rpc: string,
     retryInterval: number;
@@ -132,6 +133,7 @@ export class UnderwriterService implements OnModuleInit {
         return {
             chainId,
             chainName: chainConfig.name,
+            tokens: chainConfig.tokens,
             pools: filteredPools,
             rpc: chainConfig.rpc,
 
