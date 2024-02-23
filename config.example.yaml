@@ -71,11 +71,10 @@ chains:
     name: "Mumbai"
     rpc: "https://polygon-mumbai-pokt.nodies.app"
 
-    # startingBlock   # The block number at which to start Relaying #TODO do we want this?
-
     # Overrides
     listener:
       interval: 3000
+      # startingBlock   # The block number at which to start 'listening' for events
     underwriter:
       retryInterval: 3000
     expirer:

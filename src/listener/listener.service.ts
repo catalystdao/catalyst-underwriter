@@ -112,7 +112,7 @@ export class ListenerService implements OnModuleInit {
             chainId,
             chainName: chainConfig.name,
             rpc: chainConfig.rpc,
-            startingBlock: chainConfig.startingBlock,
+            startingBlock: chainListenerConfig.startingBlock,
             processingInterval: chainListenerConfig.processingInterval ?? defaultConfig.processingInterval,
             maxBlocks: chainListenerConfig.maxBlocks ?? defaultConfig.maxBlocks,
             vaultConfigs,

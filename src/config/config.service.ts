@@ -24,7 +24,6 @@ export interface ChainConfig {
   chainId: string;
   name: string;
   rpc: string;
-  startingBlock?: number;
   blockDelay?: number;
   monitor: MonitorConfig;
   listener: ListenerConfig;
@@ -42,6 +41,7 @@ export interface MonitorConfig extends MonitorGlobalConfig {}
 export interface ListenerGlobalConfig {
   processingInterval?: number;
   maxBlocks?: number;
+  startingBlock?: number;
 }
 
 export interface ListenerConfig extends ListenerGlobalConfig {}
@@ -212,7 +212,6 @@ export class ConfigService {
                 chainId: rawChainConfig.chainId.toString(),
                 name: rawChainConfig.name,
                 rpc: rawChainConfig.rpc,
-                startingBlock: rawChainConfig.startingBlock,
                 blockDelay: rawChainConfig.blockDelay,
                 monitor: rawChainConfig.monitor ?? {},          //TODO 'monitor' object should be verified
                 listener: rawChainConfig.listener ?? {},        //TODO 'listener' object should be verified
