@@ -65,6 +65,7 @@ class UnderwriterWorker {
             this.config.maxTries,
             this.config.underwriteBlocksMargin,
             this.config.maxSubmissionDelay,
+            this.config.walletPublicKey,
             this.wallet,
             this.store,
             this.provider,
@@ -104,6 +105,7 @@ class UnderwriterWorker {
         maxTries: number,
         underwriteBlocksMargin: number,
         maxSubmissionDelay: number,
+        walletPublicKey: string,
         wallet: WalletInterface,
         store: Store,
         provider: JsonRpcProvider,
@@ -125,6 +127,7 @@ class UnderwriterWorker {
             retryInterval,
             maxTries,
             maxSubmissionDelay,
+            walletPublicKey,
             wallet,
             provider,
             logger
@@ -170,6 +173,9 @@ class UnderwriterWorker {
 
             const [newUnderwriteOrders, ,] = this.evalQueue.getFinishedOrders();
 
+            // ! Failed allowance updates are not retried, thus any depending underwrites will
+            // ! fail. However, consequtive 'updateAllowances' calls of this handler will always
+            // ! reissue any required allowance updates.
             await this.approvalHandler.updateAllowances(...newUnderwriteOrders);
 
             await this.underwriteQueue.addOrders(...newUnderwriteOrders);

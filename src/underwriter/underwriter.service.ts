@@ -5,6 +5,7 @@ import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService, PoolConfig } from 'src/config/config.service';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { WalletService } from 'src/wallet/wallet.service';
+import { Wallet } from 'ethers';
 
 export const DEFAULT_UNDERWRITER_RETRY_INTERVAL = 30000;
 export const DEFAULT_UNDERWRITER_PROCESSING_INTERVAL = 100;
@@ -20,6 +21,7 @@ interface DefaultUnderwriterWorkerData {
     maxPendingTransactions: number;
     underwriteBlocksMargin: number;
     maxSubmissionDelay: number;
+    walletPublicKey: string;
 }
 
 export interface UnderwriterWorkerData {
@@ -33,6 +35,7 @@ export interface UnderwriterWorkerData {
     maxPendingTransactions: number;
     underwriteBlocksMargin: number;
     maxSubmissionDelay: number;
+    walletPublicKey: string;
     walletPort: MessagePort;
     loggerOptions: LoggerOptions;
 }
@@ -96,6 +99,7 @@ export class UnderwriterService implements OnModuleInit {
         const maxPendingTransactions = globalUnderwriterConfig.maxPendingTransactions ?? DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS;
         const underwriteBlocksMargin = globalUnderwriterConfig.underwriteBlocksMargin ?? DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN;
         const maxSubmissionDelay = globalUnderwriterConfig.maxSubmissionDelay ?? DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY;
+        const walletPublicKey = (new Wallet(this.configService.globalConfig.privateKey)).address;
     
         return {
             retryInterval,
@@ -104,6 +108,7 @@ export class UnderwriterService implements OnModuleInit {
             maxPendingTransactions,
             underwriteBlocksMargin,
             maxSubmissionDelay,
+            walletPublicKey,
         }
     }
 
@@ -145,6 +150,7 @@ export class UnderwriterService implements OnModuleInit {
                 chainUnderwriterConfig.maxSubmissionDelay
                 ?? defaultConfig.maxSubmissionDelay,
 
+            walletPublicKey: defaultConfig.walletPublicKey,
             walletPort: await this.walletService.attachToWallet(chainId),
             loggerOptions: this.loggerService.loggerOptions
         };

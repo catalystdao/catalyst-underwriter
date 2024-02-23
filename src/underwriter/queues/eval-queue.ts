@@ -93,7 +93,16 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         const expectedReturn = await toVaultContract.calcReceiveAsset(toAsset, order.units);
         const toAssetAllowance = expectedReturn * 11n / 10n;    //TODO set customizable allowance margin
 
-        //TODO evaluation
+        // Set the maximum allowed gasLimit for the transaction. This will be checked on the
+        // 'underwrite' queue with an 'estimateGas' call.
+        // ! It is not possible to 'estimateGas' of the underwrite transaction at this point, as
+        // ! before doing it the allowance for underwriting must be set. The allowance for
+        // ! underwriting is set **after** the evaluation step, as the allowance amount is not
+        // ! known until the evaluation step completes.
+        const maxGasLimit = null;  //TODO
+        
+        //TODO add economical evaluation
+
         if (true) {
             const result: UnderwriteOrder = {
                 ...order,
@@ -101,7 +110,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
                 toAssetAllowance,
                 interfaceAddress,
                 calldata,
-                gasLimit: 1000000 //TODO
+                maxGasLimit
             }
             return { result };
         } else {

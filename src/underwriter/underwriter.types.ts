@@ -32,7 +32,8 @@ export interface EvalOrder extends Order {
 
 export interface UnderwriteOrder extends Order {
     calldata: BytesLike;
-    gasLimit: number | undefined;
+    maxGasLimit: bigint | null;
+    gasLimit?: bigint;
     toAsset: string;
     toAssetAllowance: bigint;
     interfaceAddress: string;

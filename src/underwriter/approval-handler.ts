@@ -120,6 +120,7 @@ export class ApprovalHandler {
         // ! *set* allowances map may not be iterated through fully: i.e. once an allowance is not
         // ! anymore required it must be set to 0 rather than get removed from the map.
 
+        const approvalPromises: Promise<void>[] = [];
         for (const [interfaceAddress, requiredAssetAllowances] of this.requiredUnderwritingAllowances) {
 
             let setAssetAllowances = this.setUnderwritingAllowances.get(interfaceAddress);
@@ -165,8 +166,9 @@ export class ApprovalHandler {
                             retryOnNonceConfirmationError: false    // If the tx fails to submit, do not retry as the tx order will not be maintained
                         }
 
-                        void this.wallet.submitTransaction(txRequest, approvalDescription, walletOptions)
+                        const approvalPromise = this.wallet.submitTransaction(txRequest, approvalDescription, walletOptions)
                             .then(transactionResult => this.onTransactionResult(transactionResult));
+                        approvalPromises.push(approvalPromise);
 
                         // Increase immediately the 'set' asset allowance. This is technically not correct
                         // until the 'approve' transaction confirms, but is done to prevent further approve
@@ -182,6 +184,7 @@ export class ApprovalHandler {
 
         }
 
+        await Promise.allSettled(approvalPromises);
     }
 
     private onTransactionResult(result: TransactionResult): void {

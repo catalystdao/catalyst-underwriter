@@ -14,6 +14,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
         readonly retryInterval: number,
         readonly maxTries: number,
         private readonly maxSubmissionDelay: number,
+        private readonly walletPublicKey: string,
         private readonly wallet: WalletInterface,
         private readonly provider: JsonRpcProvider,
         private readonly logger: pino.Logger
@@ -42,6 +43,20 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
             order.underwriteIncentiveX16,
             order.calldata,
         ]);
+
+        if (order.gasLimit == undefined) {
+            order.gasLimit = await this.provider.estimateGas({
+                to: order.interfaceAddress,
+                from: this.walletPublicKey,
+                data: txData,
+                blockTag: 'pending' //TODO is 'pending' widely supported?
+            });
+
+            if (order.maxGasLimit != null && order.gasLimit > order.maxGasLimit) {
+                // NOTE: the following error message is matched on the 'handleFailedOrder' handler below.
+                throw new Error('Skipping underwrite, \'gasLimit\' is larger than the set \'maxGasLimit\'.')
+            }
+        }
 
         const txRequest: TransactionRequest = {
             to: order.interfaceAddress,
@@ -84,6 +99,21 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
             error,
             try: retryCount + 1
         };
+
+        if (typeof error.message == "string") {
+            if (error.message == 'Skipping underwrite, \'gasLimit\' is larger than the set \'maxGasLimit\'.') {
+                this.logger.warn(
+                    { errorDescription, gasLimit: order.gasLimit, maxGasLimit: order.maxGasLimit },
+                    'Skipping underwrite, \'gasLimit\' is larger than the set \'maxGasLimit\'.'
+                );
+                return false;   // Do not retry
+            }
+        }
+        if (order.gasLimit == undefined) {
+            // This may happen if the token allowance is not set correctly
+            this.logger.warn(errorDescription, 'Gas limit estimation failed. Retrying if possible.')
+            return true;
+        }
 
         this.logger.warn(errorDescription, `Error on underwrite submission.`);
 
