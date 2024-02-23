@@ -25,6 +25,8 @@ export interface Order {
     units: bigint;
     fee: bigint;
     underwriteIncentiveX16: bigint;
+
+    submissionDeadline: number;
 }
 
 export interface EvalOrder extends Order {

@@ -13,7 +13,6 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
         readonly pools: PoolConfig[],
         readonly retryInterval: number,
         readonly maxTries: number,
-        private readonly maxSubmissionDelay: number,
         private readonly walletPublicKey: string,
         private readonly wallet: WalletInterface,
         private readonly provider: JsonRpcProvider,
@@ -67,7 +66,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
         const txPromise = this.wallet.submitTransaction(
             txRequest,
             order,
-            { deadline: Date.now() + this.maxSubmissionDelay }
+            { deadline: order.submissionDeadline }
         ).then(transactionResult => {
             if (transactionResult.submissionError) {
                 throw transactionResult.submissionError;    //TODO wrap in a 'SubmissionError' type?

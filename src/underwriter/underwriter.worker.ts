@@ -126,7 +126,6 @@ class UnderwriterWorker {
             pools,
             retryInterval,
             maxTries,
-            maxSubmissionDelay,
             walletPublicKey,
             wallet,
             provider,
@@ -335,6 +334,8 @@ class UnderwriterWorker {
             `Underwrite order received.`
         );
 
+        const submissionDeadline = Date.now() + this.config.maxSubmissionDelay;
+
         const sourceIdentifier = this.getSourceIdentifierOfSwap(poolId, fromChainId);
         if (sourceIdentifier == undefined) {
             this.logger.warn(
@@ -362,7 +363,8 @@ class UnderwriterWorker {
             minOut,
             units,
             fee,
-            underwriteIncentiveX16
+            underwriteIncentiveX16,
+            submissionDeadline,
         };
 
         const processDelay = 0;   //TODO derive delay
