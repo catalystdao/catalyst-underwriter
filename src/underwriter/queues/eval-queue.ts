@@ -131,8 +131,8 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
         if (typeof error.message == "string") {
             if (
-                /^Unknown pool id (0x)?[0-9a-f]*/.test(error.message)
-                || /^No vault on chain [0-9a-f]* defined on pool (0x)?[0-9a-f]*/.test(error.message)
+                /^Unknown pool id (0x)?[0-9a-fA-F]*/.test(error.message)
+                || /^No vault on chain [0-9a-fA-F]* defined on pool (0x)?[0-9a-fA-F]*/.test(error.message)
             ) {
                 this.logger.warn(
                     errorDescription,
