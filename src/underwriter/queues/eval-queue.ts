@@ -33,10 +33,10 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             throw new Error(`Unknown pool id ${order.poolId}`);
         }
 
-        const toVaultConfig = poolConfig.vaults.find((vault) => vault.vaultAddress == order.toVault);
+        const toVaultConfig = poolConfig.vaults.find((vault) => vault.chainId == this.chainId);
         if (toVaultConfig == undefined) {
             // NOTE: The following error is matched on `handleFailedOrder`
-            throw new Error(`No vault ${order.toVault} defined on pool ${order.poolId}`);
+            throw new Error(`No vault on chain ${this.chainId} defined on pool ${order.poolId}`);
         }
 
         // Get the amb
@@ -132,7 +132,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         if (typeof error.message == "string") {
             if (
                 /^Unknown pool id (0x)?[0-9a-f]*/.test(error.message)
-                || /^No vault (0x)?[0-9a-f]* defined on pool (0x)?[0-9a-f]*/.test(error.message)
+                || /^No vault on chain [0-9a-f]* defined on pool (0x)?[0-9a-f]*/.test(error.message)
             ) {
                 this.logger.warn(
                     errorDescription,
