@@ -392,6 +392,10 @@ class WalletWorker {
             }
 
             try {
+                this.logger.debug(
+                    { cancelTxNonce },
+                    'Submitting transaction cancellation'
+                );
                 const tx = await this.signer.sendTransaction({
                     nonce: cancelTxNonce,
                     to: ZeroAddress,
@@ -406,9 +410,15 @@ class WalletWorker {
 
                 // Transaction cancelled
                 return receipt;
-            } catch {
-                // continue
+            } catch (error) {
+                this.logger.warn(
+                    { cancelTxNonce, error },
+                    'Error on transaction cancellation.'
+                );
+                // Continue trying to cancel the transaction
             }
+
+            await wait(this.config.retryInterval);
         }
 
         this.isStalled = true;
