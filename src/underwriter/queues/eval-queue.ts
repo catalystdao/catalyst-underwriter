@@ -75,6 +75,8 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         );
 
         // Never underwrite if too much time has passed since the original swap transaction
+        // ! This code snippet cannot be moved before the query/save calldata methods, as those are
+        // ! required by the expirer service.
         if (order.swapObservedAtBlockNumber > order.swapBlockNumber + this.underwriteBlocksMargin) {
             this.logger.warn(
                 {
