@@ -2,7 +2,7 @@ import pino from "pino";
 import { UnderwriteOrder } from "./underwriter.types";
 import { Token__factory } from "src/contracts";
 import { TransactionResult, WalletInterface } from "src/wallet/wallet.interface";
-import { MaxUint256, TransactionRequest } from "ethers";
+import { JsonRpcProvider, MaxUint256, TransactionRequest } from "ethers";
 import { WalletTransactionOptions } from "src/wallet/wallet.types";
 import { TokenConfig } from "src/config/config.service";
 
@@ -22,7 +22,9 @@ export class ApprovalHandler {
     constructor(
         readonly retryInterval: number,
         readonly tokens: Record<string, TokenConfig>,
+        private readonly walletPublicKey: string,
         private readonly wallet: WalletInterface,
+        private readonly provider: JsonRpcProvider,
         private readonly logger: pino.Logger
     ) {
     }
@@ -134,7 +136,19 @@ export class ApprovalHandler {
 
             for (const [assetAddress, requiredAllowance] of requiredAssetAllowances) {
 
-                const setAllowance = setAssetAllowances.get(assetAddress) ?? 0n;
+                let setAllowance = setAssetAllowances.get(assetAddress);
+                if (setAllowance == undefined) {
+                    setAllowance = await this.queryCurrentAllowance(assetAddress, interfaceAddress)
+                        ?? 0n;
+                    setAssetAllowances.set(assetAddress, setAllowance);
+
+                    if (setAllowance != 0n) {
+                        this.logger.info(
+                            { allowance: setAllowance, asset: assetAddress, interface: interfaceAddress },
+                            'Existing allowance for interface contract found.'
+                        );
+                    }
+                }
 
                 // If 'assetAddress' is not in 'tokens' the following will fail. This should never
                 // happen, as the 'eval-queue' already checks that the token in question is
@@ -217,6 +231,22 @@ export class ApprovalHandler {
         }
 
         await Promise.allSettled(approvalPromises);
+    }
+
+    private async queryCurrentAllowance(
+        assetAddress: string,
+        interfaceAddress: string,
+    ): Promise<bigint | undefined> {
+        const tokenContract = Token__factory.connect(
+            assetAddress,
+            this.provider
+        );
+
+        try {
+            return tokenContract.allowance(this.walletPublicKey, interfaceAddress);
+        } catch {
+            return undefined;
+        }
     }
 
     private onTransactionResult(result: TransactionResult): void {

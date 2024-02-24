@@ -57,7 +57,9 @@ class UnderwriterWorker {
         this.approvalHandler = new ApprovalHandler(
             this.config.retryInterval,
             this.tokens,
+            this.config.walletPublicKey,
             this.wallet,
+            this.provider,
             this.logger
         );
 
