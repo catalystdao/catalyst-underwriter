@@ -21,7 +21,7 @@ export interface AMBConfig {
 }
 
 export interface TokenConfig {
-    approvalBuffer?: bigint;
+    allowanceBuffer?: bigint;
 }
 
 export interface ChainConfig {
@@ -226,8 +226,8 @@ export class ConfigService {
                 }
 
                 const tokenConfig: TokenConfig = {};
-                if (rawTokenConfig.approvalBuffer != undefined) {
-                    tokenConfig.approvalBuffer = BigInt(rawTokenConfig.approvalBuffer);
+                if (rawTokenConfig.allowanceBuffer != undefined) {
+                    tokenConfig.allowanceBuffer = BigInt(rawTokenConfig.allowanceBuffer);
                 }
 
                 tokensConfig[rawTokenConfig.address.toLowerCase()] = tokenConfig;

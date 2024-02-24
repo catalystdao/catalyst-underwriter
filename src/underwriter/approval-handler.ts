@@ -2,13 +2,15 @@ import pino from "pino";
 import { UnderwriteOrder } from "./underwriter.types";
 import { Token__factory } from "src/contracts";
 import { TransactionResult, WalletInterface } from "src/wallet/wallet.interface";
-import { TransactionRequest } from "ethers";
+import { MaxUint256, TransactionRequest } from "ethers";
 import { WalletTransactionOptions } from "src/wallet/wallet.types";
+import { TokenConfig } from "src/config/config.service";
 
 interface ApprovalDescription {
     interfaceAddress: string;
     assetAddress: string;
-    setAllowance: bigint;
+    oldSetAllowance: bigint;
+    newSetAllowance: bigint;
     requiredAllowance: bigint;
 }
 
@@ -19,6 +21,7 @@ export class ApprovalHandler {
 
     constructor(
         readonly retryInterval: number,
+        readonly tokens: Record<string, TokenConfig>,
         private readonly wallet: WalletInterface,
         private readonly logger: pino.Logger
     ) {
@@ -133,14 +136,42 @@ export class ApprovalHandler {
 
                 const setAllowance = setAssetAllowances.get(assetAddress) ?? 0n;
 
-                if (requiredAllowance != setAllowance) {
+                // If 'assetAddress' is not in 'tokens' the following will fail. This should never
+                // happen, as the 'eval-queue' already checks that the token in question is
+                // supported.
+                const assetAllowanceBuffer = this.tokens[assetAddress].allowanceBuffer;
 
+                // Determine if the asset allowance has to be updated according to the following
+                // logic:
+                //   - If there is no 'assetAllowanceBuffer' for the asset, set an 'unlimited'
+                //     approval.
+                //   - If there is an 'assetAllowanceBuffer':
+                //       - If the 'setAllowance' is less than the 'requiredAllowance' increase the
+                //         allowance (inc. buffer).
+                //       - If the 'setAllowance' exceeds the 'requiredAllowance' by twice the
+                //         buffer amount decrease the set allowance (keeping a buffer). This
+                //         'twice' factor is used to avoid triggering many 'allowance change'
+                //         transactions when operating at an allowance-changing threshold.
+                let newSetAllowance = undefined;
+                if (assetAllowanceBuffer == null) {
+                    if (setAllowance < MaxUint256 / 2n) {   // Divide by 2 to avoid reissuing the 'approve' tx as the allowance gets used
+                        newSetAllowance = MaxUint256;
+                    }
+                } else if (
+                    setAllowance < requiredAllowance ||
+                    setAllowance > (requiredAllowance + assetAllowanceBuffer * 2n)
+                ) {
+                    newSetAllowance = requiredAllowance + assetAllowanceBuffer;
+                }
+
+                if (newSetAllowance != undefined) {
                     try {
                         this.logger.debug(
                             {
                                 interfaceAddress,
                                 assetAddress,
-                                requiredAllowance
+                                oldSetAllowance: setAllowance,
+                                newSetAllowance
                             },
                             `Setting token allowance for interface contract.`
                         );
@@ -149,7 +180,7 @@ export class ApprovalHandler {
                         );
                         const txData = tokenContract.interface.encodeFunctionData("approve", [
                             interfaceAddress,
-                            requiredAllowance,   
+                            newSetAllowance,   
                         ])
                         const txRequest: TransactionRequest = {
                             to: assetAddress,
@@ -159,21 +190,22 @@ export class ApprovalHandler {
                         const approvalDescription: ApprovalDescription = {
                             interfaceAddress,
                             assetAddress,
-                            setAllowance,
+                            oldSetAllowance: setAllowance,
+                            newSetAllowance,
                             requiredAllowance,
                         }
                         const walletOptions: WalletTransactionOptions = {
                             retryOnNonceConfirmationError: false    // If the tx fails to submit, do not retry as the tx order will not be maintained
                         }
 
-                        const approvalPromise = this.wallet.submitTransaction(txRequest, approvalDescription, walletOptions)
-                            .then(transactionResult => this.onTransactionResult(transactionResult));
-                        approvalPromises.push(approvalPromise);
-
                         // Increase immediately the 'set' asset allowance. This is technically not correct
                         // until the 'approve' transaction confirms, but is done to prevent further approve
                         // transactions for the same allowance requirement to be issued.
-                        setAssetAllowances.set(assetAddress, requiredAllowance);
+                        setAssetAllowances.set(assetAddress, newSetAllowance);
+
+                        const approvalPromise = this.wallet.submitTransaction(txRequest, approvalDescription, walletOptions)
+                            .then(transactionResult => this.onTransactionResult(transactionResult));
+                        approvalPromises.push(approvalPromise);
 
                     } catch {
                         // TODO is this required?
@@ -191,14 +223,16 @@ export class ApprovalHandler {
         const {
             interfaceAddress,
             assetAddress,
-            setAllowance,
+            oldSetAllowance,
+            newSetAllowance,
             requiredAllowance
         } = result.metadata as ApprovalDescription;
 
         const logDescription = {
             interface: interfaceAddress,
             asset: assetAddress,
-            setAllowance,
+            oldSetAllowance,
+            newSetAllowance,
             requiredAllowance,
             txHash: result.txReceipt?.hash,
             submissionError: result.submissionError,
@@ -213,7 +247,7 @@ export class ApprovalHandler {
             this.registerSetAllowanceDecrease(
                 interfaceAddress,
                 assetAddress,
-                requiredAllowance - setAllowance
+                newSetAllowance - oldSetAllowance   // If old > new it effectively means 'increasing' the 'setAllowance'.
             );
         } else {
             this.logger.debug(logDescription, 'Approval transaction success');

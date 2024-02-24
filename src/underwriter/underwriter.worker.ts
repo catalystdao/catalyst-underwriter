@@ -56,6 +56,7 @@ class UnderwriterWorker {
 
         this.approvalHandler = new ApprovalHandler(
             this.config.retryInterval,
+            this.tokens,
             this.wallet,
             this.logger
         );
@@ -177,6 +178,9 @@ class UnderwriterWorker {
 
             const [newUnderwriteOrders, ,] = this.evalQueue.getFinishedOrders();
 
+            // ! The following call blocks the pipeline until the submitted approvals are
+            // ! confirmed! Approvals should be configured to not be issued at a high frequency
+            // ! (see the 'allowanceBuffer' configuration).
             // ! Failed allowance updates are not retried, thus any depending underwrites will
             // ! fail. However, consequtive 'updateAllowances' calls of this handler will always
             // ! reissue any required allowance updates.
