@@ -81,6 +81,7 @@ chains:
                                                   # 'unlimited' approval is set.
 
     # Overrides
+    blockDelay: 2
     listener:
       interval: 3000
       # startingBlock   # The block number at which to start 'listening' for events
