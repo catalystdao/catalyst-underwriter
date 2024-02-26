@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import * as yaml from 'js-yaml';
 import dotenv from 'dotenv';
+import { getConfigValidator } from './config-schemas';
 
 export interface GlobalConfig {
   port: number;
@@ -162,20 +163,27 @@ export class ConfigService {
             );
         }
 
-        return yaml.load(rawConfig) as Record<string, any>;
+        const config = yaml.load(rawConfig) as Record<string, any>;
+
+        this.validateConfig(config);
+        return config;
+    }
+
+    private validateConfig(config: any): void {
+        const validator = getConfigValidator();
+        const isConfigValid = validator(config);
+
+        if (!isConfigValid) {
+            const error = validator.errors;
+            console.error('Config validation failed:', error);
+            throw new Error(
+                'Config validation failed.'
+            );
+        }
     }
 
     private loadGlobalConfig(): GlobalConfig {
         const rawGlobalConfig = this.rawConfig.global;
-        if (rawGlobalConfig == undefined) {
-            throw new Error(
-                "'global' configuration missing on the configuration file",
-            );
-        }
-
-        if (rawGlobalConfig.privateKey == undefined) {
-            throw new Error("Invalid global configuration: 'privateKey' missing.");
-        }
 
         if (process.env.UNDERWRITER_PORT == undefined) {
             throw new Error(
@@ -200,30 +208,9 @@ export class ConfigService {
         const chainConfig = new Map<string, ChainConfig>();
 
         for (const rawChainConfig of this.rawConfig.chains) {
-            if (rawChainConfig.chainId == undefined) {
-                throw new Error(`Invalid chain configuration: 'chainId' missing.`);
-            }
-            if (rawChainConfig.name == undefined) {
-                throw new Error(
-                    `Invalid chain configuration for chain '${rawChainConfig.chainId}': 'name' missing.`,
-                );
-            }
-            if (rawChainConfig.rpc == undefined) {
-                throw new Error(
-                    `Invalid chain configuration for chain '${rawChainConfig.chainId}': 'rpc' missing.`,
-                );
-            }
 
             const tokensConfig: Record<string, TokenConfig> = {};
             for (const rawTokenConfig of rawChainConfig.tokens) {
-                if (rawTokenConfig.name == undefined) {
-                    throw new Error(`Invalid token configuration: 'name' missing.`);
-                }
-                if (rawTokenConfig.address == undefined) {
-                    throw new Error(
-                        `Invalid token configuration for token '${rawTokenConfig.name}': 'address' missing.`
-                    )
-                }
 
                 const tokenConfig: TokenConfig = {};
                 if (rawTokenConfig.allowanceBuffer != undefined) {
@@ -239,11 +226,11 @@ export class ConfigService {
                 rpc: rawChainConfig.rpc,
                 blockDelay: rawChainConfig.blockDelay,
                 tokens: tokensConfig,
-                monitor: rawChainConfig.monitor ?? {},          //TODO 'monitor' object should be verified
-                listener: rawChainConfig.listener ?? {},        //TODO 'listener' object should be verified
-                underwriter: rawChainConfig.underwriter ?? {},  //TODO 'underwriter' object should be verified
-                expirer: rawChainConfig.expirer ?? {},          //TODO 'expirer' object should be verified
-                wallet: rawChainConfig.wallet ?? {},            //TODO 'wallet' object should be verified
+                monitor: rawChainConfig.monitor ?? {},
+                listener: rawChainConfig.listener ?? {},
+                underwriter: rawChainConfig.underwriter ?? {},
+                expirer: rawChainConfig.expirer ?? {},
+                wallet: rawChainConfig.wallet ?? {},
             });
         }
 
@@ -257,15 +244,13 @@ export class ConfigService {
 
             const ambName = rawAMBConfig.name;
 
-            if (ambName == undefined) {
-                throw new Error(`Invalid AMB configuration: 'name' missing.`);
-            }
-
             if (rawAMBConfig.enabled == false) {
                 continue;
             }
 
             const globalProperties = rawAMBConfig;
+
+            //TODO check the defined 'name's are unique.
 
             ambConfig.set(ambName, {
                 name: ambName,
@@ -280,60 +265,21 @@ export class ConfigService {
         const poolsConfig = new Map<string, PoolConfig>();
 
         for (const rawPoolsConfig of this.rawConfig.pools) {
-            if (rawPoolsConfig.id == undefined) {
+
+            if (!ambNames.includes(rawPoolsConfig.amb)) {
                 throw new Error(
-                    `Invalid pool configuration: 'id' missing.`,
+                    `Invalid pool configuration for pool '${rawPoolsConfig.id}': 'amb' value invalid.`,
                 );
             }
 
-            if (rawPoolsConfig.name == undefined) {
-                throw new Error(
-                    `Invalid pool configuration for pool '${rawPoolsConfig.id}': 'name' missing.`,
-                );
-            }
-
-            if (rawPoolsConfig.amb == undefined || !ambNames.includes(rawPoolsConfig.amb)) {
-                throw new Error(
-                    `Invalid pool configuration for pool '${rawPoolsConfig.id}': 'amb' invalid or missing.`,
-                );
-            }
-
-            const vaults = rawPoolsConfig.vaults ?? [];
-            if (vaults.length < 2) {
-                throw new Error(
-                    `Invalid pool configuration for pool '${rawPoolsConfig.id}': at least 2 vaults must be specified.`,
-                );
-            }
+            const vaults = rawPoolsConfig.vaults;
             for (const vault of vaults) {
-                if (vault.name == undefined) {
-                    throw new Error(
-                        `Invalid vault configuration': 'name' missing.`,
-                    );
-                }
-                if (vault.chainId == undefined) {
-                    throw new Error(
-                        `Invalid vault configuration for vault '${vault.name}': 'chainId' missing.`
-                    );
-                }
-                if (vault.vaultAddress == undefined) {
-                    throw new Error(
-                        `Invalid vault configuration for vault '${vault.name}': 'vaultAddress' missing.`
-                    );
-                }
-                if (vault.interfaceAddress == undefined) {
-                    throw new Error(
-                        `Invalid vault configuration for vault '${vault.name}': 'interfaceAddress' missing.`
-                    );
-                }
-                if (vault.channels == undefined) {
-                    throw new Error(
-                        `Invalid vault configuration for vault '${vault.name}': 'channels' missing.`
-                    );
-                }
 
                 // Make sure 'chainId's are always strings
                 vault.chainId = vault.chainId.toString();
 
+                //TODO verify the 'chainId's are valid (i.e. they are defined on the 'chains' config)
+                //TODO verify the 'channels' mapping is exhaustive
                 const transformedChannels: Record<string, string> = {};
                 for (const [channelId, chainId] of Object.entries(vault.channels)) {
                     transformedChannels[channelId] = (chainId as number).toString();
