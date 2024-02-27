@@ -83,12 +83,9 @@ class ListenerWorker {
             const vaultAddress = vaultConfig.vaultAddress.toLowerCase();
             const interfaceAddress = vaultConfig.interfaceAddress.toLowerCase();
 
-            // Make sure that there are no vault/interface address duplicates
+            // Make sure that there are no vault address duplicates
             if (normalizedConfigs.some((config) => config.vaultAddress === vaultAddress)) {
                 throw new Error(`Vault address ${vaultAddress} is defined more than once.`);
-            }
-            if (normalizedConfigs.some((config) => config.interfaceAddress === interfaceAddress)) {
-                throw new Error(`Interface address ${interfaceAddress} is defined more than once.`);
             }
 
             // The following logic only works if vault addresses are unique
@@ -109,9 +106,12 @@ class ListenerWorker {
     }
 
     private getAllAddresses(vaultConfigs: VaultConfig[]): string[] {
+        const allVaultAddresses = vaultConfigs.map((config) => config.vaultAddress);
+        const allInterfaceAddresses = vaultConfigs.map((config) => config.interfaceAddress);
+
         return [
-            ...vaultConfigs.map((config) => config.vaultAddress),
-            ...vaultConfigs.map((config) => config.interfaceAddress)
+            ...new Set(allVaultAddresses),      // Filter out duplicates
+            ...new Set(allInterfaceAddresses)   // Filter out duplicates
         ]
     }
 
@@ -213,8 +213,8 @@ class ListenerWorker {
         });
     }
 
-    private getInterfaceConfig(address: string): VaultConfig | undefined {
-        return this.vaultConfigs.find((config) => {
+    private isInterface(address: string): boolean {
+        return this.vaultConfigs.some((config) => {
             return config.interfaceAddress == address.toLowerCase()
         });
     }
@@ -239,9 +239,9 @@ class ListenerWorker {
                 continue;
             }
 
-            const interfaceConfig = this.getInterfaceConfig(log.address);
-            if (interfaceConfig != undefined) {
-                await this.handleInterfaceEvent(log, interfaceConfig);
+            const isInterface = this.isInterface(log.address);
+            if (isInterface) {
+                await this.handleInterfaceEvent(log);
                 continue;
             }
 
@@ -286,7 +286,7 @@ class ListenerWorker {
         }
     }
 
-    private async handleInterfaceEvent(log: Log, vaultConfig: VaultConfig): Promise<void> {
+    private async handleInterfaceEvent(log: Log): Promise<void> {
         const parsedLog = this.chainInterfaceEventsInterface.parseLog({
             topics: Object.assign([], log.topics),
             data: log.data,
@@ -302,15 +302,15 @@ class ListenerWorker {
 
         switch (parsedLog.name) {
             case 'SwapUnderwritten':
-                await this.handleSwapUnderwrittenEvent(log, parsedLog, vaultConfig);
+                await this.handleSwapUnderwrittenEvent(log, parsedLog);
                 break;
 
             case 'FulfillUnderwrite':
-                await this.handleFulfillUnderwriteEvent(log, parsedLog, vaultConfig);
+                await this.handleFulfillUnderwriteEvent(log, parsedLog);
                 break;
 
             case 'ExpireUnderwrite':
-                await this.handleExpireUnderwriteEvent(log, parsedLog, vaultConfig);
+                await this.handleExpireUnderwriteEvent(log, parsedLog);
                 break;
 
             default:
@@ -451,8 +451,7 @@ class ListenerWorker {
     
     private async handleSwapUnderwrittenEvent (
         log: Log,
-        parsedLog: LogDescription,
-        vaultConfig: VaultConfig
+        parsedLog: LogDescription
     ): Promise<void> {
 
         const interfaceAddress = log.address;
@@ -464,14 +463,23 @@ class ListenerWorker {
             { interfaceAddress: log.address, txHash: log.transactionHash, underwriteId },
             `SwapUnderwritten event captured.`
         );
+
+        const poolId = this.getVaultConfig(event.targetVault)?.poolId;
+        if (poolId == undefined) {
+            this.logger.error(
+                { interfaceAddress, vaultAddress: event.targetVault, txHash: log.transactionHash, underwriteId },
+                'Unable to determine the \'poolId\' for the given \'SwapUnderwritten\' event.'
+            );
+            return;
+        }
     
         const underwriteState: UnderwriteState = {
-            poolId: vaultConfig.poolId,
             toChainId: this.chainId,
             toInterface: interfaceAddress,
             status: UnderwriteStatus.Underwritten,
             underwriteId,
             swapUnderwrittenEvent: {
+                poolId,
                 txHash: log.transactionHash,
                 blockHash: log.blockHash,
                 blockNumber: log.blockNumber,
@@ -491,8 +499,7 @@ class ListenerWorker {
     
     private async handleFulfillUnderwriteEvent (
         log: Log,
-        parsedLog: LogDescription,
-        vaultConfig: VaultConfig
+        parsedLog: LogDescription
     ): Promise<void> {
 
         const interfaceAddress = log.address;
@@ -506,7 +513,6 @@ class ListenerWorker {
         );
     
         const underwriteState: UnderwriteState = {
-            poolId: vaultConfig.poolId,
             toChainId: this.chainId,
             toInterface: interfaceAddress,
             status: UnderwriteStatus.Underwritten,
@@ -524,8 +530,7 @@ class ListenerWorker {
     
     private async handleExpireUnderwriteEvent (
         log: Log,
-        parsedLog: LogDescription,
-        vaultConfig: VaultConfig
+        parsedLog: LogDescription
     ): Promise<void> {
 
         const interfaceAddress = log.address;
@@ -539,7 +544,6 @@ class ListenerWorker {
         );
     
         const underwriteState: UnderwriteState = {
-            poolId: vaultConfig.poolId,
             toChainId: this.chainId,
             toInterface: interfaceAddress,
             status: UnderwriteStatus.Underwritten,

@@ -100,7 +100,6 @@ export interface CompletedUnderwriteDescription {
 export interface UnderwriteState {
 
     // Trusted fields (provided by the listener)
-    poolId: string;
     toChainId: string;
     toInterface: string;
 
@@ -115,6 +114,8 @@ export interface UnderwriteState {
 }
 
 export interface SwapUnderwrittenEventDetails extends TransactionDescription {
+    poolId: string; // The 'poolId' is registered here as it is not possible to derive it from the
+                    // other events' data.
     underwriter: string;
     expiry: number;
     targetVault: string;

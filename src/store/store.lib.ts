@@ -496,7 +496,7 @@ export class Store {
         if (newState.status >= UnderwriteStatus.Fulfilled) {
 
             const underwriteDescription: CompletedUnderwriteDescription = {
-                poolId: newState.poolId,
+                poolId: newState.swapUnderwrittenEvent!.poolId,
                 toChainId: newState.toChainId,
                 toInterface: newState.toInterface,
                 underwriter: newState.swapUnderwrittenEvent!.underwriter,
@@ -529,12 +529,12 @@ export class Store {
 
         if (state.swapUnderwrittenEvent) {
             const underwriteDescription: ActiveUnderwriteDescription = {
-                poolId: state.poolId,
+                poolId: state.swapUnderwrittenEvent.poolId,
                 toChainId: state.toChainId,
                 toInterface: state.toInterface,
-                underwriter: state.swapUnderwrittenEvent!.underwriter,
+                underwriter: state.swapUnderwrittenEvent.underwriter,
                 underwriteId: state.underwriteId,
-                expiry: state.swapUnderwrittenEvent!.expiry,
+                expiry: state.swapUnderwrittenEvent.expiry,
             }
             await this.postMessage(Store.onSwapUnderwrittenChannel, underwriteDescription);
         }
