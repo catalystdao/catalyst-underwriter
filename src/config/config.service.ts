@@ -25,12 +25,14 @@ export interface TokenConfig {
     allowanceBuffer?: bigint;
 }
 
+export type TokensConfig = Record<string, TokenConfig>;
+
 export interface ChainConfig {
   chainId: string;
   name: string;
   rpc: string;
   blockDelay?: number;
-  tokens: Record<string, TokenConfig>,
+  tokens: TokensConfig,
   monitor: MonitorConfig;
   listener: ListenerConfig;
   underwriter: UnderwriterConfig;
@@ -196,11 +198,11 @@ export class ConfigService {
             privateKey: rawGlobalConfig.privateKey,
             logLevel: rawGlobalConfig.logLevel,
             blockDelay: rawGlobalConfig.blockDelay,
-            monitor: rawGlobalConfig.monitor ?? {},
-            listener: rawGlobalConfig.listener ?? {},
-            underwriter: rawGlobalConfig.underwriter ?? {},
-            expirer: rawGlobalConfig.expirer ?? {},
-            wallet: rawGlobalConfig.wallet ?? {}
+            monitor: this.formatMonitorGlobalConfig(rawGlobalConfig.monitor),
+            listener: this.formatListenerGlobalConfig(rawGlobalConfig.listener),
+            underwriter: this.formatUnderwriterGlobalConfig(rawGlobalConfig.underwriter),
+            expirer: this.formatExpirerGlobalConfig(rawGlobalConfig.expirer),
+            wallet: this.formatWalletGlobalConfig(rawGlobalConfig.wallet),
         };
     }
 
@@ -209,28 +211,18 @@ export class ConfigService {
 
         for (const rawChainConfig of this.rawConfig.chains) {
 
-            const tokensConfig: Record<string, TokenConfig> = {};
-            for (const rawTokenConfig of rawChainConfig.tokens) {
-
-                const tokenConfig: TokenConfig = {};
-                if (rawTokenConfig.allowanceBuffer != undefined) {
-                    tokenConfig.allowanceBuffer = BigInt(rawTokenConfig.allowanceBuffer);
-                }
-
-                tokensConfig[rawTokenConfig.address.toLowerCase()] = tokenConfig;
-            }
 
             chainConfig.set(rawChainConfig.chainId.toString(), {
                 chainId: rawChainConfig.chainId.toString(),
                 name: rawChainConfig.name,
                 rpc: rawChainConfig.rpc,
                 blockDelay: rawChainConfig.blockDelay,
-                tokens: tokensConfig,
-                monitor: rawChainConfig.monitor ?? {},
-                listener: rawChainConfig.listener ?? {},
-                underwriter: rawChainConfig.underwriter ?? {},
-                expirer: rawChainConfig.expirer ?? {},
-                wallet: rawChainConfig.wallet ?? {},
+                tokens: this.formatTokensConfig(rawChainConfig.tokens),
+                monitor: this.formatMonitorConfig(rawChainConfig.monitor),
+                listener: this.formatListenerConfig(rawChainConfig.listener),
+                underwriter: this.formatUnderwriterConfig(rawChainConfig.underwriter),
+                expirer: this.formatWalletConfig(rawChainConfig.expirer),
+                wallet: this.formatExpirerConfig(rawChainConfig.wallet)
             });
         }
 
@@ -314,5 +306,64 @@ export class ConfigService {
 
         // If there is no chain-specific override, return the default value for the property.
         return this.ambsConfig.get(amb)?.globalProperties[key];
+    }
+
+
+    // Formatting helpers
+    // ********************************************************************************************
+
+    private formatMonitorGlobalConfig(rawConfig: any): MonitorGlobalConfig {
+        return {...rawConfig} as MonitorGlobalConfig;
+    }
+
+    private formatListenerGlobalConfig(rawConfig: any): ListenerGlobalConfig {
+        return {...rawConfig} as ListenerGlobalConfig;
+    }
+
+    private formatUnderwriterGlobalConfig(rawConfig: any): UnderwriterGlobalConfig {
+        return {...rawConfig} as UnderwriterGlobalConfig;
+    }
+
+    private formatExpirerGlobalConfig(rawConfig: any): ExpirerGlobalConfig {
+        return {...rawConfig} as ExpirerGlobalConfig;
+    }
+
+    private formatWalletGlobalConfig(rawConfig: any): WalletGlobalConfig {
+        return {...rawConfig} as WalletGlobalConfig;
+    }
+
+
+    private formatMonitorConfig(rawConfig: any): MonitorConfig {
+        return this.formatMonitorGlobalConfig(rawConfig);
+    }
+
+    private formatListenerConfig(rawConfig: any): ListenerConfig {
+        return this.formatListenerGlobalConfig(rawConfig);
+    }
+
+    private formatUnderwriterConfig(rawConfig: any): UnderwriterConfig {
+        return this.formatUnderwriterGlobalConfig(rawConfig);
+    }
+
+    private formatWalletConfig(rawConfig: any): WalletConfig {
+        return this.formatWalletGlobalConfig(rawConfig);
+    }
+
+    private formatExpirerConfig(rawConfig: any): ExpirerConfig {
+        return this.formatExpirerGlobalConfig(rawConfig);
+    }
+
+    private formatTokensConfig(rawConfig: any): TokensConfig {
+        const config: TokensConfig = {};
+        for (const rawTokenConfig of rawConfig) {
+
+            const tokenConfig = {...rawTokenConfig};
+            if (tokenConfig.allowanceBuffer != undefined) {
+                tokenConfig.allowanceBuffer = BigInt(tokenConfig.allowanceBuffer);
+
+            config[rawTokenConfig.address.toLowerCase()] = tokenConfig;
+        }
+
+        return config;
     }
 }
