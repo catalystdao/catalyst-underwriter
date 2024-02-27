@@ -360,6 +360,7 @@ export class ConfigService {
             const tokenConfig = {...rawTokenConfig};
             if (tokenConfig.allowanceBuffer != undefined) {
                 tokenConfig.allowanceBuffer = BigInt(tokenConfig.allowanceBuffer);
+            }
 
             config[rawTokenConfig.address.toLowerCase()] = tokenConfig;
         }
