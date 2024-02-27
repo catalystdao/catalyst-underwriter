@@ -6,6 +6,7 @@ import { PoolConfig } from "src/config/config.service";
 import { CatalystChainInterface__factory } from "src/contracts";
 import { WalletInterface } from "src/wallet/wallet.interface";
 import { encodeBytes65Address } from "src/common/decode.payload";
+import fetch from "node-fetch";
 
 export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, UnderwriteOrderResult> {
 
@@ -145,6 +146,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
                     orderDescription,
                     `Successful underwrite processing: underwrite submitted.`,
                 );
+                await this.requestRelayPrioritisation(order);
             } else {
                 this.logger.debug(
                     orderDescription,
@@ -155,6 +157,31 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
             this.logger.error(
                 orderDescription,
                 `Unsuccessful underwrite processing.`,
+            );
+        }
+    }
+
+    private async requestRelayPrioritisation(
+        order: UnderwriteOrder
+    ): Promise<void> {
+
+        const relayerEndpoint = `http://${process.env.RELAYER_HOST}:${process.env.RELAYER_PORT}/prioritiseAMBMessage`;
+
+        const ambMessageData = order.ambMessageData;
+        try {
+            this.logger.debug(
+                { ambMessageData, swapTxHash: order.swapTxHash, swapIdentifier: order.swapIdentifier},
+                'Requesting AMB message relay prioritisation.'  
+            );
+            await fetch(relayerEndpoint, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(ambMessageData),
+            });
+        } catch (error) {
+            this.logger.error(
+                { ambMessageData, swapTxHash: order.swapTxHash, swapIdentifier: order.swapIdentifier},
+                'Failed to request amb message relay prioritisation.'
             );
         }
     }

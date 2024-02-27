@@ -34,11 +34,20 @@ export interface EvalOrder extends Order {
 
 export interface UnderwriteOrder extends Order {
     calldata: BytesLike;
+
     maxGasLimit: bigint | null;
     gasLimit?: bigint;
     toAsset: string;
     toAssetAllowance: bigint;
     interfaceAddress: string;
+
+    // The following fields are for message prioritisation
+    ambMessageData: {
+        messageIdentifier: string;
+        amb: string;
+        sourceChainId: string;
+        destinationChainId: string;
+    }
 }
 
 export interface UnderwriteOrderResult extends UnderwriteOrder {

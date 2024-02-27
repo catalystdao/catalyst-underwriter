@@ -42,7 +42,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
         // Get the amb
         const interfaceAddress = toVaultConfig.interfaceAddress;
-        const calldata = await this.queryAMBCalldata(
+        const ambMessageData = await this.queryAMBMessageData(
             order.fromChainId,
             order.swapTxHash,
             interfaceAddress,
@@ -50,7 +50,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             order.swapIdentifier
         );
 
-        if (calldata == undefined) {
+        if (ambMessageData == undefined) {
             throw new Error(`Underwrite evaluation fail: AMB of txHash ${order.swapTxHash} (chain ${order.fromChainId}) not found`);
         }
 
@@ -64,7 +64,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         await this.saveAdditionalSwapData(
             order,
             toAsset,
-            calldata,
+            ambMessageData.calldata,
         );
 
         // Save the map 'underwrite-to-swap' for later use by the expirer
@@ -72,7 +72,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             order,
             toAsset,
             interfaceAddress,
-            calldata
+            ambMessageData.calldata,
         );
 
         // Never underwrite if too much time has passed since the original swap transaction
@@ -124,8 +124,14 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
                 toAsset,
                 toAssetAllowance,
                 interfaceAddress,
-                calldata,
-                maxGasLimit
+                calldata: ambMessageData.calldata,
+                maxGasLimit,
+                ambMessageData: {
+                    messageIdentifier: ambMessageData.messageIdentifier,
+                    amb: ambMessageData.amb,
+                    sourceChainId: ambMessageData.sourceChainId,
+                    destinationChainId: ambMessageData.destinationChainId,
+                }
             }
             return { result };
         } else {
@@ -214,13 +220,19 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         }
     }
 
-    private async queryAMBCalldata(
+    private async queryAMBMessageData(
         chainId: string,
         txHash: string,
         sourceInterface: string,
         sourceVault: string,
         swapId: string
-    ): Promise<string | undefined> {
+    ): Promise<{
+        calldata: string;
+        messageIdentifier: string;
+        amb: string;
+        sourceChainId: string;
+        destinationChainId: string;        
+    } | undefined> {
 
         const relayerEndpoint = `http://${process.env.RELAYER_HOST}:${process.env.RELAYER_PORT}/getAMBs?`;
 
@@ -250,7 +262,13 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
                 if (ambSwapId.toLowerCase() != swapId.toLowerCase()) continue;
 
-                return catalystPayload.cdata;
+                return {
+                    calldata: catalystPayload.cdata,
+                    messageIdentifier: amb.messageIdentifier,
+                    amb: amb.amb,
+                    sourceChainId: amb.sourceChain,
+                    destinationChainId: amb.destinationChain,
+                };
 
             } catch {
                 // Continue
