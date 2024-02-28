@@ -1,7 +1,7 @@
 import pino from "pino";
 import { UnderwriteOrder } from "../underwriter.types";
 import { JsonRpcProvider } from "ethers";
-import { TokenConfig } from "src/config/config.types";
+import { PoolConfig, TokenConfig } from "src/config/config.types";
 import { ApprovalHandler } from "./approval-handler";
 import { WalletInterface } from "src/wallet/wallet.interface";
 import { BalanceHandler } from "./balance-handler";
@@ -16,7 +16,9 @@ export class TokenHandler {
     private approvalHandlers = new Map<InterfaceAddress, ApprovalHandler>();
 
     constructor(
+        private readonly chainId: string,
         private readonly retryInterval: number,
+        private readonly pools: PoolConfig[],
         private readonly tokens: Record<string, TokenConfig>,
         private readonly walletPublicKey: string,
         private readonly wallet: WalletInterface,
@@ -26,11 +28,8 @@ export class TokenHandler {
     }
 
     async init(): Promise<void> {
-        await Promise.allSettled(
-            Object.keys(this.tokens).map(tokenAddress => {
-                return this.initializeBalanceHandler(tokenAddress);
-            })
-        );
+        await this.initializeBalanceHandlers();
+        this.initializeApprovalHandlers();
     }
 
     async processOrders(...orders: UnderwriteOrder[]): Promise<void> {
@@ -54,7 +53,15 @@ export class TokenHandler {
 
     // Balance logic
     // ********************************************************************************************
-    async initializeBalanceHandler(
+    private async initializeBalanceHandlers(): Promise<void> {
+        await Promise.all(
+            Object.keys(this.tokens).map(tokenAddress => {
+                return this.initializeBalanceHandler(tokenAddress);
+            })
+        );
+    }
+
+    private async initializeBalanceHandler(
         tokenAddress: TokenAddress
     ): Promise<BalanceHandler> {
 
@@ -117,22 +124,46 @@ export class TokenHandler {
 
     // Approval logic
     // ********************************************************************************************
+    private initializeApprovalHandlers(): void {
+
+        for (const poolConfig of this.pools) {
+            for (const vaultConfig of poolConfig.vaults) {
+                if (vaultConfig.chainId != this.chainId) {
+                    continue
+                }
+
+                if (!this.approvalHandlers.has(vaultConfig.interfaceAddress)) {
+                    this.initializeApprovalHandler(vaultConfig.interfaceAddress);
+                }
+            }
+        }
+    }
+
+    private initializeApprovalHandler(
+        interfaceAddress: InterfaceAddress
+    ): ApprovalHandler {
+
+        const normalizedInterfaceAddress = interfaceAddress.toLowerCase();
+
+        const handler = new ApprovalHandler(
+            this.tokens,
+            normalizedInterfaceAddress,
+            this.walletPublicKey,
+            this.wallet,
+            this.provider,
+            this.logger
+        );
+
+        this.approvalHandlers.set(interfaceAddress, handler);
+
+        return handler;
+    }
+
     private getApprovalHandler(interfaceAddress: string): ApprovalHandler {
         const handler = this.approvalHandlers.get(interfaceAddress);
 
         if (handler == undefined) {
-            const newHandler = new ApprovalHandler(
-                this.tokens,
-                interfaceAddress,
-                this.walletPublicKey,
-                this.wallet,
-                this.provider,
-                this.logger
-            );
-
-            this.approvalHandlers.set(interfaceAddress, newHandler);
-
-            return newHandler;
+            throw new Error(`ApprovalHandler of interface ${interfaceAddress} not found.`)
         }
 
         return handler;

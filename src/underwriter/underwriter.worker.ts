@@ -55,7 +55,9 @@ class UnderwriterWorker {
         this.wallet = new WalletInterface(this.config.walletPort);
 
         this.tokenHandler = new TokenHandler(
+            this.chainId,
             this.config.retryInterval,
+            this.pools,
             this.tokens,
             this.config.walletPublicKey,
             this.wallet,
