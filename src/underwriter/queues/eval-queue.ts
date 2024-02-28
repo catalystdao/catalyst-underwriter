@@ -2,7 +2,7 @@ import { calcAssetSwapIdentifier, calcUnderwriteIdentifier } from 'src/common/ut
 import pino from "pino";
 import { HandleOrderResult, ProcessingQueue } from "../../processing-queue/processing-queue";
 import { EvalOrder, UnderwriteOrder } from "../underwriter.types";
-import { PoolConfig, TokenConfig } from "src/config/config.service";
+import { PoolConfig, TokenConfig } from "src/config/config.types";
 import { CatalystVaultCommon__factory } from "src/contracts";
 import fetch from 'node-fetch';
 import { CatalystContext, catalystParse } from 'src/common/decode.catalyst';

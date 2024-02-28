@@ -2,7 +2,7 @@ import { JsonRpcProvider, TransactionRequest } from "ethers";
 import pino from "pino";
 import { HandleOrderResult, ProcessingQueue } from "../../processing-queue/processing-queue";
 import { UnderwriteOrder, UnderwriteOrderResult } from "../underwriter.types";
-import { PoolConfig } from "src/config/config.service";
+import { PoolConfig } from "src/config/config.types";
 import { CatalystChainInterface__factory } from "src/contracts";
 import { WalletInterface } from "src/wallet/wallet.interface";
 import { encodeBytes65Address } from "src/common/decode.payload";

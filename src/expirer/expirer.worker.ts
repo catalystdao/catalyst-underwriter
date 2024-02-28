@@ -2,7 +2,7 @@ import { JsonRpcProvider } from "ethers";
 import pino, { LoggerOptions } from "pino";
 import { workerData, MessagePort } from 'worker_threads';
 import { wait } from "src/common/utils";
-import { PoolConfig } from "src/config/config.service";
+import { PoolConfig } from "src/config/config.types";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
 import { ActiveUnderwriteDescription, CompletedUnderwriteDescription } from "src/store/store.types";

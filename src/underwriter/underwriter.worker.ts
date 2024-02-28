@@ -3,7 +3,7 @@ import pino, { LoggerOptions } from "pino";
 import { workerData } from 'worker_threads';
 import { UnderwriterWorkerData } from "./underwriter.service";
 import { wait } from "src/common/utils";
-import { PoolConfig, TokenConfig } from "src/config/config.service";
+import { PoolConfig, TokenConfig } from "src/config/config.types";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
 import { SwapDescription } from "src/store/store.types";

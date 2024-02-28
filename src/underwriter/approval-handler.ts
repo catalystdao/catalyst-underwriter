@@ -4,7 +4,7 @@ import { Token__factory } from "src/contracts";
 import { TransactionResult, WalletInterface } from "src/wallet/wallet.interface";
 import { JsonRpcProvider, MaxUint256, TransactionRequest } from "ethers";
 import { WalletTransactionOptions } from "src/wallet/wallet.types";
-import { TokenConfig } from "src/config/config.service";
+import { TokenConfig } from "src/config/config.types";
 
 interface ApprovalDescription {
     interfaceAddress: string;
