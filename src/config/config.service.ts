@@ -216,7 +216,11 @@ export class ConfigService {
     }
 
     private formatUnderwriterGlobalConfig(rawConfig: any): UnderwriterGlobalConfig {
-        return {...rawConfig} as UnderwriterGlobalConfig;
+        const config = {...rawConfig};
+        if (config.lowTokenBalanceWarning != undefined) {
+            config.lowTokenBalanceWarning = BigInt(config.lowTokenBalanceWarning);
+        }
+        return config as UnderwriterGlobalConfig;
     }
 
     private formatExpirerGlobalConfig(rawConfig: any): ExpirerGlobalConfig {
@@ -259,6 +263,9 @@ export class ConfigService {
             const tokenConfig = {...rawTokenConfig};
             if (tokenConfig.allowanceBuffer != undefined) {
                 tokenConfig.allowanceBuffer = BigInt(tokenConfig.allowanceBuffer);
+            }
+            if (tokenConfig.lowTokenBalanceWarning != undefined) {
+                tokenConfig.lowTokenBalanceWarning = BigInt(tokenConfig.lowTokenBalanceWarning);
             }
 
             config[rawTokenConfig.address.toLowerCase()] = tokenConfig;

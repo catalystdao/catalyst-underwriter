@@ -70,7 +70,7 @@ class UnderwriterWorker {
             this.config.retryInterval,
             this.config.maxTries,
             this.config.underwriteBlocksMargin,
-            this.config.maxSubmissionDelay,
+            this.tokenHandler,
             this.config.walletPublicKey,
             this.wallet,
             this.store,
@@ -111,7 +111,7 @@ class UnderwriterWorker {
         retryInterval: number,
         maxTries: number,
         underwriteBlocksMargin: number,
-        maxSubmissionDelay: number,
+        tokenHandler: TokenHandler,
         walletPublicKey: string,
         wallet: WalletInterface,
         store: Store,
@@ -125,6 +125,7 @@ class UnderwriterWorker {
             retryInterval,
             maxTries,
             underwriteBlocksMargin,
+            tokenHandler,
             store,
             provider,
             logger
@@ -169,6 +170,8 @@ class UnderwriterWorker {
 
         await this.evalQueue.init();
         await this.underwriteQueue.init();
+
+        await this.tokenHandler.init();
 
         await this.listenForOrders();
 

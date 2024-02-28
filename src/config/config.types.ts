@@ -35,6 +35,8 @@ export interface UnderwriterGlobalConfig {
     maxPendingTransactions?: number;
     underwriteBlocksMargin?: number;
     maxSubmissionDelay?: number;
+    lowTokenBalanceWarning?: bigint;
+    tokenBalanceUpdateInterval?: number;
 }
 
 export interface UnderwriterConfig extends UnderwriterGlobalConfig {}
@@ -95,6 +97,8 @@ export interface ChainConfig {
 
 export interface TokenConfig {
     allowanceBuffer?: bigint;
+    lowTokenBalanceWarning?: bigint;
+    tokenBalanceUpdateInterval?: number;
 }
 
 export type TokensConfig = Record<string, TokenConfig>;

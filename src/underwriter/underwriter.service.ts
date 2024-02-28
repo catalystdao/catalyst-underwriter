@@ -3,7 +3,7 @@ import { join } from 'path';
 import { LoggerOptions } from 'pino';
 import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService } from 'src/config/config.service';
-import { PoolConfig, TokenConfig } from 'src/config/config.types';
+import { ChainConfig, PoolConfig, TokensConfig } from 'src/config/config.types';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { WalletService } from 'src/wallet/wallet.service';
 import { Wallet } from 'ethers';
@@ -14,6 +14,7 @@ export const DEFAULT_UNDERWRITER_MAX_TRIES = 3;
 export const DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS = 50;
 export const DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN = 50;
 export const DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY = 300000;
+export const DEFAULT_UNDERWRITER_TOKEN_BALANCE_UPDATE_INTERVAL = 50;
 
 interface DefaultUnderwriterWorkerData {
     retryInterval: number;
@@ -22,13 +23,15 @@ interface DefaultUnderwriterWorkerData {
     maxPendingTransactions: number;
     underwriteBlocksMargin: number;
     maxSubmissionDelay: number;
+    lowTokenBalanceWarning: bigint | undefined;
+    tokenBalanceUpdateInterval: number;
     walletPublicKey: string;
 }
 
 export interface UnderwriterWorkerData {
     chainId: string,
     chainName: string,
-    tokens: Record<string, TokenConfig>,
+    tokens: TokensConfig,
     pools: PoolConfig[],
     rpc: string,
     retryInterval: number;
@@ -101,6 +104,8 @@ export class UnderwriterService implements OnModuleInit {
         const maxPendingTransactions = globalUnderwriterConfig.maxPendingTransactions ?? DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS;
         const underwriteBlocksMargin = globalUnderwriterConfig.underwriteBlocksMargin ?? DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN;
         const maxSubmissionDelay = globalUnderwriterConfig.maxSubmissionDelay ?? DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY;
+        const lowTokenBalanceWarning = globalUnderwriterConfig.lowTokenBalanceWarning;
+        const tokenBalanceUpdateInterval = globalUnderwriterConfig.tokenBalanceUpdateInterval ?? DEFAULT_UNDERWRITER_TOKEN_BALANCE_UPDATE_INTERVAL;
         const walletPublicKey = (new Wallet(this.configService.globalConfig.privateKey)).address;
     
         return {
@@ -110,6 +115,8 @@ export class UnderwriterService implements OnModuleInit {
             maxPendingTransactions,
             underwriteBlocksMargin,
             maxSubmissionDelay,
+            lowTokenBalanceWarning,
+            tokenBalanceUpdateInterval,
             walletPublicKey,
         }
     }
@@ -134,7 +141,7 @@ export class UnderwriterService implements OnModuleInit {
         return {
             chainId,
             chainName: chainConfig.name,
-            tokens: chainConfig.tokens,
+            tokens: this.loadTokensConfig(chainConfig, defaultConfig),
             pools: filteredPools,
             rpc: chainConfig.rpc,
 
@@ -157,6 +164,32 @@ export class UnderwriterService implements OnModuleInit {
             walletPort: await this.walletService.attachToWallet(chainId),
             loggerOptions: this.loggerService.loggerOptions
         };
+    }
+
+    private loadTokensConfig(
+        chainConfig: ChainConfig,
+        defaultConfig: DefaultUnderwriterWorkerData
+    ): TokensConfig {
+        const chainUnderwriterConfig = chainConfig.underwriter;
+
+        // Token-specific config can be specified in three places. The hierarchy of the config to
+        // use is as follows (list in decreasing preference)
+        // - chain > tokens > ${config}
+        // - chain > underwriter > ${config}
+        // - global > underwriter > ${config}
+
+        const finalConfig: TokensConfig = {};
+        for (const [tokenAddress, chainTokenConfig] of Object.entries(chainConfig.tokens)) {
+            finalConfig[tokenAddress] = { ...chainTokenConfig };
+            finalConfig[tokenAddress].lowTokenBalanceWarning ??=
+                chainUnderwriterConfig.lowTokenBalanceWarning
+                ?? defaultConfig.lowTokenBalanceWarning;
+            finalConfig[tokenAddress].tokenBalanceUpdateInterval ??=
+                chainUnderwriterConfig.tokenBalanceUpdateInterval
+                ?? defaultConfig.tokenBalanceUpdateInterval;
+        }
+
+        return finalConfig;
     }
 
     private loadPools(): PoolConfig[] {

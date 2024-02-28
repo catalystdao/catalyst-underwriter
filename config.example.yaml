@@ -24,6 +24,9 @@ global:
                                 # allowed to be underwritten.
     maxSubmissionDelay: 300000  # Maximum time for the wallet to submit the 'underwrite' transaction.
 
+    lowTokenBalanceWarning: "1000000000000000000"  # Token balance below which a 'low balance' warning is emitted.
+    tokenBalanceUpdateInterval: 50   # Number of transactions after which to update the Underwriter token balance from the rpc. 
+
   expirer:
     # ! The following properties default to the values of the 'underwriter' if missing
     retryInterval: 30000        # Time to wait before retrying an expiry
@@ -82,6 +85,10 @@ chains:
                                                   # to prevent having to approve tokens for every
                                                   # single underwrite. If not specified an 
                                                   # 'unlimited' approval is set.
+        
+        # Overrides
+        lowTokenBalanceWarning: "1000000000000000000"
+        tokenBalanceUpdateInterval: 50
 
     # Overrides
     blockDelay: 2

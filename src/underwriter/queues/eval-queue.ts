@@ -9,6 +9,7 @@ import { CatalystContext, catalystParse } from 'src/common/decode.catalyst';
 import { parsePayload } from 'src/common/decode.payload';
 import { JsonRpcProvider } from 'ethers';
 import { Store } from 'src/store/store.lib';
+import { TokenHandler } from '../token-handler/token-handler';
 
 export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
@@ -19,6 +20,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         readonly retryInterval: number,
         readonly maxTries: number,
         private readonly underwriteBlocksMargin: number,
+        private readonly tokenHandler: TokenHandler,
         private readonly store: Store,
         private readonly provider: JsonRpcProvider,
         private readonly logger: pino.Logger
@@ -107,6 +109,25 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         // Estimate return
         const expectedReturn = await toVaultContract.calcReceiveAsset(toAsset, order.units);
         const toAssetAllowance = expectedReturn * 11n / 10n;    //TODO set customizable allowance margin
+
+        // Verify the underwriter has enough assets to perform the underwrite
+        const enoughBalanceToUnderwrite = await this.tokenHandler.hasEnoughBalance(
+            toAssetAllowance,
+            toAsset
+        );
+        if (!enoughBalanceToUnderwrite) {
+            this.logger.warn(
+                {
+                    swapId: order.swapIdentifier,
+                    swapTxHash: order.swapTxHash,
+                    swapBlockNumber: order.swapBlockNumber,
+                    toAsset,
+                    requiredAllowance: toAssetAllowance,
+                },
+                "Skipping underwrite: not enough token balance to perform underwrite."
+            );
+            return null;
+        }
 
         // Set the maximum allowed gasLimit for the transaction. This will be checked on the
         // 'underwrite' queue with an 'estimateGas' call.

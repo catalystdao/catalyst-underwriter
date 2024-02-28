@@ -30,6 +30,12 @@ const GAS_FIELD_SCHEMA = {
     minLength: 1,
 }
 
+const UINT256_FIELD_SCHEMA = {
+    $id: "uint256-field-schema",
+    type: "string",
+    minLength: 1,
+}
+
 const CHAIN_ID_SCHEMA = {
     $id: "chain-id-schema",
     type: "number",
@@ -113,7 +119,9 @@ const UNDERWRITER_SCHEMA = {
         maxTries: {$ref: "positive-number-schema"},
         maxPendingTransactions: {$ref: "positive-number-schema"},
         underwriteBlocksMargin: {$ref: "positive-number-schema"},
-        maxSubmissionDelay: {$ref: "positive-number-schema"}
+        maxSubmissionDelay: {$ref: "positive-number-schema"},
+        lowTokenBalanceWarning: {$ref: "uint256-field-schema"},
+        tokenBalanceUpdateInterval: {$ref: "positive-number-schema"},
     },
     additionalProperties: false
 }
@@ -189,6 +197,8 @@ const TOKENS_SCHEMA = {
         properties: {
             name: {$ref: "non-empty-string-schema"},
             address: {$ref: "address-field-schema"},
+            lowTokenBalanceWarning: {$ref: "uint256-field-schema"},
+            tokenBalanceUpdateInterval: {$ref: "positive-number-schema"},
             allowanceBuffer: {$ref: "gas-field-schema"}
         },
         required: ["name", "address"],
@@ -265,6 +275,7 @@ export function getConfigValidator(): AnyValidateFunction<unknown> {
     ajv.addSchema(NON_EMPTY_STRING_SCHEMA);
     ajv.addSchema(ADDRESS_FIELD_SCHEMA);
     ajv.addSchema(GAS_FIELD_SCHEMA);
+    ajv.addSchema(UINT256_FIELD_SCHEMA);
     ajv.addSchema(CHAIN_ID_SCHEMA);
     ajv.addSchema(PROCESSING_INTERVAL_SCHEMA);
     ajv.addSchema(CONFIG_SCHEMA);
