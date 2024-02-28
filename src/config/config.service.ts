@@ -109,7 +109,6 @@ export interface PoolConfig {
   }[];
 }
 
-//TODO config schema verification should not be implemented manually.
 
 @Injectable()
 export class ConfigService {
