@@ -10,7 +10,7 @@ import { SwapDescription } from "src/store/store.types";
 import { EvalOrder, NewOrder, Order, UnderwriteOrder, UnderwriteOrderResult } from "./underwriter.types";
 import { EvalQueue } from "./queues/eval-queue";
 import { UnderwriteQueue } from "./queues/underwrite-queue";
-import { ApprovalHandler } from "./approval-handler";
+import { TokenHandler } from "./token-handler/token-handler";
 import { WalletInterface } from "src/wallet/wallet.interface";
 
 
@@ -29,7 +29,7 @@ class UnderwriterWorker {
     readonly pools: PoolConfig[];
 
     readonly wallet: WalletInterface;
-    readonly approvalHandler: ApprovalHandler;
+    readonly tokenHandler: TokenHandler;
 
     readonly newOrdersQueue: NewOrder<EvalOrder>[] = [];
     readonly evalQueue: EvalQueue;
@@ -54,7 +54,7 @@ class UnderwriterWorker {
 
         this.wallet = new WalletInterface(this.config.walletPort);
 
-        this.approvalHandler = new ApprovalHandler(
+        this.tokenHandler = new TokenHandler(
             this.config.retryInterval,
             this.tokens,
             this.config.walletPublicKey,
@@ -184,9 +184,9 @@ class UnderwriterWorker {
             // ! confirmed! Approvals should be configured to not be issued at a high frequency
             // ! (see the 'allowanceBuffer' configuration).
             // ! Failed allowance updates are not retried, thus any depending underwrites will
-            // ! fail. However, consequtive 'updateAllowances' calls of this handler will always
+            // ! fail. However, consequtive 'processOrders' calls of this handler will always
             // ! reissue any required allowance updates.
-            await this.approvalHandler.updateAllowances(...newUnderwriteOrders);
+            await this.tokenHandler.processOrders(...newUnderwriteOrders);
 
             await this.underwriteQueue.addOrders(...newUnderwriteOrders);
             await this.underwriteQueue.processOrders();
@@ -208,7 +208,7 @@ class UnderwriterWorker {
         // Registering the 'use' of 'toAssetAllowance is an approximation, as the allowance is an
         // overestimate. Thus, in practice a small allowance will be left for the interface. This
         // leftover will be removed once a new allowance for other orders is set. 
-            this.approvalHandler.registerAllowanceUse(
+            this.tokenHandler.registerAllowanceUse(
                 confirmedOrder.interfaceAddress,
                 confirmedOrder.toAsset,
                 confirmedOrder.toAssetAllowance
@@ -235,7 +235,7 @@ class UnderwriterWorker {
     ): Promise<void> {
 
         for (const rejectedOrder of rejectedSubmitOrders) {
-            this.approvalHandler.registerRequiredAllowanceDecrease(
+            this.tokenHandler.registerRequiredAllowanceDecrease(
                 rejectedOrder.interfaceAddress,
                 rejectedOrder.toAsset,
                 rejectedOrder.toAssetAllowance
