@@ -22,6 +22,7 @@ export class SubmitQueue extends ProcessingQueue<WalletTransactionRequest, Pendi
 
     protected async onProcessOrders(): Promise<void> {
         await this.transactionHelper.updateFeeData();
+        await this.transactionHelper.runBalanceCheck();
     }
 
     protected async handleOrder(

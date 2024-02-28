@@ -140,6 +140,8 @@ const WALLET_SCHEMA = {
         maxTries: {$ref: "positive-number-schema"},
         maxPendingTransactions: {$ref: "positive-number-schema"},
         confirmationTimeout: {$ref: "positive-number-schema"},
+        lowGasBalanceWarning: {$ref: "gas-field-schema"},
+        gasBalanceUpdateInterval: {$ref: "positive-number-schema"},
         maxFeePerGas: {$ref: "gas-field-schema"},
         maxAllowedPriorityFeePerGas: {$ref: "gas-field-schema"},
         maxPriorityFeeAdjustmentFactor: {

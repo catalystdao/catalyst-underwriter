@@ -1,7 +1,7 @@
 //TODO replace this file with an import from the GeneralisedRelayer once 1) relayer is made public 2) relayer is updated to ethers 6
 import { AbstractProvider, FeeData, TransactionResponse, Wallet } from 'ethers';
 import pino from 'pino';
-import { GasFeeConfig, GasFeeOverrides } from './wallet.types';
+import { BalanceConfig, GasFeeConfig, GasFeeOverrides } from './wallet.types';
 
 const DECIMAL_BASE = 10000;
 const DECIMAL_BASE_BIG_INT = BigInt(DECIMAL_BASE);
@@ -24,14 +24,24 @@ export class TransactionHelper {
     private maxPriorityFeeAdjustmentFactor: bigint | undefined;
     private maxAllowedPriorityFeePerGas: bigint | undefined;
 
+    // Balance config
+    private walletBalance: bigint;
+    private transactionsSinceLastBalanceUpdate: number = 0;
+    private isBalanceLow: boolean = false;
+
+    private lowBalanceWarning: bigint | undefined;
+    private balanceUpdateInterval: number;
+
     constructor(
         gasFeeConfig: GasFeeConfig,
+        balanceConfig: BalanceConfig,
         private readonly retryInterval: number,
         private readonly provider: AbstractProvider,
         private readonly wallet: Wallet,
         private readonly logger: pino.Logger,
     ) {
         this.loadGasFeeConfig(gasFeeConfig);
+        this.loadBalanceConfig(balanceConfig);
     }
 
     private loadGasFeeConfig(config: GasFeeConfig): void {
@@ -109,9 +119,15 @@ export class TransactionHelper {
         }
     }
 
+    private loadBalanceConfig(config: BalanceConfig): void {
+        this.lowBalanceWarning = config.lowBalanceWarning;
+        this.balanceUpdateInterval = config.balanceUpdateInterval;
+    }
+
     async init(): Promise<void> {
         await this.updateTransactionNonce();
         await this.updateFeeData();
+        await this.updateWalletBalance();
     }
 
     /**
@@ -140,6 +156,73 @@ export class TransactionHelper {
 
     increaseTransactionNonce(): void {
         this.transactionNonce++;
+    }
+
+    async registerBalanceUse(amount: bigint): Promise<void> {
+        this.transactionsSinceLastBalanceUpdate++;
+  
+        const newWalletBalance = this.walletBalance - amount;
+        if (newWalletBalance < 0n) {
+            this.walletBalance = 0n;
+        } else {
+            this.walletBalance = newWalletBalance;
+        }
+  
+        if (
+            this.lowBalanceWarning != undefined &&
+            !this.isBalanceLow && // Only trigger update if the current saved state is 'balance not low' (i.e. crossing the boundary)
+            this.walletBalance < this.lowBalanceWarning
+        ) {
+            await this.updateWalletBalance();
+        }
+    }
+  
+    async registerBalanceRefund(amount: bigint): Promise<void> {
+        this.walletBalance = this.walletBalance + amount;
+    }
+  
+    async runBalanceCheck(): Promise<void> {
+        if (
+            this.isBalanceLow ||
+            this.transactionsSinceLastBalanceUpdate > this.balanceUpdateInterval
+        ) {
+            await this.updateWalletBalance();
+        }
+    }
+  
+    async updateWalletBalance(): Promise<void> {
+        let i = 0;
+        let walletBalance;
+        while (walletBalance == undefined) {
+            try {
+                walletBalance = await this.provider.getBalance(this.wallet.address, 'pending');
+            } catch {
+                i++;
+                this.logger.warn(
+                    { account: this.wallet.address, try: i },
+                    'Failed to update account balance. Worker locked until successful update.',
+                );
+                await new Promise((r) => setTimeout(r, this.retryInterval));
+                // Continue trying
+            }
+        }
+  
+        this.walletBalance = walletBalance;
+        this.transactionsSinceLastBalanceUpdate = 0;
+  
+        if (this.lowBalanceWarning != undefined) {
+            const isBalanceLow = this.walletBalance < this.lowBalanceWarning;
+            if (isBalanceLow != this.isBalanceLow) {
+                this.isBalanceLow = isBalanceLow;
+                const balanceInfo = {
+                    balance: this.walletBalance,
+                    lowBalanceWarning: this.lowBalanceWarning,
+                    account: this.wallet.address,
+                };
+                if (isBalanceLow) this.logger.warn(balanceInfo, 'Wallet balance low.');
+                else this.logger.info(balanceInfo, 'Wallet funded.');
+            }
+        }
     }
 
     async updateFeeData(): Promise<void> {

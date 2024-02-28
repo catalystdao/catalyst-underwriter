@@ -40,6 +40,9 @@ global:
     maxPendingTransactions: 50  # Maximum number of transactions within the 'submit' pipeline
     confirmationTimeout: 90000  # Timeout for a transaction to confirm
 
+    lowGasBalanceWarning: "1000000000000000000"  # Gas balance below which a 'low balance' warning is emitted.
+    gasBalanceUpdateInterval: 50   # Number of transactions after which to update the Underwriter gas balance from the rpc. 
+
     # EIP-1559 Transactions
     maxFeePerGas: "200000000000"                 # 'maxFeePerGas' set for all transactions (for chains that support eip-1559)
 

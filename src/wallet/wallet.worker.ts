@@ -7,7 +7,7 @@ import { Store } from "src/store/store.lib";
 import { TransactionHelper } from "./transaction-helper";
 import { TransactionQueue as ConfirmQueue } from "./queues/confirm-queue";
 import { WalletWorkerData } from "./wallet.service";
-import { ConfirmedTransaction, GasFeeConfig, WalletGetPortMessage, WalletGetPortResponse, PendingTransaction, WalletTransactionOptions, WalletTransactionRequest, WalletTransactionRequestMessage, WalletTransactionRequestResponse } from "./wallet.types";
+import { ConfirmedTransaction, GasFeeConfig, WalletGetPortMessage, WalletGetPortResponse, PendingTransaction, WalletTransactionOptions, WalletTransactionRequest, WalletTransactionRequestMessage, WalletTransactionRequestResponse, BalanceConfig } from "./wallet.types";
 import { SubmitQueue } from "./queues/submit-queue";
 
 
@@ -50,6 +50,7 @@ class WalletWorker {
 
         this.transactionHelper = new TransactionHelper(
             this.getGasFeeConfig(this.config),
+            this.getBalanceConfig(this.config),
             this.config.retryInterval,
             this.provider,
             this.signer,
@@ -140,6 +141,13 @@ class WalletWorker {
             maxPriorityFeeAdjustmentFactor: config.maxPriorityFeeAdjustmentFactor,
             maxAllowedPriorityFeePerGas: config.maxAllowedPriorityFeePerGas,
             priorityAdjustmentFactor: config.priorityAdjustmentFactor,
+        };
+    }
+
+    private getBalanceConfig(config: WalletWorkerData): BalanceConfig {
+        return {
+            lowBalanceWarning: config.lowBalanceWarning,
+            balanceUpdateInterval: config.balanceUpdateInterval,
         };
     }
 
@@ -304,6 +312,11 @@ class WalletWorker {
     ): Promise<void> {
 
         for (const transaction of confirmedTransactions) {
+            // Register the gas cost used
+            //TODO this should be done before the tx is submitted
+            const txReceipt = transaction.txReceipt;
+            const gasCost = txReceipt.gasUsed * txReceipt.gasPrice;
+            await this.transactionHelper.registerBalanceUse(gasCost);
 
             const logDescription = {
                 txHash: transaction.txReceipt.hash,
@@ -325,6 +338,9 @@ class WalletWorker {
     ): Promise<void> {
 
         for (const transaction of rejectedTransactions) {
+
+            // Currently, the gas used by failed transactions is not taken into account for the
+            // relayer gas estimate.
 
             const confirmationError = transaction.confirmationError;
 
@@ -407,6 +423,12 @@ class WalletWorker {
                     this.config.confirmations,
                     this.config.confirmationTimeout,
                 );
+
+                if (receipt != null) {  //NOTE: receipt == null should never happen
+                    await this.transactionHelper.registerBalanceUse(
+                        receipt.gasUsed * receipt.gasPrice,
+                    );
+                }
 
                 // Transaction cancelled
                 return receipt;

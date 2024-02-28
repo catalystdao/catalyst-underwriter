@@ -58,6 +58,8 @@ export interface WalletGlobalConfig {
     maxPendingTransactions?: number;
     confirmations?: number;
     confirmationTimeout?: number;
+    lowGasBalanceWarning?: bigint;
+    gasBalanceUpdateInterval?: number;
     maxFeePerGas?: number | string;
     maxAllowedPriorityFeePerGas?: number | string;
     maxPriorityFeeAdjustmentFactor?: number;

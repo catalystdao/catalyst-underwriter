@@ -13,6 +13,7 @@ const DEFAULT_WALLET_MAX_TRIES = 3;
 const DEFAULT_WALLET_MAX_PENDING_TRANSACTIONS = 50;
 const DEFAULT_WALLET_CONFIRMATIONS = 1;
 const DEFAULT_WALLET_CONFIRMATION_TIMEOUT = 60000;
+const DEFAULT_WALLET_BALANCE_UPDATE_INTERVAL = 50;
 
 interface DefaultWalletWorkerData {
     retryInterval: number;
@@ -21,6 +22,8 @@ interface DefaultWalletWorkerData {
     maxPendingTransactions: number;
     confirmations: number;
     confirmationTimeout: number;
+    lowBalanceWarning: bigint | undefined;
+    balanceUpdateInterval: number;
     maxFeePerGas?: number | string;
     maxAllowedPriorityFeePerGas?: number | string;
     maxPriorityFeeAdjustmentFactor?: number;
@@ -40,6 +43,8 @@ export interface WalletWorkerData {
     confirmations: number;
     confirmationTimeout: number;
     privateKey: string;
+    lowBalanceWarning: bigint | undefined;
+    balanceUpdateInterval: number;
     maxFeePerGas?: number | string;
     maxAllowedPriorityFeePerGas?: number | string;
     maxPriorityFeeAdjustmentFactor?: number;
@@ -110,6 +115,8 @@ export class WalletService implements OnModuleInit {
         const maxPendingTransactions = globalWalletConfig.maxPendingTransactions ?? DEFAULT_WALLET_MAX_PENDING_TRANSACTIONS;
         const confirmations = globalWalletConfig.confirmations ?? DEFAULT_WALLET_CONFIRMATIONS;
         const confirmationTimeout = globalWalletConfig.confirmationTimeout ?? DEFAULT_WALLET_CONFIRMATION_TIMEOUT;
+        const lowBalanceWarning = globalWalletConfig.lowGasBalanceWarning;
+        const balanceUpdateInterval = globalWalletConfig.gasBalanceUpdateInterval ?? DEFAULT_WALLET_BALANCE_UPDATE_INTERVAL;
 
         const maxFeePerGas = globalWalletConfig.maxFeePerGas;
         const maxAllowedPriorityFeePerGas = globalWalletConfig.maxAllowedPriorityFeePerGas;
@@ -125,6 +132,8 @@ export class WalletService implements OnModuleInit {
             maxPendingTransactions,
             confirmations,
             confirmationTimeout,
+            lowBalanceWarning,
+            balanceUpdateInterval,
             maxFeePerGas,
             maxAllowedPriorityFeePerGas,
             maxPriorityFeeAdjustmentFactor,
@@ -162,6 +171,12 @@ export class WalletService implements OnModuleInit {
             confirmationTimeout:
                 chainWalletConfig.confirmationTimeout ??
                 defaultConfig.confirmationTimeout,
+            lowBalanceWarning:
+                chainWalletConfig.lowGasBalanceWarning ??
+                defaultConfig.lowBalanceWarning,
+            balanceUpdateInterval:
+                chainWalletConfig.gasBalanceUpdateInterval ??
+                defaultConfig.balanceUpdateInterval,
 
             privateKey: this.configService.globalConfig.privateKey,
             

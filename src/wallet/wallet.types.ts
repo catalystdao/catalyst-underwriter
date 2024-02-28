@@ -81,3 +81,8 @@ export interface GasFeeConfig {
     maxAllowedPriorityFeePerGas?: number | string;
     priorityAdjustmentFactor?: number;
 }
+
+export interface BalanceConfig {
+    lowBalanceWarning: bigint | undefined;
+    balanceUpdateInterval: number;
+}

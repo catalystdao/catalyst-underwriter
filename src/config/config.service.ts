@@ -224,7 +224,11 @@ export class ConfigService {
     }
 
     private formatWalletGlobalConfig(rawConfig: any): WalletGlobalConfig {
-        return {...rawConfig} as WalletGlobalConfig;
+        const config = {...rawConfig};
+        if (config.lowGasBalanceWarning != undefined) {
+            config.lowGasBalanceWarning = BigInt(config.lowGasBalanceWarning);
+        }
+        return config as WalletGlobalConfig;
     }
 
 
