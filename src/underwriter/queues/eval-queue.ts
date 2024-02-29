@@ -140,6 +140,11 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         //TODO add economical evaluation
 
         if (true) {
+            await this.tokenHandler.registerBalanceUse(
+                toAssetAllowance,
+                toAsset
+            );
+
             const result: UnderwriteOrder = {
                 ...order,
                 toAsset,

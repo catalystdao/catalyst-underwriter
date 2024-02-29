@@ -32,23 +32,6 @@ export class TokenHandler {
         this.initializeApprovalHandlers();
     }
 
-    async processOrders(...orders: UnderwriteOrder[]): Promise<void> {
-        for (const order of orders) {
-            this.registerRequiredAllowanceIncrease(
-                order.interfaceAddress,
-                order.toAsset,
-                order.toAssetAllowance
-            );
-
-            await this.registerBalanceUse(
-                order.toAssetAllowance,
-                order.toAsset
-            );
-        }
-
-        await this.setRequiredAllowances();
-    }
-
 
 
     // Balance logic
@@ -167,6 +150,18 @@ export class TokenHandler {
         }
 
         return handler;
+    }
+
+    async processNewAllowances(...orders: UnderwriteOrder[]): Promise<void> {
+        for (const order of orders) {
+            this.registerRequiredAllowanceIncrease(
+                order.interfaceAddress,
+                order.toAsset,
+                order.toAssetAllowance
+            );
+        }
+
+        await this.setRequiredAllowances();
     }
 
     private registerRequiredAllowanceIncrease(

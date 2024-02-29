@@ -191,7 +191,7 @@ class UnderwriterWorker {
             // ! Failed allowance updates are not retried, thus any depending underwrites will
             // ! fail. However, consequtive 'processOrders' calls of this handler will always
             // ! reissue any required allowance updates.
-            await this.tokenHandler.processOrders(...newUnderwriteOrders);
+            await this.tokenHandler.processNewAllowances(...newUnderwriteOrders);
 
             await this.underwriteQueue.addOrders(...newUnderwriteOrders);
             await this.underwriteQueue.processOrders();
