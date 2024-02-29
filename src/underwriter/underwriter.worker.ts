@@ -3,7 +3,7 @@ import pino, { LoggerOptions } from "pino";
 import { workerData } from 'worker_threads';
 import { UnderwriterWorkerData } from "./underwriter.service";
 import { wait } from "src/common/utils";
-import { PoolConfig, TokenConfig } from "src/config/config.types";
+import { AMBConfig, PoolConfig, TokenConfig } from "src/config/config.types";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
 import { SwapDescription } from "src/store/store.types";
@@ -27,6 +27,7 @@ class UnderwriterWorker {
 
     readonly tokens: Record<string, TokenConfig>;
     readonly pools: PoolConfig[];
+    readonly ambs: Record<string, AMBConfig>;
 
     readonly wallet: WalletInterface;
     readonly tokenHandler: TokenHandler;
@@ -44,6 +45,7 @@ class UnderwriterWorker {
 
         this.tokens = this.config.tokens;
         this.pools = this.config.pools;
+        this.ambs = this.config.ambs;
 
         this.store = new Store();
         this.logger = this.initializeLogger(
@@ -70,6 +72,7 @@ class UnderwriterWorker {
             this.chainId,
             this.tokens,
             this.pools,
+            this.ambs,
             this.config.retryInterval,
             this.config.maxTries,
             this.config.underwriteBlocksMargin,
@@ -112,6 +115,7 @@ class UnderwriterWorker {
         chainId: string,
         tokens: Record<string, TokenConfig>,
         pools: PoolConfig[],
+        ambs: Record<string, AMBConfig>,
         retryInterval: number,
         maxTries: number,
         underwriteBlocksMargin: number,
@@ -138,6 +142,7 @@ class UnderwriterWorker {
 
         const underwriteQueue = new UnderwriteQueue(
             pools,
+            ambs,
             retryInterval,
             maxTries,
             walletPublicKey,
@@ -364,8 +369,18 @@ class UnderwriterWorker {
             return;
         }
 
+        const poolConfig = this.pools.find(pool => pool.id == poolId);
+        if (poolConfig == undefined) {
+            this.logger.warn(
+                { poolId, fromVault, fromChainId, swapTxHash, swapId: swapIdentifier },
+                'Unable to find the pool configuration corresponding to the given \'poolId\'. Skipping underwrite.'
+            );
+            return;
+        }
+
         const order: Order = {
             poolId,
+            amb: poolConfig.amb,
             fromChainId,
             fromVault,
             swapTxHash,

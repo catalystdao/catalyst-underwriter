@@ -3,7 +3,7 @@ import { join } from 'path';
 import { LoggerOptions } from 'pino';
 import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService } from 'src/config/config.service';
-import { ChainConfig, PoolConfig, TokensConfig } from 'src/config/config.types';
+import { AMBConfig, ChainConfig, PoolConfig, TokensConfig } from 'src/config/config.types';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { WalletService } from 'src/wallet/wallet.service';
 import { Wallet } from 'ethers';
@@ -37,6 +37,7 @@ export interface UnderwriterWorkerData {
     chainName: string,
     tokens: TokensConfig,
     pools: PoolConfig[],
+    ambs: Record<string, AMBConfig>,
     rpc: string,
     retryInterval: number;
     processingInterval: number;
@@ -72,10 +73,11 @@ export class UnderwriterService implements OnModuleInit {
         const defaultWorkerConfig = this.loadDefaultWorkerConfig();
 
         const pools = this.loadPools();
+        const ambs = Object.fromEntries(this.configService.ambsConfig.entries());
 
         for (const [chainId, ] of this.configService.chainsConfig) {
 
-            const workerData = await this.loadWorkerConfig(chainId, pools, defaultWorkerConfig);
+            const workerData = await this.loadWorkerConfig(chainId, pools, ambs, defaultWorkerConfig);
 
             const worker = new Worker(join(__dirname, 'underwriter.worker.js'), {
                 workerData,
@@ -134,6 +136,7 @@ export class UnderwriterService implements OnModuleInit {
     private async loadWorkerConfig(
         chainId: string,
         pools: PoolConfig[],
+        ambs: Record<string, AMBConfig>,
         defaultConfig: DefaultUnderwriterWorkerData
     ): Promise<UnderwriterWorkerData> {
 
@@ -154,6 +157,7 @@ export class UnderwriterService implements OnModuleInit {
             chainName: chainConfig.name,
             tokens: this.loadTokensConfig(chainConfig, defaultConfig),
             pools: filteredPools,
+            ambs,
             rpc: chainConfig.rpc,
 
             retryInterval: chainUnderwriterConfig.retryInterval ?? defaultConfig.retryInterval,

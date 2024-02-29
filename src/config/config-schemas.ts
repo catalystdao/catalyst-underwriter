@@ -186,7 +186,10 @@ const AMBS_SCHEMA = {
             name: {$ref: "non-empty-string-schema"},
             enabled: {
                 type: "boolean"
-            }
+            },
+            relayPrioritisation: {
+                type: "boolean"
+            },
         },
         required: ["name"],
         additionalProperties: true,

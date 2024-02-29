@@ -141,6 +141,7 @@ export class ConfigService {
 
             ambConfig.set(ambName, {
                 name: ambName,
+                relayPrioritisation: rawAMBConfig.relayPrioritisation != false,
                 globalProperties,
             });
         }

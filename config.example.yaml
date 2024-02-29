@@ -74,6 +74,7 @@ global:
 ambs:
   - name: mock
     enabled: true               # TODO not implemented. Defaults to 'true' if the key is missing
+    relayPrioritisation: true   # Defaults to 'true' if the key is missing
 
 # Chain configuration
 chains:

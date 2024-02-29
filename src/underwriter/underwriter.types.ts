@@ -4,6 +4,7 @@ import { BytesLike, TransactionReceipt, TransactionResponse } from "ethers";
 export interface Order {
     // Trusted fields (provided by the listener)
     poolId: string;
+    amb: string;
     fromChainId: string;
     fromVault: string;
     swapTxHash: string;

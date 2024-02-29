@@ -80,6 +80,7 @@ export interface WalletConfig extends WalletGlobalConfig {
 
 export interface AMBConfig {
     name: string;
+    relayPrioritisation: boolean;
     globalProperties: Record<string, any>;
 }
 
