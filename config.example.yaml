@@ -73,7 +73,7 @@ global:
 # The AMBs configuration
 ambs:
   - name: mock
-    enabled: true   # Defaults to 'true' if the key is missing
+    enabled: true               # TODO not implemented. Defaults to 'true' if the key is missing
 
 # Chain configuration
 chains:
