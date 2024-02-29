@@ -66,6 +66,7 @@ class UnderwriterWorker {
         );
 
         [this.evalQueue, this.underwriteQueue] = this.initializeQueues(
+            this.config.enabled,
             this.chainId,
             this.tokens,
             this.pools,
@@ -107,6 +108,7 @@ class UnderwriterWorker {
     }
 
     private initializeQueues(
+        enabled: boolean,
         chainId: string,
         tokens: Record<string, TokenConfig>,
         pools: PoolConfig[],
@@ -121,6 +123,7 @@ class UnderwriterWorker {
         logger: pino.Logger,
     ): [EvalQueue, UnderwriteQueue] {
         const evalQueue = new EvalQueue(
+            enabled,
             chainId,
             tokens,
             pools,

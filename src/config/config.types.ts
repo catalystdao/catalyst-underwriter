@@ -29,6 +29,7 @@ export interface ListenerConfig extends ListenerGlobalConfig {}
 
 
 export interface UnderwriterGlobalConfig {
+    enabled?: boolean;
     retryInterval?: number;
     processingInterval?: number;
     maxTries?: number;

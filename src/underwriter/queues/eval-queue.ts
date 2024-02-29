@@ -14,6 +14,7 @@ import { TokenHandler } from '../token-handler/token-handler';
 export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
     constructor(
+        private readonly enabled: boolean,
         readonly chainId: string,
         readonly tokens: Record<string, TokenConfig>,
         readonly pools: PoolConfig[],
@@ -77,9 +78,22 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             ambMessageData.calldata,
         );
 
+        // ! The 'don't underwrite' code snippets cannot be moved before the query/save calldata
+        // ! methods, as those are required by the expirer service.
+
+        if (!this.enabled) {
+            this.logger.debug(
+                {
+                    swapId: order.swapIdentifier,
+                    swapTxHash: order.swapTxHash,
+                    swapBlockNumber: order.swapBlockNumber,
+                },
+                "Skipping underwrite: underwriter disabled."
+            )
+            return null;
+        }
+
         // Never underwrite if too much time has passed since the original swap transaction
-        // ! This code snippet cannot be moved before the query/save calldata methods, as those are
-        // ! required by the expirer service.
         if (order.swapObservedAtBlockNumber > order.swapBlockNumber + this.underwriteBlocksMargin) {
             this.logger.warn(
                 {

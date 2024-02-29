@@ -17,6 +17,7 @@ export const DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY = 300000;
 export const DEFAULT_UNDERWRITER_TOKEN_BALANCE_UPDATE_INTERVAL = 50;
 
 interface DefaultUnderwriterWorkerData {
+    enabled: boolean;
     retryInterval: number;
     processingInterval: number;
     maxTries: number;
@@ -29,6 +30,7 @@ interface DefaultUnderwriterWorkerData {
 }
 
 export interface UnderwriterWorkerData {
+    enabled: boolean;
     chainId: string,
     chainName: string,
     tokens: TokensConfig,
@@ -98,6 +100,7 @@ export class UnderwriterService implements OnModuleInit {
     private loadDefaultWorkerConfig(): DefaultUnderwriterWorkerData {
         const globalUnderwriterConfig = this.configService.globalConfig.underwriter;
 
+        const enabled = globalUnderwriterConfig.enabled != false;
         const retryInterval = globalUnderwriterConfig.retryInterval ?? DEFAULT_UNDERWRITER_RETRY_INTERVAL;
         const processingInterval = globalUnderwriterConfig.processingInterval ?? DEFAULT_UNDERWRITER_PROCESSING_INTERVAL;
         const maxTries = globalUnderwriterConfig.maxTries ?? DEFAULT_UNDERWRITER_MAX_TRIES;
@@ -109,6 +112,7 @@ export class UnderwriterService implements OnModuleInit {
         const walletPublicKey = (new Wallet(this.configService.globalConfig.privateKey)).address;
     
         return {
+            enabled,
             retryInterval,
             processingInterval,
             maxTries,
@@ -139,6 +143,7 @@ export class UnderwriterService implements OnModuleInit {
 
         const chainUnderwriterConfig = chainConfig.underwriter;
         return {
+            enabled: defaultConfig.enabled && chainUnderwriterConfig.enabled != false,
             chainId,
             chainName: chainConfig.name,
             tokens: this.loadTokensConfig(chainConfig, defaultConfig),

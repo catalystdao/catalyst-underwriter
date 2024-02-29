@@ -16,6 +16,8 @@ global:
     maxBlocks: 1000             # Maximum number of blocks to query in a single call
 
   underwriter:
+    enabled: true               # Defaults to 'true' if the key is missing. Disabling the underwriter
+                                # can be used to only handle past underwrites' expiries.
     retryInterval: 30000        # Time to wait before retrying an underwrite
     processingInterval: 100     # Throttle for the Underwriter main 'run' loop
     maxTries: 3                 # Maximum tries for an underwrite

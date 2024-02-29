@@ -114,6 +114,9 @@ const UNDERWRITER_SCHEMA = {
     $id: "underwriter-schema",
     type: "object",
     properties: {
+        enabled: {
+            type: "boolean"
+        },
         retryInterval: {$ref: "positive-number-schema"},
         processingInterval: {$ref: "processing-interval-schema"},
         maxTries: {$ref: "positive-number-schema"},
