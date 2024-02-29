@@ -44,6 +44,11 @@ export class ExpireQueue extends ProcessingQueue<ExpireOrder, ExpireOrderResult>
             // gasLimit: order.gasLimit,    //TODO set gas limit
         };
 
+        this.logger.warn(
+            order,
+            'Expiring underwrite.'
+        );
+
         //TODO add 'priority' option to wallet
         const txPromise = this.wallet.submitTransaction(txRequest, order)
             .then(transactionResult => {
