@@ -63,6 +63,8 @@ export class TransactionQueue extends ProcessingQueue<PendingTransaction, Confir
             // Reprice the order
             const originalTx = order.tx;
 
+            await this.transactionHelper.updateFeeData();
+
             const increasedFeeConfig =
                 this.transactionHelper.getIncreasedFeeDataForTransaction(originalTx);
 

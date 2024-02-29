@@ -412,6 +412,9 @@ class WalletWorker {
                     { cancelTxNonce },
                     'Submitting transaction cancellation'
                 );
+
+                await this.transactionHelper.updateFeeData();
+
                 const tx = await this.signer.sendTransaction({
                     nonce: cancelTxNonce,
                     to: ZeroAddress,
