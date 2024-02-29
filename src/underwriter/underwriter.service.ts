@@ -24,6 +24,8 @@ interface DefaultUnderwriterWorkerData {
     maxPendingTransactions: number;
     underwriteBlocksMargin: number;
     maxSubmissionDelay: number;
+    maxUnderwriteAllowed: bigint | undefined;
+    minUnderwriteReward: bigint | undefined;
     lowTokenBalanceWarning: bigint | undefined;
     tokenBalanceUpdateInterval: number;
     walletPublicKey: string;
@@ -107,6 +109,8 @@ export class UnderwriterService implements OnModuleInit {
         const maxPendingTransactions = globalUnderwriterConfig.maxPendingTransactions ?? DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS;
         const underwriteBlocksMargin = globalUnderwriterConfig.underwriteBlocksMargin ?? DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN;
         const maxSubmissionDelay = globalUnderwriterConfig.maxSubmissionDelay ?? DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY;
+        const maxUnderwriteAllowed = globalUnderwriterConfig.maxUnderwriteAllowed;
+        const minUnderwriteReward = globalUnderwriterConfig.minUnderwriteReward;
         const lowTokenBalanceWarning = globalUnderwriterConfig.lowTokenBalanceWarning;
         const tokenBalanceUpdateInterval = globalUnderwriterConfig.tokenBalanceUpdateInterval ?? DEFAULT_UNDERWRITER_TOKEN_BALANCE_UPDATE_INTERVAL;
         const walletPublicKey = (new Wallet(this.configService.globalConfig.privateKey)).address;
@@ -119,6 +123,8 @@ export class UnderwriterService implements OnModuleInit {
             maxPendingTransactions,
             underwriteBlocksMargin,
             maxSubmissionDelay,
+            maxUnderwriteAllowed,
+            minUnderwriteReward,
             lowTokenBalanceWarning,
             tokenBalanceUpdateInterval,
             walletPublicKey,
@@ -186,9 +192,19 @@ export class UnderwriterService implements OnModuleInit {
         const finalConfig: TokensConfig = {};
         for (const [tokenAddress, chainTokenConfig] of Object.entries(chainConfig.tokens)) {
             finalConfig[tokenAddress] = { ...chainTokenConfig };
+
+            finalConfig[tokenAddress].maxUnderwriteAllowed ??=
+                chainUnderwriterConfig.maxUnderwriteAllowed
+                ?? defaultConfig.maxUnderwriteAllowed;
+
+            finalConfig[tokenAddress].minUnderwriteReward ??=
+                chainUnderwriterConfig.minUnderwriteReward
+                ?? defaultConfig.minUnderwriteReward;
+
             finalConfig[tokenAddress].lowTokenBalanceWarning ??=
                 chainUnderwriterConfig.lowTokenBalanceWarning
                 ?? defaultConfig.lowTokenBalanceWarning;
+
             finalConfig[tokenAddress].tokenBalanceUpdateInterval ??=
                 chainUnderwriterConfig.tokenBalanceUpdateInterval
                 ?? defaultConfig.tokenBalanceUpdateInterval;

@@ -123,6 +123,8 @@ const UNDERWRITER_SCHEMA = {
         maxPendingTransactions: {$ref: "positive-number-schema"},
         underwriteBlocksMargin: {$ref: "positive-number-schema"},
         maxSubmissionDelay: {$ref: "positive-number-schema"},
+        maxUnderwriteAllowed: {$ref: "uint256-field-schema"},
+        minUnderwriteReward: {$ref: "uint256-field-schema"},
         lowTokenBalanceWarning: {$ref: "uint256-field-schema"},
         tokenBalanceUpdateInterval: {$ref: "positive-number-schema"},
     },
@@ -200,6 +202,8 @@ const TOKENS_SCHEMA = {
         properties: {
             name: {$ref: "non-empty-string-schema"},
             address: {$ref: "address-field-schema"},
+            maxUnderwriteAllowed: {$ref: "uint256-field-schema"},
+            minUnderwriteReward: {$ref: "uint256-field-schema"},
             lowTokenBalanceWarning: {$ref: "uint256-field-schema"},
             tokenBalanceUpdateInterval: {$ref: "positive-number-schema"},
             allowanceBuffer: {$ref: "gas-field-schema"}

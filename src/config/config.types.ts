@@ -36,6 +36,8 @@ export interface UnderwriterGlobalConfig {
     maxPendingTransactions?: number;
     underwriteBlocksMargin?: number;
     maxSubmissionDelay?: number;
+    maxUnderwriteAllowed?: bigint;
+    minUnderwriteReward?: bigint;
     lowTokenBalanceWarning?: bigint;
     tokenBalanceUpdateInterval?: number;
 }
@@ -98,6 +100,8 @@ export interface ChainConfig {
 
 export interface TokenConfig {
     allowanceBuffer?: bigint;
+    maxUnderwriteAllowed?: bigint;
+    minUnderwriteReward?: bigint;
     lowTokenBalanceWarning?: bigint;
     tokenBalanceUpdateInterval?: number;
 }

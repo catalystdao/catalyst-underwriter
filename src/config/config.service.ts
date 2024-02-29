@@ -217,6 +217,12 @@ export class ConfigService {
 
     private formatUnderwriterGlobalConfig(rawConfig: any): UnderwriterGlobalConfig {
         const config = {...rawConfig};
+        if (config.maxUnderwriteAllowed != undefined) {
+            config.maxUnderwriteAllowed = BigInt(config.maxUnderwriteAllowed);
+        }
+        if (config.minUnderwriteReward != undefined) {
+            config.minUnderwriteReward = BigInt(config.minUnderwriteReward);
+        }
         if (config.lowTokenBalanceWarning != undefined) {
             config.lowTokenBalanceWarning = BigInt(config.lowTokenBalanceWarning);
         }
@@ -263,6 +269,12 @@ export class ConfigService {
             const tokenConfig = {...rawTokenConfig};
             if (tokenConfig.allowanceBuffer != undefined) {
                 tokenConfig.allowanceBuffer = BigInt(tokenConfig.allowanceBuffer);
+            }
+            if (tokenConfig.maxUnderwriteAllowed != undefined) {
+                tokenConfig.maxUnderwriteAllowed = BigInt(tokenConfig.maxUnderwriteAllowed);
+            }
+            if (tokenConfig.minUnderwriteReward != undefined) {
+                tokenConfig.minUnderwriteReward = BigInt(tokenConfig.minUnderwriteReward);
             }
             if (tokenConfig.lowTokenBalanceWarning != undefined) {
                 tokenConfig.lowTokenBalanceWarning = BigInt(tokenConfig.lowTokenBalanceWarning);

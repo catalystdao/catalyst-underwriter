@@ -107,7 +107,8 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         }
 
         // Verify the token to underwrite is supported
-        if (this.tokens[toAsset.toLowerCase()] == undefined) {
+        const tokenConfig = this.tokens[toAsset.toLowerCase()];
+        if (tokenConfig == undefined) {
             this.logger.warn(
                 {
                     swapId: order.swapIdentifier,
@@ -123,6 +124,45 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         // Estimate return
         const expectedReturn = await toVaultContract.calcReceiveAsset(toAsset, order.units);
         const toAssetAllowance = expectedReturn * 11n / 10n;    //TODO set customizable allowance margin
+
+        // Verify the token balances involed are acceptable
+        if (
+            tokenConfig.maxUnderwriteAllowed
+            && toAssetAllowance > tokenConfig.maxUnderwriteAllowed
+        ) {
+            this.logger.info(
+                {
+                    swapId: order.swapIdentifier,
+                    swapTxHash: order.swapTxHash,
+                    swapBlockNumber: order.swapBlockNumber,
+                    toAsset,
+                    toAssetAllowance,
+                    maxUnderwriteAllowed: tokenConfig.maxUnderwriteAllowed
+                },
+                "Skipping underwrite: underwrite exceed the 'maxUnderwriteAllowed' configuration."
+            );
+            return null;
+        }
+
+        const expectedReward = (expectedReturn * order.underwriteIncentiveX16) >> 16n;
+        if (
+            tokenConfig.minUnderwriteReward
+            && expectedReward < tokenConfig.minUnderwriteReward
+        ) {
+            this.logger.info(
+                {
+                    swapId: order.swapIdentifier,
+                    swapTxHash: order.swapTxHash,
+                    swapBlockNumber: order.swapBlockNumber,
+                    toAsset,
+                    underwriteIncentiveX16: order.underwriteIncentiveX16,
+                    expectedReward,
+                    minUnderwriteReward: tokenConfig.minUnderwriteReward
+                },
+                "Skipping underwrite: expected underwrite reward is less than the 'minUnderwriteReward' configuration."
+            );
+            return null;
+        }
 
         // Verify the underwriter has enough assets to perform the underwrite
         const enoughBalanceToUnderwrite = await this.tokenHandler.hasEnoughBalance(
