@@ -13,6 +13,7 @@ export const DEFAULT_UNDERWRITER_PROCESSING_INTERVAL = 100;
 export const DEFAULT_UNDERWRITER_MAX_TRIES = 3;
 export const DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS = 50;
 export const DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN = 50;
+export const DEFAULT_UNDERWRITER_UNDERWRITE_DELAY = 500;
 export const DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY = 300000;
 export const DEFAULT_UNDERWRITER_TOKEN_BALANCE_UPDATE_INTERVAL = 50;
 
@@ -23,6 +24,7 @@ interface DefaultUnderwriterWorkerData {
     maxTries: number;
     maxPendingTransactions: number;
     underwriteBlocksMargin: number;
+    underwriteDelay: number;
     maxSubmissionDelay: number;
     maxUnderwriteAllowed: bigint | undefined;
     minUnderwriteReward: bigint | undefined;
@@ -44,6 +46,7 @@ export interface UnderwriterWorkerData {
     maxTries: number;
     maxPendingTransactions: number;
     underwriteBlocksMargin: number;
+    underwriteDelay: number;
     maxSubmissionDelay: number;
     walletPublicKey: string;
     walletPort: MessagePort;
@@ -110,6 +113,7 @@ export class UnderwriterService implements OnModuleInit {
         const maxTries = globalUnderwriterConfig.maxTries ?? DEFAULT_UNDERWRITER_MAX_TRIES;
         const maxPendingTransactions = globalUnderwriterConfig.maxPendingTransactions ?? DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS;
         const underwriteBlocksMargin = globalUnderwriterConfig.underwriteBlocksMargin ?? DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN;
+        const underwriteDelay = globalUnderwriterConfig.underwriteDelay ?? DEFAULT_UNDERWRITER_UNDERWRITE_DELAY;
         const maxSubmissionDelay = globalUnderwriterConfig.maxSubmissionDelay ?? DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY;
         const maxUnderwriteAllowed = globalUnderwriterConfig.maxUnderwriteAllowed;
         const minUnderwriteReward = globalUnderwriterConfig.minUnderwriteReward;
@@ -124,6 +128,7 @@ export class UnderwriterService implements OnModuleInit {
             maxTries,
             maxPendingTransactions,
             underwriteBlocksMargin,
+            underwriteDelay,
             maxSubmissionDelay,
             maxUnderwriteAllowed,
             minUnderwriteReward,
@@ -171,6 +176,9 @@ export class UnderwriterService implements OnModuleInit {
             underwriteBlocksMargin:
                 chainUnderwriterConfig.underwriteBlocksMargin
                 ?? defaultConfig.underwriteBlocksMargin,
+            underwriteDelay:
+                chainUnderwriterConfig.underwriteDelay
+                ?? defaultConfig.underwriteDelay,
             maxSubmissionDelay:
                 chainUnderwriterConfig.maxSubmissionDelay
                 ?? defaultConfig.maxSubmissionDelay,

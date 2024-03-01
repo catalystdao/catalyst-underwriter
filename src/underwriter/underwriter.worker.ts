@@ -401,7 +401,7 @@ class UnderwriterWorker {
             submissionDeadline,
         };
 
-        const processDelay = 0;   //TODO derive delay
+        const processDelay = this.config.underwriteDelay;
 
         this.newOrdersQueue.push({
             processAt: Date.now() + processDelay,
