@@ -142,6 +142,10 @@ TODO
 ### The `Store` library
 The distinct services of the Underwriter communicate with each other using a Redis database. To abstract the Redis implementation away, a helper library, `store.lib.ts`, is provided. 
 
+### Underwriting disabling
+Underwriting may be enabled and disabled dynamically by sending a `POST` request to the `enableUnderwriting`/`disableUnderwriting` endpoints of the underwriter. An optional JSON encoded payload may be specified to select the `chainIds` to enable/disable.
+> ℹ️ Underwriting disabling is useful when it is desired to take down the underwriter, as it allows the underwriter to continue to run throughout a 'take-down' period to handle any required expiries.
+
 ## Development
 
 ### Typechain Types
