@@ -1,7 +1,7 @@
 import { JsonRpcProvider } from "ethers";
 import pino, { LoggerOptions } from "pino";
-import { workerData } from 'worker_threads';
-import { UnderwriterWorkerData } from "./underwriter.service";
+import { parentPort, workerData } from 'worker_threads';
+import { UnderwriterWorkerCommand, UnderwriterWorkerCommandId, UnderwriterWorkerData } from "./underwriter.service";
 import { wait } from "src/common/utils";
 import { AMBConfig, PoolConfig, TokenConfig } from "src/config/config.types";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
@@ -84,6 +84,8 @@ class UnderwriterWorker {
             this.logger
         );
 
+        this.listenForCommands();
+
         void this.initiateIntervalStatusLog();
     }
 
@@ -157,6 +159,7 @@ class UnderwriterWorker {
     private initiateIntervalStatusLog(): void {
         const logStatus = () => {
             const status = {
+                isUnderwritingEnabled: this.evalQueue.isUnderwritingEnabled(),
                 capacity: this.getUnderwritterCapacity(),
                 newOrdersQueue: this.newOrdersQueue.length,
                 evalQueue: this.evalQueue.size,
@@ -428,6 +431,27 @@ class UnderwriterWorker {
         }
 
         return undefined;
+    }
+
+
+
+    // Commands handler
+    // ********************************************************************************************
+    private listenForCommands(): void {
+        parentPort?.on('message', (data: any) => {
+            void this.handleWorkerCommand(data);
+        })
+    }
+
+    private async handleWorkerCommand(command: UnderwriterWorkerCommand): Promise<void> {
+        switch (command.id) {
+            case UnderwriterWorkerCommandId.Enable:
+                this.evalQueue.enableUnderwrites();
+                break;
+            case UnderwriterWorkerCommandId.Disable:
+                this.evalQueue.disableUnderwrite();
+                break;
+        }
     }
 
 }

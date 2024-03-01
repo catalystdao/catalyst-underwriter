@@ -7,6 +7,8 @@ import { AMBConfig, ChainConfig, PoolConfig, TokensConfig } from 'src/config/con
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { WalletService } from 'src/wallet/wallet.service';
 import { Wallet } from 'ethers';
+import { DisableUnderwritingRequest, EnableUnderwritingRequest } from './underwriter.controller';
+
 
 export const DEFAULT_UNDERWRITER_RETRY_INTERVAL = 30000;
 export const DEFAULT_UNDERWRITER_PROCESSING_INTERVAL = 100;
@@ -51,6 +53,16 @@ export interface UnderwriterWorkerData {
     walletPublicKey: string;
     walletPort: MessagePort;
     loggerOptions: LoggerOptions;
+}
+
+export enum UnderwriterWorkerCommandId {
+    Enable,
+    Disable
+}
+
+export interface UnderwriterWorkerCommand {
+    id: UnderwriterWorkerCommandId,
+    data?: any
 }
 
 
@@ -269,5 +281,53 @@ export class UnderwriterService implements OnModuleInit {
             this.loggerService.info(status, 'Underwriter workers status.');
         };
         setInterval(logStatus, STATUS_LOG_INTERVAL);
+    }
+
+
+    // Management utils
+    // ********************************************************************************************
+
+    async enableUnderwriting(request: EnableUnderwritingRequest): Promise<void> {
+
+        const enableCommand: UnderwriterWorkerCommand = {
+            id: UnderwriterWorkerCommandId.Enable
+        }
+
+        for (const [chainId, worker] of Object.entries(this.workers)) {
+            if (
+                request.chainIds != undefined
+                && !request.chainIds.includes(chainId)
+            ) {
+                continue;
+            }
+
+            this.loggerService.warn(
+                { chainId },
+                'Requesting underwrite worker enable.'
+            );
+            worker?.postMessage(enableCommand);
+        }
+    }
+
+    async disableUnderwriting(request: DisableUnderwritingRequest): Promise<void> {
+
+        const disableCommand: UnderwriterWorkerCommand = {
+            id: UnderwriterWorkerCommandId.Disable
+        }
+
+        for (const [chainId, worker] of Object.entries(this.workers)) {
+            if (
+                request.chainIds != undefined
+                && !request.chainIds.includes(chainId)
+            ) {
+                continue;
+            }
+
+            this.loggerService.warn(
+                { chainId },
+                'Requesting underwrite worker disable.'
+            );
+            worker?.postMessage(disableCommand);
+        }
     }
 }

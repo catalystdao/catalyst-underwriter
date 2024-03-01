@@ -14,7 +14,7 @@ import { TokenHandler } from '../token-handler/token-handler';
 export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
     constructor(
-        private readonly enabled: boolean,
+        private enabled: boolean,
         readonly chainId: string,
         readonly tokens: Record<string, TokenConfig>,
         readonly pools: PoolConfig[],
@@ -27,6 +27,10 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         private readonly logger: pino.Logger
     ) {
         super(retryInterval, maxTries);
+    }
+
+    isUnderwritingEnabled(): boolean {
+        return this.enabled;
     }
 
     protected async handleOrder(order: EvalOrder, retryCount: number): Promise<HandleOrderResult<UnderwriteOrder> | null> {
@@ -406,4 +410,17 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
     }
 
+
+
+    // Management utils
+    // ********************************************************************************************
+    enableUnderwrites(): void {
+        this.enabled = true;
+        this.logger.debug('Underwriting enabled.');
+    }
+
+    disableUnderwrite(): void {
+        this.enabled = false;
+        this.logger.debug('Underwriting disabled.');
+    }
 }
