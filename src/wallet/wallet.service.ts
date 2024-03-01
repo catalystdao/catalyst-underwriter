@@ -70,15 +70,15 @@ export class WalletService implements OnModuleInit {
         this.publicKey = (new Wallet(this.configService.globalConfig.privateKey)).address;
     }
 
-    onModuleInit() {
+    async onModuleInit() {
         this.loggerService.info(`Starting Wallets on all chains...`);
 
-        this.initializeWorkers();
+        await this.initializeWorkers();
 
         this.initiateIntervalStatusLog();
     }
 
-    private initializeWorkers(): void {
+    private async initializeWorkers(): Promise<void> {
         const defaultWorkerConfig = this.loadDefaultWorkerConfig();
 
         for (const [chainId, ] of this.configService.chainsConfig) {
@@ -104,6 +104,11 @@ export class WalletService implements OnModuleInit {
                 );
             });
         }
+
+        // Add a small delay to wait for the workers to be initialized
+        //TODO the following should not be delay-based.
+        //TODO is this required?
+        await new Promise((r) => setTimeout(r, 5000));
     }
 
     private loadDefaultWorkerConfig(): DefaultWalletWorkerData {
