@@ -136,8 +136,7 @@ The Underwriter has the ability to automatically set the transactions gas pricin
 If a transaction does not mine in time (`maxTries * (confirmationTimeout + retryInterval)` approximately), the Underwriter will attempt to reprice the transaction by resubmitting the transaction with higher gas price values. The gas prices are adjusted according to the `priorityAdjustmentFactor` configuration. If not set, it defaults to `1.1` (i.e +10%).
 
 ### Low balance warning
-TODO
-<!-- The Underwriter keeps an estimate of the Underwriter account gas balance for each chain. A warning is emitted to the logs if the gas balance falls below a configurable threshold `lowBalanceWarning` (in Wei). -->
+The Underwriter keeps an estimate of the Underwriter account gas/tokens balance for each chain. A warning is emitted to the logs if the gas/tokens balance falls below a configurable threshold (`lowGasBalanceWarning`/`lowTokenBalanceWarning` in Wei).
 
 ### The `Store` library
 The distinct services of the Underwriter communicate with each other using a Redis database. To abstract the Redis implementation away, a helper library, `store.lib.ts`, is provided. 
