@@ -57,15 +57,16 @@ export class MonitorService implements OnModuleInit {
 
             worker.on('error', (error) =>
                 this.loggerService.fatal(
-                    error,
-                    `Error on monitor worker (chain ${chainId}).`,
+                    { error, chainId },
+                    `Error on monitor worker.`,
                 ),
             );
 
             worker.on('exit', (exitCode) => {
                 this.workers[chainId] = null;
-                this.loggerService.info(
-                    `Monitor worker exited with code ${exitCode} (chain ${chainId}).`,
+                this.loggerService.fatal(
+                    { exitCode, chainId },
+                    `Monitor worker exited.`,
                 );
             });
         }

@@ -137,12 +137,14 @@ export class TransactionHelper {
         let i = 1;
         while (true) {
             try {
-                this.transactionNonce =
-          await this.wallet.getNonce('pending'); //TODO 'pending' may not be supported
+                this.transactionNonce = await this.wallet.getNonce('pending'); //TODO 'pending' may not be supported
                 break;
             } catch (error) {
                 // Continue trying indefinitely. If the transaction count is incorrect, no transaction will go through.
-                this.logger.error(`Failed to update nonce for chain (try ${i}).`);
+                this.logger.warn(
+                    { try: i, address: this.wallet.address },
+                    `Failed to update nonce.`,
+                );
                 await new Promise((r) => setTimeout(r, this.retryInterval));
             }
 

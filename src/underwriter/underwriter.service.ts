@@ -102,15 +102,16 @@ export class UnderwriterService implements OnModuleInit {
 
             worker.on('error', (error) =>
                 this.loggerService.fatal(
-                    error,
-                    `Error on underwriter worker (chain ${chainId}).`,
+                    { error, chainId },
+                    `Error on underwriter worker.`,
                 ),
             );
 
             worker.on('exit', (exitCode) => {
                 this.workers[chainId] = null;
-                this.loggerService.info(
-                    `Underwriter worker exited with code ${exitCode} (chain ${chainId}).`,
+                this.loggerService.fatal(
+                    { exitCode, chainId },
+                    `Underwriter worker exited.`,
                 );
             });
         }

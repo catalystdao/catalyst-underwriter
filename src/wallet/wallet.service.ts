@@ -92,15 +92,16 @@ export class WalletService implements OnModuleInit {
 
             worker.on('error', (error) =>
                 this.loggerService.fatal(
-                    error,
-                    `Error on Wallet worker (chain ${chainId}).`,
+                    { error, chainId },
+                    `Error on wallet worker.`,
                 ),
             );
 
             worker.on('exit', (exitCode) => {
                 this.workers[chainId] = null;
-                this.loggerService.info(
-                    `Wallet worker exited with code ${exitCode} (chain ${chainId}).`,
+                this.loggerService.fatal(
+                    { exitCode, chainId },
+                    `Wallet worker exited.`,
                 );
             });
         }

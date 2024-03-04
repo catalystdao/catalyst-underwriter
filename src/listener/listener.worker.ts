@@ -200,7 +200,7 @@ class ListenerWorker {
                 }
             }
             catch (error) {
-                this.logger.error(error, `Failed on listener.service`);
+                this.logger.error(error, `Failed on listener.worker`);
             }
 
             await wait(this.config.processingInterval);
@@ -224,12 +224,7 @@ class ListenerWorker {
         toBlock: number
     ): Promise<void> {
 
-        const logs = await this.provider.getLogs({
-            address: this.addresses,
-            topics: this.topics,
-            fromBlock,
-            toBlock
-        });
+        const logs = await this.queryLogs(fromBlock, toBlock);
 
         for (const log of logs) {
 
@@ -250,6 +245,34 @@ class ListenerWorker {
                 `No vault/interface configuration found for the contract address ${log.address}.`
             );
         }
+    }
+
+    private async queryLogs(
+        fromBlock: number,
+        toBlock: number
+    ): Promise<Log[]> {
+        const filter = {
+            address: this.addresses,
+            topics: this.topics,
+            fromBlock,
+            toBlock
+        };
+
+        let logs: Log[] | undefined;
+        let i = 0;
+        while (logs == undefined) {
+            try {
+                logs = await this.provider.getLogs(filter);
+            } catch (error) {
+                i++;
+                this.logger.warn(
+                    { ...filter, try: i },
+                    `Failed to 'getLogs' on listener. Worker blocked until successful query.`
+                );
+            }
+        }
+
+        return logs;
     }
 
     // Event handlers

@@ -75,15 +75,16 @@ export class ExpirerService implements OnModuleInit {
 
             worker.on('error', (error) =>
                 this.loggerService.fatal(
-                    error,
-                    `Error on expirer worker (chain ${chainId}).`,
+                    { error, chainId },
+                    `Error on expirer worker.`,
                 ),
             );
 
             worker.on('exit', (exitCode) => {
                 this.workers[chainId] = null;
-                this.loggerService.info(
-                    `Expirer worker exited with code ${exitCode} (chain ${chainId}).`,
+                this.loggerService.fatal(
+                    { exitCode, chainId },
+                    `Expirer worker exited.`,
                 );
             });
         }
