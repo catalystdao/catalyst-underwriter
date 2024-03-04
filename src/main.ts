@@ -9,20 +9,14 @@ async function logLoadedOptions(
 ) {
     // Log the loaded configuration
     loggerService.info(
-        { config: configService.globalConfig },
-        `Loaded global configuration (${configService.nodeEnv})`,
-    );
-    loggerService.info(
-        { config: Object.fromEntries(configService.chainsConfig.entries()) },
-        'Loaded chains configuration',
-    );
-    loggerService.info(
-        { config: Object.fromEntries(configService.ambsConfig.entries()) },
-        'Loaded AMBs configuration',
-    );
-    loggerService.info(
-        { config: Object.fromEntries(configService.poolsConfig.entries()) },
-        'Loaded pools configuration',
+        {
+            mode: configService.nodeEnv,
+            globalConfig: configService.globalConfig,
+            ambsConfig: Object.fromEntries(configService.ambsConfig),
+            chainsConfig: Object.fromEntries(configService.chainsConfig),
+            poolsConfig: Object.fromEntries(configService.poolsConfig)
+        },
+        `Underwriter initialized.`,
     );
 }
 
