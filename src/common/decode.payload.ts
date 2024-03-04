@@ -98,6 +98,7 @@ export function parsePayload(generalisedIncentiveMessage: string): GeneralisedIn
     };
     if (context === MessageContext.CTX_SOURCE_TO_DESTINATION) {
         const toApplication = "0x" + generalisedIncentiveMessage.slice(counter, counter += (32*2*2 + 2));
+        counter += 8*2; // TODO implement deadline decoding
         const maxGasLimit = BigInt("0x" + generalisedIncentiveMessage.slice(counter, counter += (6*2)));
         const message = "0x" + generalisedIncentiveMessage.slice(counter);
         return {
