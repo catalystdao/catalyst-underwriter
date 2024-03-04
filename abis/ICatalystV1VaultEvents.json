@@ -1,610 +1,608 @@
-{
-  "abi": [
+[
     {
-      "anonymous": false,
-      "inputs": [],
-      "name": "FinishSetup",
-      "type": "event"
+        "type": "event",
+        "name": "FinishSetup",
+        "inputs": [],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "fromAsset",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "toAsset",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "fromAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "toAmount",
-          "type": "uint256"
-        }
-      ],
-      "name": "LocalSwap",
-      "type": "event"
+        "type": "event",
+        "name": "LocalSwap",
+        "inputs": [
+            {
+                "name": "account",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "fromAsset",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "toAsset",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "fromAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "toAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "fromVault",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "toAccount",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "toAsset",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "units",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "toAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "fromAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "fromAsset",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint32",
-          "name": "sourceBlockNumberMod",
-          "type": "uint32"
-        }
-      ],
-      "name": "ReceiveAsset",
-      "type": "event"
+        "type": "event",
+        "name": "ReceiveAsset",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "fromVault",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "toAccount",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "toAsset",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "units",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "toAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "fromAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "fromAsset",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "sourceBlockNumberMod",
+                "type": "uint32",
+                "indexed": false,
+                "internalType": "uint32"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "fromVault",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "toAccount",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "units",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "toAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "fromAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "sourceBlockNumberMod",
-          "type": "uint256"
-        }
-      ],
-      "name": "ReceiveLiquidity",
-      "type": "event"
+        "type": "event",
+        "name": "ReceiveLiquidity",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "fromVault",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "toAccount",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "units",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "toAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "fromAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "sourceBlockNumberMod",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toVault",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toAccount",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "fromAsset",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint8",
-          "name": "toAssetIndex",
-          "type": "uint8"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "fromAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "minOut",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "units",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "fee",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint16",
-          "name": "underwriteIncentiveX16",
-          "type": "uint16"
-        }
-      ],
-      "name": "SendAsset",
-      "type": "event"
+        "type": "event",
+        "name": "SendAsset",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toVault",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "toAccount",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "fromAsset",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "toAssetIndex",
+                "type": "uint8",
+                "indexed": false,
+                "internalType": "uint8"
+            },
+            {
+                "name": "fromAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "minOut",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "units",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "underwriteIncentiveX16",
+                "type": "uint16",
+                "indexed": false,
+                "internalType": "uint16"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toAccount",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "units",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "escrowAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "escrowToken",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint32",
-          "name": "blockNumberMod",
-          "type": "uint32"
-        }
-      ],
-      "name": "SendAssetFailure",
-      "type": "event"
+        "type": "event",
+        "name": "SendAssetFailure",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toAccount",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "units",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowToken",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "blockNumberMod",
+                "type": "uint32",
+                "indexed": false,
+                "internalType": "uint32"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toAccount",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "units",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "escrowAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "escrowToken",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint32",
-          "name": "blockNumberMod",
-          "type": "uint32"
-        }
-      ],
-      "name": "SendAssetSuccess",
-      "type": "event"
+        "type": "event",
+        "name": "SendAssetSuccess",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toAccount",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "units",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowToken",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "blockNumberMod",
+                "type": "uint32",
+                "indexed": false,
+                "internalType": "uint32"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toVault",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toAccount",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "fromAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256[2]",
-          "name": "minOut",
-          "type": "uint256[2]"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "units",
-          "type": "uint256"
-        }
-      ],
-      "name": "SendLiquidity",
-      "type": "event"
+        "type": "event",
+        "name": "SendLiquidity",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toVault",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "toAccount",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "fromAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "minOut",
+                "type": "uint256[2]",
+                "indexed": false,
+                "internalType": "uint256[2]"
+            },
+            {
+                "name": "units",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toAccount",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "units",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "escrowAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint32",
-          "name": "blockNumberMod",
-          "type": "uint32"
-        }
-      ],
-      "name": "SendLiquidityFailure",
-      "type": "event"
+        "type": "event",
+        "name": "SendLiquidityFailure",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toAccount",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "units",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "blockNumberMod",
+                "type": "uint32",
+                "indexed": false,
+                "internalType": "uint32"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toAccount",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "units",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "escrowAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint32",
-          "name": "blockNumberMod",
-          "type": "uint32"
-        }
-      ],
-      "name": "SendLiquiditySuccess",
-      "type": "event"
+        "type": "event",
+        "name": "SendLiquiditySuccess",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toAccount",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "units",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "blockNumberMod",
+                "type": "uint32",
+                "indexed": false,
+                "internalType": "uint32"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "targetTime",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "targetAmplification",
-          "type": "uint256"
-        }
-      ],
-      "name": "SetAmplification",
-      "type": "event"
+        "type": "event",
+        "name": "SetAmplification",
+        "inputs": [
+            {
+                "name": "targetTime",
+                "type": "uint48",
+                "indexed": false,
+                "internalType": "uint48"
+            },
+            {
+                "name": "targetAmplification",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toVault",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "bool",
-          "name": "newState",
-          "type": "bool"
-        }
-      ],
-      "name": "SetConnection",
-      "type": "event"
+        "type": "event",
+        "name": "SetConnection",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toVault",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "newState",
+                "type": "bool",
+                "indexed": false,
+                "internalType": "bool"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "administrator",
-          "type": "address"
-        }
-      ],
-      "name": "SetFeeAdministrator",
-      "type": "event"
+        "type": "event",
+        "name": "SetFeeAdministrator",
+        "inputs": [
+            {
+                "name": "administrator",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "fee",
-          "type": "uint256"
-        }
-      ],
-      "name": "SetGovernanceFee",
-      "type": "event"
+        "type": "event",
+        "name": "SetGovernanceFee",
+        "inputs": [
+            {
+                "name": "fee",
+                "type": "uint64",
+                "indexed": false,
+                "internalType": "uint64"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "fee",
-          "type": "uint256"
-        }
-      ],
-      "name": "SetVaultFee",
-      "type": "event"
+        "type": "event",
+        "name": "SetVaultFee",
+        "inputs": [
+            {
+                "name": "fee",
+                "type": "uint64",
+                "indexed": false,
+                "internalType": "uint64"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "targetTime",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256[]",
-          "name": "targetWeights",
-          "type": "uint256[]"
-        }
-      ],
-      "name": "SetWeights",
-      "type": "event"
+        "type": "event",
+        "name": "SetWeights",
+        "inputs": [
+            {
+                "name": "targetTime",
+                "type": "uint248",
+                "indexed": false,
+                "internalType": "uint248"
+            },
+            {
+                "name": "targetWeights",
+                "type": "uint256[]",
+                "indexed": false,
+                "internalType": "uint256[]"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "bytes32",
-          "name": "identifier",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "toAsset",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "U",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "purchasedTokens",
-          "type": "uint256"
-        }
-      ],
-      "name": "SwapUnderwritten",
-      "type": "event"
+        "type": "event",
+        "name": "SwapUnderwritten",
+        "inputs": [
+            {
+                "name": "identifier",
+                "type": "bytes32",
+                "indexed": true,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toAsset",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "U",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "purchasedTokens",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "toAccount",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "mint",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256[]",
-          "name": "assets",
-          "type": "uint256[]"
-        }
-      ],
-      "name": "VaultDeposit",
-      "type": "event"
+        "type": "event",
+        "name": "VaultDeposit",
+        "inputs": [
+            {
+                "name": "toAccount",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "mint",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "assets",
+                "type": "uint256[]",
+                "indexed": false,
+                "internalType": "uint256[]"
+            }
+        ],
+        "anonymous": false
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "toAccount",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "burn",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256[]",
-          "name": "assets",
-          "type": "uint256[]"
-        }
-      ],
-      "name": "VaultWithdraw",
-      "type": "event"
+        "type": "event",
+        "name": "VaultWithdraw",
+        "inputs": [
+            {
+                "name": "toAccount",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "burn",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "assets",
+                "type": "uint256[]",
+                "indexed": false,
+                "internalType": "uint256[]"
+            }
+        ],
+        "anonymous": false
     }
-  ]
-}
+]

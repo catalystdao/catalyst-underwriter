@@ -1,2241 +1,2309 @@
-{
-  "abi": [
-    {
-      "inputs": [],
-      "name": "EscrowAlreadyExists",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "VaultNotConnected",
-      "type": "error"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "owner",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "spender",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "Approval",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [],
-      "name": "FinishSetup",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint8",
-          "name": "version",
-          "type": "uint8"
-        }
-      ],
-      "name": "Initialized",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "fromAsset",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "toAsset",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "fromAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "toAmount",
-          "type": "uint256"
-        }
-      ],
-      "name": "LocalSwap",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "fromVault",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "toAccount",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "toAsset",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "units",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "toAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "fromAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "fromAsset",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint32",
-          "name": "sourceBlockNumberMod",
-          "type": "uint32"
-        }
-      ],
-      "name": "ReceiveAsset",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "fromVault",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "toAccount",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "units",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "toAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "fromAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "sourceBlockNumberMod",
-          "type": "uint256"
-        }
-      ],
-      "name": "ReceiveLiquidity",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toVault",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toAccount",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "fromAsset",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint8",
-          "name": "toAssetIndex",
-          "type": "uint8"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "fromAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "minOut",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "units",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "fee",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint16",
-          "name": "underwriteIncentiveX16",
-          "type": "uint16"
-        }
-      ],
-      "name": "SendAsset",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toAccount",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "units",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "escrowAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "escrowToken",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint32",
-          "name": "blockNumberMod",
-          "type": "uint32"
-        }
-      ],
-      "name": "SendAssetFailure",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toAccount",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "units",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "escrowAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "escrowToken",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint32",
-          "name": "blockNumberMod",
-          "type": "uint32"
-        }
-      ],
-      "name": "SendAssetSuccess",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toVault",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toAccount",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "fromAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256[2]",
-          "name": "minOut",
-          "type": "uint256[2]"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "units",
-          "type": "uint256"
-        }
-      ],
-      "name": "SendLiquidity",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toAccount",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "units",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "escrowAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint32",
-          "name": "blockNumberMod",
-          "type": "uint32"
-        }
-      ],
-      "name": "SendLiquidityFailure",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toAccount",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "units",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "escrowAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint32",
-          "name": "blockNumberMod",
-          "type": "uint32"
-        }
-      ],
-      "name": "SendLiquiditySuccess",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "targetTime",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "targetAmplification",
-          "type": "uint256"
-        }
-      ],
-      "name": "SetAmplification",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes",
-          "name": "toVault",
-          "type": "bytes"
-        },
-        {
-          "indexed": false,
-          "internalType": "bool",
-          "name": "newState",
-          "type": "bool"
-        }
-      ],
-      "name": "SetConnection",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "administrator",
-          "type": "address"
-        }
-      ],
-      "name": "SetFeeAdministrator",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "fee",
-          "type": "uint256"
-        }
-      ],
-      "name": "SetGovernanceFee",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "fee",
-          "type": "uint256"
-        }
-      ],
-      "name": "SetVaultFee",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "targetTime",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256[]",
-          "name": "targetWeights",
-          "type": "uint256[]"
-        }
-      ],
-      "name": "SetWeights",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "bytes32",
-          "name": "identifier",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "toAsset",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "U",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "purchasedTokens",
-          "type": "uint256"
-        }
-      ],
-      "name": "SwapUnderwritten",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "from",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "Transfer",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "toAccount",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "mint",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256[]",
-          "name": "assets",
-          "type": "uint256[]"
-        }
-      ],
-      "name": "VaultDeposit",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "toAccount",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "burn",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256[]",
-          "name": "assets",
-          "type": "uint256[]"
-        }
-      ],
-      "name": "VaultWithdraw",
-      "type": "event"
-    },
-    {
-      "inputs": [],
-      "name": "DOMAIN_SEPARATOR",
-      "outputs": [
-        {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "FACTORY",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "MATHLIB",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "_adjustmentTarget",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "_chainInterface",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
-        }
-      ],
-      "name": "_escrowLookup",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "_escrowedTokens",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "_escrowedVaultTokens",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "_feeAdministrator",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "_governanceFeeShare",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "_lastModificationTime",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "_maxUnitCapacity",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "_setupMaster",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "_tokenIndexing",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes",
-          "name": "",
-          "type": "bytes"
-        }
-      ],
-      "name": "_vaultConnection",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "_vaultFee",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "_weight",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "allowance",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "spender",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "approve",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "balanceOf",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "from",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "calcLocalSwap",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "U",
-          "type": "uint256"
-        }
-      ],
-      "name": "calcReceiveAsset",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "from",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "calcSendAsset",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "decimals",
-      "outputs": [
-        {
-          "internalType": "uint8",
-          "name": "",
-          "type": "uint8"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "identifier",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "uint256",
-          "name": "U",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "escrowAmount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "escrowToken",
-          "type": "address"
-        }
-      ],
-      "name": "deleteUnderwriteAsset",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256[]",
-          "name": "tokenAmounts",
-          "type": "uint256[]"
-        },
-        {
-          "internalType": "uint256",
-          "name": "minOut",
-          "type": "uint256"
-        }
-      ],
-      "name": "depositMixed",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "factoryOwner",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "finishSetup",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getUnitCapacity",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "governanceFeeDestination",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address[]",
-          "name": "assets",
-          "type": "address[]"
-        },
-        {
-          "internalType": "uint256[]",
-          "name": "weights",
-          "type": "uint256[]"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amp",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "depositor",
-          "type": "address"
-        }
-      ],
-      "name": "initializeSwapCurves",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "fromAsset",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "toAsset",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "minOut",
-          "type": "uint256"
-        }
-      ],
-      "name": "localSwap",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes[]",
-          "name": "data",
-          "type": "bytes[]"
-        }
-      ],
-      "name": "multicall",
-      "outputs": [
-        {
-          "internalType": "bytes[]",
-          "name": "results",
-          "type": "bytes[]"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "name",
-      "outputs": [
-        {
-          "internalType": "string",
-          "name": "",
-          "type": "string"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "nonces",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes",
-          "name": "toAccount",
-          "type": "bytes"
-        },
-        {
-          "internalType": "uint256",
-          "name": "U",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "escrowAmount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "escrowToken",
-          "type": "address"
-        },
-        {
-          "internalType": "uint32",
-          "name": "blockNumberMod",
-          "type": "uint32"
-        }
-      ],
-      "name": "onSendAssetFailure",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes",
-          "name": "toAccount",
-          "type": "bytes"
-        },
-        {
-          "internalType": "uint256",
-          "name": "U",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "escrowAmount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "escrowToken",
-          "type": "address"
-        },
-        {
-          "internalType": "uint32",
-          "name": "blockNumberMod",
-          "type": "uint32"
-        }
-      ],
-      "name": "onSendAssetSuccess",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes",
-          "name": "toAccount",
-          "type": "bytes"
-        },
-        {
-          "internalType": "uint256",
-          "name": "U",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "escrowAmount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint32",
-          "name": "blockNumberMod",
-          "type": "uint32"
-        }
-      ],
-      "name": "onSendLiquidityFailure",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes",
-          "name": "toAccount",
-          "type": "bytes"
-        },
-        {
-          "internalType": "uint256",
-          "name": "U",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "escrowAmount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint32",
-          "name": "blockNumberMod",
-          "type": "uint32"
-        }
-      ],
-      "name": "onSendLiquiditySuccess",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "owner",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "spender",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "value",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "deadline",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint8",
-          "name": "v",
-          "type": "uint8"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "r",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "s",
-          "type": "bytes32"
-        }
-      ],
-      "name": "permit",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "ready",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes",
-          "name": "fromVault",
-          "type": "bytes"
-        },
-        {
-          "internalType": "uint256",
-          "name": "toAssetIndex",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "toAccount",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "U",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "minOut",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "fromAmount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bytes",
-          "name": "fromAsset",
-          "type": "bytes"
-        },
-        {
-          "internalType": "uint32",
-          "name": "blockNumberMod",
-          "type": "uint32"
-        }
-      ],
-      "name": "receiveAsset",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "purchasedTokens",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes",
-          "name": "fromVault",
-          "type": "bytes"
-        },
-        {
-          "internalType": "address",
-          "name": "toAccount",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "U",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "minVaultTokens",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "minReferenceAsset",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "fromAmount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint32",
-          "name": "blockNumberMod",
-          "type": "uint32"
-        }
-      ],
-      "name": "receiveLiquidity",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "purchasedVaultTokens",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "refundTo",
-          "type": "address"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "identifier",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "uint256",
-          "name": "escrowAmount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "escrowToken",
-          "type": "address"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "sourceIdentifier",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes",
-          "name": "fromVault",
-          "type": "bytes"
-        }
-      ],
-      "name": "releaseUnderwriteAsset",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "components": [
+[
+    {
+        "type": "function",
+        "name": "DOMAIN_SEPARATOR",
+        "inputs": [],
+        "outputs": [
             {
-              "internalType": "bytes32",
-              "name": "chainIdentifier",
-              "type": "bytes32"
-            },
-            {
-              "internalType": "bytes",
-              "name": "toVault",
-              "type": "bytes"
-            },
-            {
-              "internalType": "bytes",
-              "name": "toAccount",
-              "type": "bytes"
-            },
-            {
-              "components": [
-                {
-                  "internalType": "uint48",
-                  "name": "maxGasDelivery",
-                  "type": "uint48"
-                },
-                {
-                  "internalType": "uint48",
-                  "name": "maxGasAck",
-                  "type": "uint48"
-                },
-                {
-                  "internalType": "address",
-                  "name": "refundGasTo",
-                  "type": "address"
-                },
-                {
-                  "internalType": "uint96",
-                  "name": "priceOfDeliveryGas",
-                  "type": "uint96"
-                },
-                {
-                  "internalType": "uint96",
-                  "name": "priceOfAckGas",
-                  "type": "uint96"
-                },
-                {
-                  "internalType": "uint64",
-                  "name": "targetDelta",
-                  "type": "uint64"
-                }
-              ],
-              "internalType": "struct IMessageEscrowStructs.IncentiveDescription",
-              "name": "incentive",
-              "type": "tuple"
+                "name": "result",
+                "type": "bytes32",
+                "internalType": "bytes32"
             }
-          ],
-          "internalType": "struct ICatalystV1Structs.RouteDescription",
-          "name": "routeDescription",
-          "type": "tuple"
-        },
-        {
-          "internalType": "address",
-          "name": "fromAsset",
-          "type": "address"
-        },
-        {
-          "internalType": "uint8",
-          "name": "toAssetIndex",
-          "type": "uint8"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "minOut",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "fallbackUser",
-          "type": "address"
-        },
-        {
-          "internalType": "uint16",
-          "name": "underwriteIncentiveX16",
-          "type": "uint16"
-        },
-        {
-          "internalType": "bytes",
-          "name": "calldata_",
-          "type": "bytes"
-        }
-      ],
-      "name": "sendAsset",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "payable",
-      "type": "function"
+        ],
+        "stateMutability": "view"
     },
     {
-      "inputs": [
-        {
-          "components": [
+        "type": "function",
+        "name": "FACTORY",
+        "inputs": [],
+        "outputs": [
             {
-              "internalType": "bytes32",
-              "name": "chainIdentifier",
-              "type": "bytes32"
-            },
-            {
-              "internalType": "bytes",
-              "name": "toVault",
-              "type": "bytes"
-            },
-            {
-              "internalType": "bytes",
-              "name": "toAccount",
-              "type": "bytes"
-            },
-            {
-              "components": [
-                {
-                  "internalType": "uint48",
-                  "name": "maxGasDelivery",
-                  "type": "uint48"
-                },
-                {
-                  "internalType": "uint48",
-                  "name": "maxGasAck",
-                  "type": "uint48"
-                },
-                {
-                  "internalType": "address",
-                  "name": "refundGasTo",
-                  "type": "address"
-                },
-                {
-                  "internalType": "uint96",
-                  "name": "priceOfDeliveryGas",
-                  "type": "uint96"
-                },
-                {
-                  "internalType": "uint96",
-                  "name": "priceOfAckGas",
-                  "type": "uint96"
-                },
-                {
-                  "internalType": "uint64",
-                  "name": "targetDelta",
-                  "type": "uint64"
-                }
-              ],
-              "internalType": "struct IMessageEscrowStructs.IncentiveDescription",
-              "name": "incentive",
-              "type": "tuple"
+                "name": "",
+                "type": "address",
+                "internalType": "address"
             }
-          ],
-          "internalType": "struct ICatalystV1Structs.RouteDescription",
-          "name": "routeDescription",
-          "type": "tuple"
-        },
-        {
-          "internalType": "address",
-          "name": "fromAsset",
-          "type": "address"
-        },
-        {
-          "internalType": "uint8",
-          "name": "toAssetIndex",
-          "type": "uint8"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "minOut",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "minU",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "fallbackUser",
-          "type": "address"
-        },
-        {
-          "internalType": "uint16",
-          "name": "underwriteIncentiveX16",
-          "type": "uint16"
-        },
-        {
-          "internalType": "bytes",
-          "name": "calldata_",
-          "type": "bytes"
-        }
-      ],
-      "name": "sendAssetFixedUnit",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "payable",
-      "type": "function"
+        ],
+        "stateMutability": "view"
     },
     {
-      "inputs": [
-        {
-          "components": [
+        "type": "function",
+        "name": "MATHLIB",
+        "inputs": [],
+        "outputs": [
             {
-              "internalType": "bytes32",
-              "name": "chainIdentifier",
-              "type": "bytes32"
-            },
-            {
-              "internalType": "bytes",
-              "name": "toVault",
-              "type": "bytes"
-            },
-            {
-              "internalType": "bytes",
-              "name": "toAccount",
-              "type": "bytes"
-            },
-            {
-              "components": [
-                {
-                  "internalType": "uint48",
-                  "name": "maxGasDelivery",
-                  "type": "uint48"
-                },
-                {
-                  "internalType": "uint48",
-                  "name": "maxGasAck",
-                  "type": "uint48"
-                },
-                {
-                  "internalType": "address",
-                  "name": "refundGasTo",
-                  "type": "address"
-                },
-                {
-                  "internalType": "uint96",
-                  "name": "priceOfDeliveryGas",
-                  "type": "uint96"
-                },
-                {
-                  "internalType": "uint96",
-                  "name": "priceOfAckGas",
-                  "type": "uint96"
-                },
-                {
-                  "internalType": "uint64",
-                  "name": "targetDelta",
-                  "type": "uint64"
-                }
-              ],
-              "internalType": "struct IMessageEscrowStructs.IncentiveDescription",
-              "name": "incentive",
-              "type": "tuple"
+                "name": "",
+                "type": "address",
+                "internalType": "address"
             }
-          ],
-          "internalType": "struct ICatalystV1Structs.RouteDescription",
-          "name": "routeDescription",
-          "type": "tuple"
-        },
-        {
-          "internalType": "uint256",
-          "name": "vaultTokens",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256[2]",
-          "name": "minOut",
-          "type": "uint256[2]"
-        },
-        {
-          "internalType": "address",
-          "name": "fallbackUser",
-          "type": "address"
-        },
-        {
-          "internalType": "bytes",
-          "name": "calldata_",
-          "type": "bytes"
-        }
-      ],
-      "name": "sendLiquidity",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "payable",
-      "type": "function"
+        ],
+        "stateMutability": "view"
     },
     {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "channelId",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes",
-          "name": "toVault",
-          "type": "bytes"
-        },
-        {
-          "internalType": "bool",
-          "name": "state",
-          "type": "bool"
-        }
-      ],
-      "name": "setConnection",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
+        "type": "function",
+        "name": "_adjustmentTarget",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint48",
+                "internalType": "uint48"
+            }
+        ],
+        "stateMutability": "view"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "administrator",
-          "type": "address"
-        }
-      ],
-      "name": "setFeeAdministrator",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
+        "type": "function",
+        "name": "_chainInterface",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "fee",
-          "type": "uint256"
-        }
-      ],
-      "name": "setGovernanceFee",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
+        "type": "function",
+        "name": "_escrowLookup",
+        "inputs": [
+            {
+                "name": "",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "fee",
-          "type": "uint256"
-        }
-      ],
-      "name": "setVaultFee",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
+        "type": "function",
+        "name": "_escrowedTokens",
+        "inputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
     },
     {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "name_",
-          "type": "string"
-        },
-        {
-          "internalType": "string",
-          "name": "symbol_",
-          "type": "string"
-        },
-        {
-          "internalType": "address",
-          "name": "chainInterface",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "vaultFee",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "governanceFee",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "feeAdministrator",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "setupMaster",
-          "type": "address"
-        }
-      ],
-      "name": "setup",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
+        "type": "function",
+        "name": "_escrowedVaultTokens",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
     },
     {
-      "inputs": [],
-      "name": "symbol",
-      "outputs": [
-        {
-          "internalType": "string",
-          "name": "",
-          "type": "string"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
+        "type": "function",
+        "name": "_feeAdministrator",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
     },
     {
-      "inputs": [],
-      "name": "totalSupply",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
+        "type": "function",
+        "name": "_governanceFeeShare",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint64",
+                "internalType": "uint64"
+            }
+        ],
+        "stateMutability": "view"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "transfer",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
+        "type": "function",
+        "name": "_lastModificationTime",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint48",
+                "internalType": "uint48"
+            }
+        ],
+        "stateMutability": "view"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "from",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "transferFrom",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
+        "type": "function",
+        "name": "_maxUnitCapacity",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
     },
     {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "identifier",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "address",
-          "name": "toAsset",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "U",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "minOut",
-          "type": "uint256"
-        }
-      ],
-      "name": "underwriteAsset",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "purchasedTokens",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
+        "type": "function",
+        "name": "_setupMaster",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "baseAmount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256[]",
-          "name": "minOut",
-          "type": "uint256[]"
-        }
-      ],
-      "name": "withdrawAll",
-      "outputs": [
-        {
-          "internalType": "uint256[]",
-          "name": "",
-          "type": "uint256[]"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
+        "type": "function",
+        "name": "_tokenIndexing",
+        "inputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "vaultTokens",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256[]",
-          "name": "withdrawRatio",
-          "type": "uint256[]"
-        },
-        {
-          "internalType": "uint256[]",
-          "name": "minOut",
-          "type": "uint256[]"
-        }
-      ],
-      "name": "withdrawMixed",
-      "outputs": [
-        {
-          "internalType": "uint256[]",
-          "name": "",
-          "type": "uint256[]"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
+        "type": "function",
+        "name": "_vaultConnection",
+        "inputs": [
+            {
+                "name": "",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            },
+            {
+                "name": "",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "_vaultFee",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint64",
+                "internalType": "uint64"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "_weight",
+        "inputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "allowance",
+        "inputs": [
+            {
+                "name": "owner",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "spender",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "result",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "approve",
+        "inputs": [
+            {
+                "name": "spender",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "balanceOf",
+        "inputs": [
+            {
+                "name": "owner",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "result",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "calcLocalSwap",
+        "inputs": [
+            {
+                "name": "from",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "to",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "calcReceiveAsset",
+        "inputs": [
+            {
+                "name": "to",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "U",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "calcSendAsset",
+        "inputs": [
+            {
+                "name": "from",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "decimals",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint8",
+                "internalType": "uint8"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "deleteUnderwriteAsset",
+        "inputs": [
+            {
+                "name": "identifier",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            },
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowToken",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "depositMixed",
+        "inputs": [
+            {
+                "name": "tokenAmounts",
+                "type": "uint256[]",
+                "internalType": "uint256[]"
+            },
+            {
+                "name": "minOut",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "factoryOwner",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "finishSetup",
+        "inputs": [],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "getUnitCapacity",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "governanceFeeDestination",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "initializeSwapCurves",
+        "inputs": [
+            {
+                "name": "assets",
+                "type": "address[]",
+                "internalType": "address[]"
+            },
+            {
+                "name": "weights",
+                "type": "uint256[]",
+                "internalType": "uint256[]"
+            },
+            {
+                "name": "amp",
+                "type": "uint64",
+                "internalType": "uint64"
+            },
+            {
+                "name": "depositor",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "localSwap",
+        "inputs": [
+            {
+                "name": "fromAsset",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "toAsset",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "minOut",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "multicall",
+        "inputs": [
+            {
+                "name": "data",
+                "type": "bytes[]",
+                "internalType": "bytes[]"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bytes[]",
+                "internalType": "bytes[]"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "name",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "string",
+                "internalType": "string"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "nonces",
+        "inputs": [
+            {
+                "name": "owner",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "result",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "onSendAssetFailure",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toAccount",
+                "type": "bytes",
+                "internalType": "bytes"
+            },
+            {
+                "name": "U",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowToken",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "blockNumberMod",
+                "type": "uint32",
+                "internalType": "uint32"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "onSendAssetSuccess",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toAccount",
+                "type": "bytes",
+                "internalType": "bytes"
+            },
+            {
+                "name": "U",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowToken",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "blockNumberMod",
+                "type": "uint32",
+                "internalType": "uint32"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "onSendLiquidityFailure",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toAccount",
+                "type": "bytes",
+                "internalType": "bytes"
+            },
+            {
+                "name": "U",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "blockNumberMod",
+                "type": "uint32",
+                "internalType": "uint32"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "onSendLiquiditySuccess",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toAccount",
+                "type": "bytes",
+                "internalType": "bytes"
+            },
+            {
+                "name": "U",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "blockNumberMod",
+                "type": "uint32",
+                "internalType": "uint32"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "permit",
+        "inputs": [
+            {
+                "name": "owner",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "spender",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "value",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "deadline",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "v",
+                "type": "uint8",
+                "internalType": "uint8"
+            },
+            {
+                "name": "r",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            },
+            {
+                "name": "s",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "ready",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "receiveAsset",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            },
+            {
+                "name": "fromVault",
+                "type": "bytes",
+                "internalType": "bytes"
+            },
+            {
+                "name": "toAssetIndex",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "toAccount",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "U",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "minOut",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "fromAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "fromAsset",
+                "type": "bytes",
+                "internalType": "bytes"
+            },
+            {
+                "name": "blockNumberMod",
+                "type": "uint32",
+                "internalType": "uint32"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "purchasedTokens",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "receiveLiquidity",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            },
+            {
+                "name": "fromVault",
+                "type": "bytes",
+                "internalType": "bytes"
+            },
+            {
+                "name": "toAccount",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "U",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "minVaultTokens",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "minReferenceAsset",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "fromAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "blockNumberMod",
+                "type": "uint32",
+                "internalType": "uint32"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "purchasedVaultTokens",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "releaseUnderwriteAsset",
+        "inputs": [
+            {
+                "name": "refundTo",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "identifier",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            },
+            {
+                "name": "escrowAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowToken",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "sourceIdentifier",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            },
+            {
+                "name": "fromVault",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "sendAsset",
+        "inputs": [
+            {
+                "name": "routeDescription",
+                "type": "tuple",
+                "internalType": "struct ICatalystV1Structs.RouteDescription",
+                "components": [
+                    {
+                        "name": "chainIdentifier",
+                        "type": "bytes32",
+                        "internalType": "bytes32"
+                    },
+                    {
+                        "name": "toVault",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                    },
+                    {
+                        "name": "toAccount",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                    },
+                    {
+                        "name": "incentive",
+                        "type": "tuple",
+                        "internalType": "struct IMessageEscrowStructs.IncentiveDescription",
+                        "components": [
+                            {
+                                "name": "maxGasDelivery",
+                                "type": "uint48",
+                                "internalType": "uint48"
+                            },
+                            {
+                                "name": "maxGasAck",
+                                "type": "uint48",
+                                "internalType": "uint48"
+                            },
+                            {
+                                "name": "refundGasTo",
+                                "type": "address",
+                                "internalType": "address"
+                            },
+                            {
+                                "name": "priceOfDeliveryGas",
+                                "type": "uint96",
+                                "internalType": "uint96"
+                            },
+                            {
+                                "name": "priceOfAckGas",
+                                "type": "uint96",
+                                "internalType": "uint96"
+                            },
+                            {
+                                "name": "targetDelta",
+                                "type": "uint64",
+                                "internalType": "uint64"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "deadline",
+                        "type": "uint64",
+                        "internalType": "uint64"
+                    }
+                ]
+            },
+            {
+                "name": "fromAsset",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "toAssetIndex",
+                "type": "uint8",
+                "internalType": "uint8"
+            },
+            {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "minOut",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "fallbackUser",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "underwriteIncentiveX16",
+                "type": "uint16",
+                "internalType": "uint16"
+            },
+            {
+                "name": "calldata_",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "payable"
+    },
+    {
+        "type": "function",
+        "name": "sendAssetFixedUnit",
+        "inputs": [
+            {
+                "name": "routeDescription",
+                "type": "tuple",
+                "internalType": "struct ICatalystV1Structs.RouteDescription",
+                "components": [
+                    {
+                        "name": "chainIdentifier",
+                        "type": "bytes32",
+                        "internalType": "bytes32"
+                    },
+                    {
+                        "name": "toVault",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                    },
+                    {
+                        "name": "toAccount",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                    },
+                    {
+                        "name": "incentive",
+                        "type": "tuple",
+                        "internalType": "struct IMessageEscrowStructs.IncentiveDescription",
+                        "components": [
+                            {
+                                "name": "maxGasDelivery",
+                                "type": "uint48",
+                                "internalType": "uint48"
+                            },
+                            {
+                                "name": "maxGasAck",
+                                "type": "uint48",
+                                "internalType": "uint48"
+                            },
+                            {
+                                "name": "refundGasTo",
+                                "type": "address",
+                                "internalType": "address"
+                            },
+                            {
+                                "name": "priceOfDeliveryGas",
+                                "type": "uint96",
+                                "internalType": "uint96"
+                            },
+                            {
+                                "name": "priceOfAckGas",
+                                "type": "uint96",
+                                "internalType": "uint96"
+                            },
+                            {
+                                "name": "targetDelta",
+                                "type": "uint64",
+                                "internalType": "uint64"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "deadline",
+                        "type": "uint64",
+                        "internalType": "uint64"
+                    }
+                ]
+            },
+            {
+                "name": "fromAsset",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "toAssetIndex",
+                "type": "uint8",
+                "internalType": "uint8"
+            },
+            {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "minOut",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "minU",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "fallbackUser",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "underwriteIncentiveX16",
+                "type": "uint16",
+                "internalType": "uint16"
+            },
+            {
+                "name": "calldata_",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "payable"
+    },
+    {
+        "type": "function",
+        "name": "sendLiquidity",
+        "inputs": [
+            {
+                "name": "routeDescription",
+                "type": "tuple",
+                "internalType": "struct ICatalystV1Structs.RouteDescription",
+                "components": [
+                    {
+                        "name": "chainIdentifier",
+                        "type": "bytes32",
+                        "internalType": "bytes32"
+                    },
+                    {
+                        "name": "toVault",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                    },
+                    {
+                        "name": "toAccount",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                    },
+                    {
+                        "name": "incentive",
+                        "type": "tuple",
+                        "internalType": "struct IMessageEscrowStructs.IncentiveDescription",
+                        "components": [
+                            {
+                                "name": "maxGasDelivery",
+                                "type": "uint48",
+                                "internalType": "uint48"
+                            },
+                            {
+                                "name": "maxGasAck",
+                                "type": "uint48",
+                                "internalType": "uint48"
+                            },
+                            {
+                                "name": "refundGasTo",
+                                "type": "address",
+                                "internalType": "address"
+                            },
+                            {
+                                "name": "priceOfDeliveryGas",
+                                "type": "uint96",
+                                "internalType": "uint96"
+                            },
+                            {
+                                "name": "priceOfAckGas",
+                                "type": "uint96",
+                                "internalType": "uint96"
+                            },
+                            {
+                                "name": "targetDelta",
+                                "type": "uint64",
+                                "internalType": "uint64"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "deadline",
+                        "type": "uint64",
+                        "internalType": "uint64"
+                    }
+                ]
+            },
+            {
+                "name": "vaultTokens",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "minOut",
+                "type": "uint256[2]",
+                "internalType": "uint256[2]"
+            },
+            {
+                "name": "fallbackUser",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "calldata_",
+                "type": "bytes",
+                "internalType": "bytes"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "payable"
+    },
+    {
+        "type": "function",
+        "name": "setConnection",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toVault",
+                "type": "bytes",
+                "internalType": "bytes"
+            },
+            {
+                "name": "state",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "setFeeAdministrator",
+        "inputs": [
+            {
+                "name": "administrator",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "setGovernanceFee",
+        "inputs": [
+            {
+                "name": "fee",
+                "type": "uint64",
+                "internalType": "uint64"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "setVaultFee",
+        "inputs": [
+            {
+                "name": "fee",
+                "type": "uint64",
+                "internalType": "uint64"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "setup",
+        "inputs": [
+            {
+                "name": "name_",
+                "type": "string",
+                "internalType": "string"
+            },
+            {
+                "name": "symbol_",
+                "type": "string",
+                "internalType": "string"
+            },
+            {
+                "name": "chainInterface",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "vaultFee",
+                "type": "uint64",
+                "internalType": "uint64"
+            },
+            {
+                "name": "governanceFee",
+                "type": "uint64",
+                "internalType": "uint64"
+            },
+            {
+                "name": "feeAdministrator",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "setupMaster",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "symbol",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "string",
+                "internalType": "string"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "totalSupply",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "result",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "transfer",
+        "inputs": [
+            {
+                "name": "to",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "transferFrom",
+        "inputs": [
+            {
+                "name": "from",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "to",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "amount",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "underwriteAsset",
+        "inputs": [
+            {
+                "name": "identifier",
+                "type": "bytes32",
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toAsset",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "U",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "minOut",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "purchasedTokens",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "withdrawAll",
+        "inputs": [
+            {
+                "name": "baseAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "minOut",
+                "type": "uint256[]",
+                "internalType": "uint256[]"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256[]",
+                "internalType": "uint256[]"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "withdrawMixed",
+        "inputs": [
+            {
+                "name": "vaultTokens",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "withdrawRatio",
+                "type": "uint256[]",
+                "internalType": "uint256[]"
+            },
+            {
+                "name": "minOut",
+                "type": "uint256[]",
+                "internalType": "uint256[]"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256[]",
+                "internalType": "uint256[]"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "event",
+        "name": "Approval",
+        "inputs": [
+            {
+                "name": "owner",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "spender",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "amount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "FinishSetup",
+        "inputs": [],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "Initialized",
+        "inputs": [
+            {
+                "name": "version",
+                "type": "uint64",
+                "indexed": false,
+                "internalType": "uint64"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "LocalSwap",
+        "inputs": [
+            {
+                "name": "account",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "fromAsset",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "toAsset",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "fromAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "toAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "ReceiveAsset",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "fromVault",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "toAccount",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "toAsset",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "units",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "toAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "fromAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "fromAsset",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "sourceBlockNumberMod",
+                "type": "uint32",
+                "indexed": false,
+                "internalType": "uint32"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "ReceiveLiquidity",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "fromVault",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "toAccount",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "units",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "toAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "fromAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "sourceBlockNumberMod",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SendAsset",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toVault",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "toAccount",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "fromAsset",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "toAssetIndex",
+                "type": "uint8",
+                "indexed": false,
+                "internalType": "uint8"
+            },
+            {
+                "name": "fromAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "minOut",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "units",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "fee",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "underwriteIncentiveX16",
+                "type": "uint16",
+                "indexed": false,
+                "internalType": "uint16"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SendAssetFailure",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toAccount",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "units",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowToken",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "blockNumberMod",
+                "type": "uint32",
+                "indexed": false,
+                "internalType": "uint32"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SendAssetSuccess",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toAccount",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "units",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowToken",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "blockNumberMod",
+                "type": "uint32",
+                "indexed": false,
+                "internalType": "uint32"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SendLiquidity",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toVault",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "toAccount",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "fromAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "minOut",
+                "type": "uint256[2]",
+                "indexed": false,
+                "internalType": "uint256[2]"
+            },
+            {
+                "name": "units",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SendLiquidityFailure",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toAccount",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "units",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "blockNumberMod",
+                "type": "uint32",
+                "indexed": false,
+                "internalType": "uint32"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SendLiquiditySuccess",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toAccount",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "units",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "escrowAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "blockNumberMod",
+                "type": "uint32",
+                "indexed": false,
+                "internalType": "uint32"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SetAmplification",
+        "inputs": [
+            {
+                "name": "targetTime",
+                "type": "uint48",
+                "indexed": false,
+                "internalType": "uint48"
+            },
+            {
+                "name": "targetAmplification",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SetConnection",
+        "inputs": [
+            {
+                "name": "channelId",
+                "type": "bytes32",
+                "indexed": false,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toVault",
+                "type": "bytes",
+                "indexed": false,
+                "internalType": "bytes"
+            },
+            {
+                "name": "newState",
+                "type": "bool",
+                "indexed": false,
+                "internalType": "bool"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SetFeeAdministrator",
+        "inputs": [
+            {
+                "name": "administrator",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SetGovernanceFee",
+        "inputs": [
+            {
+                "name": "fee",
+                "type": "uint64",
+                "indexed": false,
+                "internalType": "uint64"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SetVaultFee",
+        "inputs": [
+            {
+                "name": "fee",
+                "type": "uint64",
+                "indexed": false,
+                "internalType": "uint64"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SetWeights",
+        "inputs": [
+            {
+                "name": "targetTime",
+                "type": "uint248",
+                "indexed": false,
+                "internalType": "uint248"
+            },
+            {
+                "name": "targetWeights",
+                "type": "uint256[]",
+                "indexed": false,
+                "internalType": "uint256[]"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SwapUnderwritten",
+        "inputs": [
+            {
+                "name": "identifier",
+                "type": "bytes32",
+                "indexed": true,
+                "internalType": "bytes32"
+            },
+            {
+                "name": "toAsset",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "U",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "purchasedTokens",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "Transfer",
+        "inputs": [
+            {
+                "name": "from",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "to",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "amount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "VaultDeposit",
+        "inputs": [
+            {
+                "name": "toAccount",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "mint",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "assets",
+                "type": "uint256[]",
+                "indexed": false,
+                "internalType": "uint256[]"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "VaultWithdraw",
+        "inputs": [
+            {
+                "name": "toAccount",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "burn",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "assets",
+                "type": "uint256[]",
+                "indexed": false,
+                "internalType": "uint256[]"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "error",
+        "name": "AllowanceOverflow",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "AllowanceUnderflow",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "EscrowAlreadyExists",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "InsufficientAllowance",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "InsufficientBalance",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "InvalidInitialization",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "InvalidPermit",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "NotEnoughGas",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "NotInitializing",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "PermitExpired",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "Reentrancy",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "TotalSupplyOverflow",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "VaultNotConnected",
+        "inputs": []
     }
-  ]
-}
+]
