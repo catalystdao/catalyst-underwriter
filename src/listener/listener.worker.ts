@@ -181,11 +181,9 @@ class ListenerWorker {
                     continue;
                 }
 
-                let isCatchingUp = false;
                 const blocksToProcess = endBlock - startBlock;
                 if (this.config.maxBlocks != null && blocksToProcess > this.config.maxBlocks) {
                     endBlock = startBlock + this.config.maxBlocks;
-                    isCatchingUp = true;
                 }
 
                 this.logger.info(
@@ -194,10 +192,6 @@ class ListenerWorker {
                 await this.queryAndProcessEvents(startBlock, endBlock);
 
                 startBlock = endBlock + 1;
-                if (isCatchingUp) {
-                    // Skip loop delay
-                    continue;
-                }
             }
             catch (error) {
                 this.logger.error(error, `Failed on listener.worker`);
