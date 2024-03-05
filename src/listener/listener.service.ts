@@ -7,10 +7,12 @@ import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { MonitorService } from 'src/monitor/monitor.service';
 
 export const DEFAULT_LISTENER_MAX_BLOCKS = null;
+export const DEFAULT_LISTENER_RETRY_INTERVAL = 2000;
 export const DEFAULT_LISTENER_PROCESSING_INTERVAL = 100;
 
 
 interface DefaultListenerWorkerData {
+    retryInterval: number;
     processingInterval: number,
     maxBlocks: number | null
 }
@@ -27,6 +29,7 @@ export interface ListenerWorkerData {
     chainName: string,
     rpc: string,
     startingBlock?: number,
+    retryInterval: number;
     processingInterval: number,
     maxBlocks: number | null,
     vaultConfigs: VaultConfig[],
@@ -88,10 +91,12 @@ export class ListenerService implements OnModuleInit {
         const globalConfig = this.configService.globalConfig;
         const globalListenerConfig = globalConfig.listener;
 
+        const retryInterval = globalListenerConfig.retryInterval ?? DEFAULT_LISTENER_RETRY_INTERVAL;
         const processingInterval = globalListenerConfig.processingInterval ?? DEFAULT_LISTENER_PROCESSING_INTERVAL;
         const maxBlocks = globalListenerConfig.maxBlocks ?? DEFAULT_LISTENER_MAX_BLOCKS;
 
         return {
+            retryInterval,
             processingInterval,
             maxBlocks
         }
@@ -114,6 +119,7 @@ export class ListenerService implements OnModuleInit {
             chainName: chainConfig.name,
             rpc: chainConfig.rpc,
             startingBlock: chainListenerConfig.startingBlock,
+            retryInterval: chainListenerConfig.retryInterval ?? defaultConfig.retryInterval,
             processingInterval: chainListenerConfig.processingInterval ?? defaultConfig.processingInterval,
             maxBlocks: chainListenerConfig.maxBlocks ?? defaultConfig.maxBlocks,
             vaultConfigs,

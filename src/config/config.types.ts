@@ -20,6 +20,7 @@ export interface MonitorConfig extends MonitorGlobalConfig {}
 
 
 export interface ListenerGlobalConfig {
+    retryInterval?: number;
     processingInterval?: number;
     maxBlocks?: number;
     startingBlock?: number;

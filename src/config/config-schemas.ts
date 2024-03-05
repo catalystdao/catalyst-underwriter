@@ -100,6 +100,7 @@ const LISTENER_SCHEMA = {
     $id: "listener-schema",
     type: "object",
     properties: {
+        retryInterval: {$ref: "positive-number-schema"},
         processingInterval: {$ref: "processing-interval-schema"},
         maxBlocks: {
             type: "number",
