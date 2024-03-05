@@ -41,6 +41,12 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             throw new Error(`Unknown pool id ${order.poolId}`);
         }
 
+        const fromVaultConfig = poolConfig.vaults.find((vault) => vault.chainId == order.fromChainId);
+        if (fromVaultConfig == undefined) {
+            // NOTE: The following error is matched on `handleFailedOrder`
+            throw new Error(`No vault on chain ${order.fromChainId} defined on pool ${order.poolId}`);
+        }
+
         const toVaultConfig = poolConfig.vaults.find((vault) => vault.chainId == this.chainId);
         if (toVaultConfig == undefined) {
             // NOTE: The following error is matched on `handleFailedOrder`
@@ -48,11 +54,10 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         }
 
         // Get the amb
-        const interfaceAddress = toVaultConfig.interfaceAddress;
         const ambMessageData = await this.queryAMBMessageData(
             order.fromChainId,
             order.swapTxHash,
-            interfaceAddress,
+            fromVaultConfig.interfaceAddress,
             order.fromVault,
             order.swapIdentifier
         );
@@ -75,6 +80,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         );
 
         // Save the map 'underwrite-to-swap' for later use by the expirer
+        const interfaceAddress = toVaultConfig.interfaceAddress;
         await this.saveSwapDescriptionByActiveUnderwrite(
             order,
             toAsset,
