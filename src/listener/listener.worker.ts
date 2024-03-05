@@ -269,6 +269,7 @@ class ListenerWorker {
                     { ...filter, try: i },
                     `Failed to 'getLogs' on listener. Worker blocked until successful query.`
                 );
+                await wait(this.config.retryInterval);
             }
         }
 
