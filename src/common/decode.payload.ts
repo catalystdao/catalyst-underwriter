@@ -87,7 +87,7 @@ export type GeneralisedIncentiveMessage = SOURCE_TO_DESTINATION | DESTINATION_TO
 
 export function parsePayload(generalisedIncentiveMessage: string): GeneralisedIncentiveMessage {
     
-    let counter = 2;
+    let counter = generalisedIncentiveMessage.startsWith("0x") ? 2 : 0;
     const context: MessageContext = parseInt(generalisedIncentiveMessage.slice(counter, counter += 2), 16);
     const messageIdentifier = "0x" + generalisedIncentiveMessage.slice(counter, counter += 32*2);
     const applicationAddress = "0x" + generalisedIncentiveMessage.slice(counter, counter += (32*2*2 + 2));
