@@ -351,13 +351,24 @@ class ListenerWorker {
 
         const toVault = decodeBytes65Address(event.toVault);
         const toAccount = decodeBytes65Address(event.toAccount);
+
+        //TODO implement a better (generic) block number fix
+        let blockNumber = log.blockNumber;
+        if (this.chainId == '421614') { // Arbitrum sepolia
+            const blockData = await this.provider.send(
+                "eth_getBlockByNumber",
+                ["0x"+blockNumber.toString(16), false]
+            );
+            blockNumber = blockData.l1BlockNumber;
+        }
+        
         //TODO the way in which the hash is calculated should depend on the fromVault template
         const swapId = calcAssetSwapIdentifier(
             toAccount,
             event.units,
             event.fromAmount - event.fee,
             event.fromAsset,
-            log.blockNumber
+            blockNumber
         );
     
         this.logger.info(
