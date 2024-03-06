@@ -14,7 +14,7 @@ import { EvalQueue } from "./queues/eval-queue";
 import { MonitorInterface, MonitorStatus } from "src/monitor/monitor.interface";
 
 
-class UnderwriterWorker {
+class ExpirerWorker {
     readonly store: Store;
     readonly logger: pino.Logger;
 
@@ -347,4 +347,4 @@ class UnderwriterWorker {
 
 }
 
-void new UnderwriterWorker().run();
+void new ExpirerWorker().run();
