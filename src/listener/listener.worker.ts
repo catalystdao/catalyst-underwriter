@@ -260,7 +260,7 @@ class ListenerWorker {
             } catch (error) {
                 i++;
                 this.logger.warn(
-                    { ...filter, try: i },
+                    { ...filter, error, try: i },
                     `Failed to 'getLogs' on listener. Worker blocked until successful query.`
                 );
                 await wait(this.config.retryInterval);
