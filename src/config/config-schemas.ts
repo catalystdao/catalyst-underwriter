@@ -138,6 +138,9 @@ const EXPIRER_SCHEMA = {
     $id: "expirer-schema",
     type: "object",
     properties: {
+        enabled: {
+            type: "boolean"
+        },
         retryInterval: {$ref: "positive-number-schema"},
         processingInterval: {$ref: "processing-interval-schema"},
         maxTries: {$ref: "positive-number-schema"},

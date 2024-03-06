@@ -16,6 +16,7 @@ export const DEFAULT_EXPIRER_MAX_PENDING_TRANSACTIONS = DEFAULT_UNDERWRITER_MAX_
 export const DEFAULT_EXPIRER_EXPIRE_BLOCK_MARGIN = 500;
 
 interface DefaultExpirerWorkerData {
+    enabled: boolean;
     retryInterval: number;
     processingInterval: number;
     maxTries: number;
@@ -24,6 +25,7 @@ interface DefaultExpirerWorkerData {
 }
 
 export interface ExpirerWorkerData {
+    enabled: boolean;
     chainId: string;
     chainName: string;
     pools: PoolConfig[];
@@ -67,6 +69,15 @@ export class ExpirerService implements OnModuleInit {
 
             const workerData = await this.loadWorkerConfig(chainId, pools, defaultWorkerConfig);
 
+            if (!workerData.enabled) {
+                this.loggerService.warn(
+                    { chainId },
+                    'Skipping expirer worker creation: expirer disabled.'
+                );
+
+                continue;
+            }
+
             const worker = new Worker(join(__dirname, 'expirer.worker.js'), {
                 workerData,
                 transferList: [workerData.monitorPort, workerData.walletPort]
@@ -94,6 +105,8 @@ export class ExpirerService implements OnModuleInit {
         const globalExpirerConfig = this.configService.globalConfig.expirer;
         const globalUnderwriterConfig = this.configService.globalConfig.underwriter;
 
+        const enabled = globalExpirerConfig.enabled != false;
+
         const retryInterval = globalExpirerConfig.retryInterval
             ?? globalUnderwriterConfig.retryInterval
             ?? DEFAULT_EXPIRER_RETRY_INTERVAL;
@@ -110,6 +123,7 @@ export class ExpirerService implements OnModuleInit {
             ?? DEFAULT_EXPIRER_EXPIRE_BLOCK_MARGIN;
     
         return {
+            enabled,
             retryInterval,
             processingInterval,
             maxTries,
@@ -138,6 +152,9 @@ export class ExpirerService implements OnModuleInit {
         const chainExpirerConfig = chainConfig.expirer;
         const chainUnderwriterConfig = chainConfig.underwriter;
         return {
+            enabled: defaultConfig.enabled
+                && chainExpirerConfig.enabled != false,
+
             chainId,
             chainName: chainConfig.name,
             pools: filteredPools,

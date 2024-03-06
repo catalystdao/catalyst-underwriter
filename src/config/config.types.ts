@@ -48,6 +48,7 @@ export interface UnderwriterConfig extends UnderwriterGlobalConfig {}
 
 
 export interface ExpirerGlobalConfig {
+    enabled?: boolean;
     retryInterval?: number;
     processingInterval?: number;
     maxTries?: number;
