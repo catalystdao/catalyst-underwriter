@@ -1,11 +1,9 @@
-FROM node:20-alpine AS base
+FROM node:18-alpine AS base
 
 WORKDIR /usr/catalyst-underwriter
 
 # Copy packages
 COPY package.json pnpm-lock.yaml tsconfig*.json ./
-COPY abis ./abis
-copy src ./src
 RUN corepack enable
 
 # Install depends
@@ -13,11 +11,15 @@ FROM base AS prod-deps
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile --ignore-scripts
 
 FROM base AS build
+COPY abis ./abis
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod=false --frozen-lockfile
+
+# Build
+copy src ./src
 RUN pnpm run build
 
 # Production image
-FROM node:20-alpine
+FROM node:18-alpine
 
 WORKDIR /usr/catalyst-underwriter
 
