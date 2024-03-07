@@ -15,7 +15,7 @@ COPY abis ./abis
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod=false --frozen-lockfile
 
 # Build
-copy src ./src
+COPY src ./src
 RUN pnpm run build
 
 # Production image
