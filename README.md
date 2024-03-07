@@ -51,15 +51,15 @@ The `-d` option detaches the process to the background.
 Install the required dependencies with:
 
 ```bash
-yarn install
+pnpm install
 ```
-- **NOTE**: The `devDependencies` are required to build the project. If running on a production machine where `NODE_ENV=production`, use `yarn install --prod=false` 
+- **NOTE**: The `devDependencies` are required to build the project. If running on a production machine where `NODE_ENV=production`, use `pnpm install --prod=false` 
 
 Make sure that a Generalised Relayer implementation is running, and verify that the port of the active Redis database is correctly set on the `.env` configuration file.
 
 Build and start the Underwriter with:
 ```bash
-yarn start
+pnpm start
 ```
 
 For further insight into the requirements for running the Underwriter see the `docker-compose.yaml` file.
