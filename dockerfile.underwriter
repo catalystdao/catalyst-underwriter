@@ -9,18 +9,20 @@ copy src ./src
 RUN corepack enable
 
 # Install depends
+FROM base AS prod-deps
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile --ignore-scripts
+
+FROM base AS build
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod=false --frozen-lockfile
 RUN pnpm run build
-
-RUN pnpm prune --prod --config.ignore-scripts=true
 
 # Production image
 FROM node:20-alpine
 
 WORKDIR /usr/catalyst-underwriter
 
-COPY --from=base /usr/catalyst-underwriter/dist ./dist
-COPY --from=base /usr/catalyst-underwriter/node_modules ./node_modules
+COPY --from=build /usr/catalyst-underwriter/dist ./dist
+COPY --from=prod-deps /usr/catalyst-underwriter/node_modules ./node_modules
 
 ENV NODE_ENV=${NODE_ENV}
 
