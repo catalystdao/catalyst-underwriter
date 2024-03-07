@@ -1,6 +1,7 @@
 services:
 
   underwriter:
+    image: ghcr.io/catalystdao/catalyst-underwriter:latest
     build:
       context: .
       dockerfile: dockerfile.underwriter
@@ -13,8 +14,8 @@ services:
     container_name: underwriter
     restart: unless-stopped
     networks:
-      - generalisedrelayer_default
+      - generalised-relayer_default
 
 networks:
-  generalisedrelayer_default:
+  generalised-relayer_default:
     external: true
