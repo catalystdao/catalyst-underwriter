@@ -221,23 +221,29 @@ class ListenerWorker {
         const logs = await this.queryLogs(fromBlock, toBlock);
 
         for (const log of logs) {
+            try {
+                const vaultConfig = this.getVaultConfig(log.address);
+                if (vaultConfig != undefined) {
+                    await this.handleVaultEvent(log, vaultConfig);
+                    continue;
+                }
 
-            const vaultConfig = this.getVaultConfig(log.address);
-            if (vaultConfig != undefined) {
-                await this.handleVaultEvent(log, vaultConfig);
-                continue;
+                const isInterface = this.isInterface(log.address);
+                if (isInterface) {
+                    await this.handleInterfaceEvent(log);
+                    continue;
+                }
+
+                this.logger.warn(
+                    { address: log.address },
+                    `No vault/interface configuration found for the contract address ${log.address}.`
+                );
+            } catch (error) {
+                this.logger.error(
+                    { log, error },
+                    `Failed to process event on listener worker.`
+                );
             }
-
-            const isInterface = this.isInterface(log.address);
-            if (isInterface) {
-                await this.handleInterfaceEvent(log);
-                continue;
-            }
-
-            this.logger.warn(
-                { address: log.address },
-                `No vault/interface configuration found for the contract address ${log.address}.`
-            );
         }
     }
 
