@@ -116,8 +116,8 @@ export class ConfigService {
                 monitor: this.formatMonitorConfig(rawChainConfig.monitor),
                 listener: this.formatListenerConfig(rawChainConfig.listener),
                 underwriter: this.formatUnderwriterConfig(rawChainConfig.underwriter),
-                expirer: this.formatWalletConfig(rawChainConfig.expirer),
-                wallet: this.formatExpirerConfig(rawChainConfig.wallet)
+                expirer: this.formatExpirerConfig(rawChainConfig.expirer),
+                wallet: this.formatWalletConfig(rawChainConfig.wallet)
             });
         }
 
