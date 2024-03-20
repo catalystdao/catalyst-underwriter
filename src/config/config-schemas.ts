@@ -12,6 +12,12 @@ const POSITIVE_NUMBER_SCHEMA = {
     type: "number",
     minimum: 0,
 }
+const POSITIVE_NON_ZERO_INTEGER_SCHEMA = {
+    $id: "positive-non-zero-integer-schema",
+    type: "number",
+    exclusiveMinimum: 0,
+    multipleOf: 1,
+}
 const NON_EMPTY_STRING_SCHEMA = {
     $id: "non-empty-string-schema",
     type: "string",
@@ -158,6 +164,7 @@ const WALLET_SCHEMA = {
         processingInterval: {$ref: "processing-interval-schema"},
         maxTries: {$ref: "positive-number-schema"},
         maxPendingTransactions: {$ref: "positive-number-schema"},
+        confirmations: {$ref: "positive-non-zero-integer-schema"},
         confirmationTimeout: {$ref: "positive-number-schema"},
         lowGasBalanceWarning: {$ref: "gas-field-schema"},
         gasBalanceUpdateInterval: {$ref: "positive-number-schema"},
@@ -288,6 +295,7 @@ const POOLS_SCHEMA = {
 export function getConfigValidator(): AnyValidateFunction<unknown> {
     const ajv = new Ajv({strict: true});
     ajv.addSchema(POSITIVE_NUMBER_SCHEMA);
+    ajv.addSchema(POSITIVE_NON_ZERO_INTEGER_SCHEMA);
     ajv.addSchema(NON_EMPTY_STRING_SCHEMA);
     ajv.addSchema(ADDRESS_FIELD_SCHEMA);
     ajv.addSchema(GAS_FIELD_SCHEMA);
