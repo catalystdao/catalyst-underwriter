@@ -69,12 +69,21 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
             txRequest,
             order,
             { deadline: order.submissionDeadline }
-        ).then(transactionResult => {
+        ).then((transactionResult): UnderwriteOrderResult => {
             if (transactionResult.submissionError) {
                 throw transactionResult.submissionError;    //TODO wrap in a 'SubmissionError' type?
             }
             if (transactionResult.confirmationError) {
                 throw transactionResult.confirmationError;    //TODO wrap in a 'ConfirmationError' type?
+            }
+
+            if (transactionResult.tx == undefined) {
+                // This case should never be reached (if tx == undefined, a 'submissionError' should be returned).
+                throw new Error('No transaction returned on wallet transaction submission result.');
+            }
+            if (transactionResult.txReceipt == undefined) {
+                // This case should never be reached (if txReceipt == undefined, a 'confirmationError' should be returned).
+                throw new Error('No transaction receipt returned on wallet transaction submission result.');
             }
 
             const order = transactionResult.metadata as UnderwriteOrder;
@@ -83,7 +92,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
                 ...order,
                 tx: transactionResult.tx,
                 txReceipt: transactionResult.txReceipt
-            } as UnderwriteOrderResult;
+            };
         });
 
         return { result: txPromise };
