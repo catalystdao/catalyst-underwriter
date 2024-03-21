@@ -253,7 +253,9 @@ export class WalletService implements OnModuleInit {
                 }
             };
             worker.on("message", listener);
-            worker.postMessage({ messageId } as WalletGetPortMessage);
+
+            const portMessage: WalletGetPortMessage = { messageId };
+            worker.postMessage(portMessage);
         });
 
         return portPromise;

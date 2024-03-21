@@ -145,7 +145,9 @@ export class MonitorService implements OnModuleInit {
                 }
             };
             worker.on("message", listener);
-            worker.postMessage({ messageId } as MonitorGetPortMessage);
+
+            const portMessage: MonitorGetPortMessage = { messageId };
+            worker.postMessage(portMessage);
         });
 
         return portPromise;
