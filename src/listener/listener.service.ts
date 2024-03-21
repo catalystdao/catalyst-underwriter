@@ -5,6 +5,7 @@ import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService } from 'src/config/config.service';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { MonitorService } from 'src/monitor/monitor.service';
+import { tryErrorToString } from 'src/common/utils';
 
 export const DEFAULT_LISTENER_MAX_BLOCKS = null;
 export const DEFAULT_LISTENER_RETRY_INTERVAL = 2000;
@@ -72,7 +73,7 @@ export class ListenerService implements OnModuleInit {
 
             worker.on('error', (error) =>
                 this.loggerService.fatal(
-                    { error, chainId },
+                    { error: tryErrorToString(error), chainId },
                     `Error on listener worker.`,
                 ),
             );

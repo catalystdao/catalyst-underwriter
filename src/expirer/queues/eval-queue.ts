@@ -3,6 +3,7 @@ import { ExpireOrder, ExpireEvalOrder } from "../expirer.types";
 import pino from "pino";
 import { Store } from "src/store/store.lib";
 import { UnderwriteStatus } from "src/store/store.types";
+import { tryErrorToString } from "src/common/utils";
 
 export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
 
@@ -103,7 +104,7 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
             toChainId: order.toChainId,
             toInterface: order.toInterface,
             underwriteId: order.underwriteId,
-            error,
+            error: tryErrorToString(error),
             try: retryCount + 1
         };
 

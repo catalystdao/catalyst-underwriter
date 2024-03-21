@@ -7,6 +7,7 @@ import { CatalystChainInterface__factory } from "src/contracts";
 import { WalletInterface } from "src/wallet/wallet.interface";
 import { encodeBytes65Address } from "src/common/decode.payload";
 import fetch from "node-fetch";
+import { tryErrorToString } from "src/common/utils";
 
 export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, UnderwriteOrderResult> {
 
@@ -106,7 +107,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
             fromChainId: order.fromChainId,
             swapTxHash: order.swapTxHash,
             swapId: order.swapIdentifier,
-            error,
+            error: tryErrorToString(error),
             try: retryCount + 1
         };
 

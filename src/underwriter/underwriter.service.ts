@@ -8,6 +8,7 @@ import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { WalletService } from 'src/wallet/wallet.service';
 import { Wallet } from 'ethers';
 import { DisableUnderwritingRequest, EnableUnderwritingRequest } from './underwriter.controller';
+import { tryErrorToString } from 'src/common/utils';
 
 
 export const DEFAULT_UNDERWRITER_RETRY_INTERVAL = 30000;
@@ -102,7 +103,7 @@ export class UnderwriterService implements OnModuleInit {
 
             worker.on('error', (error) =>
                 this.loggerService.fatal(
-                    { error, chainId },
+                    { error: tryErrorToString(error), chainId },
                     `Error on underwriter worker.`,
                 ),
             );

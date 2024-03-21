@@ -8,6 +8,7 @@ import { LoggerService, STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { WalletService } from "src/wallet/wallet.service";
 import { DEFAULT_UNDERWRITER_RETRY_INTERVAL, DEFAULT_UNDERWRITER_PROCESSING_INTERVAL, DEFAULT_UNDERWRITER_MAX_TRIES, DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS } from "src/underwriter/underwriter.service";
 import { MonitorService } from "src/monitor/monitor.service";
+import { tryErrorToString } from "src/common/utils";
 
 export const DEFAULT_EXPIRER_RETRY_INTERVAL = DEFAULT_UNDERWRITER_RETRY_INTERVAL;
 export const DEFAULT_EXPIRER_PROCESSING_INTERVAL = DEFAULT_UNDERWRITER_PROCESSING_INTERVAL;
@@ -86,7 +87,7 @@ export class ExpirerService implements OnModuleInit {
 
             worker.on('error', (error) =>
                 this.loggerService.fatal(
-                    { error, chainId },
+                    { error: tryErrorToString(error), chainId },
                     `Error on expirer worker.`,
                 ),
             );

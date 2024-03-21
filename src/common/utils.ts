@@ -41,3 +41,17 @@ export const calcUnderwriteIdentifier = (
 
     return keccak256(encodedBytes);
 }
+
+export const tryErrorToString = (error: any): string | undefined => {
+    if (error == undefined) {
+        return undefined;
+    }
+    if (typeof error == "string") {
+        return error;
+    }
+    try {
+        return error.toString();
+    } catch {
+        return 'Unable to stringify error.';
+    }
+}

@@ -2,7 +2,7 @@ import { JsonRpcProvider } from "ethers";
 import pino, { LoggerOptions } from "pino";
 import { parentPort, workerData } from 'worker_threads';
 import { UnderwriterWorkerCommand, UnderwriterWorkerCommandId, UnderwriterWorkerData } from "./underwriter.service";
-import { wait } from "src/common/utils";
+import { tryErrorToString, wait } from "src/common/utils";
 import { AMBConfig, PoolConfig, TokenConfig } from "src/config/config.types";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
@@ -297,9 +297,9 @@ class UnderwriterWorker {
                     swapStatus.sendAssetEvent!.underwriteIncentiveX16,
                 );
 
-            }).catch((rejection) => {
+            }).catch((rejection: any) => {
                 this.logger.error(
-                    { error: rejection, swapDescription },
+                    { error: tryErrorToString(rejection), swapDescription },
                     `Failed to retrieve the 'SwapStatus'.`
                 );
             })

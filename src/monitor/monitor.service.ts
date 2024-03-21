@@ -5,6 +5,7 @@ import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService } from 'src/config/config.service';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { MonitorGetPortMessage, MonitorGetPortResponse } from './monitor.types';
+import { tryErrorToString } from 'src/common/utils';
 
 export const DEFAULT_MONITOR_INTERVAL = 5000;
 export const DEFAULT_MONITOR_BLOCK_DELAY = 0;
@@ -57,7 +58,7 @@ export class MonitorService implements OnModuleInit {
 
             worker.on('error', (error) =>
                 this.loggerService.fatal(
-                    { error, chainId },
+                    { error: tryErrorToString(error), chainId },
                     `Error on monitor worker.`,
                 ),
             );

@@ -1,3 +1,4 @@
+import { tryErrorToString } from './../common/utils';
 import { TransactionReceipt, TransactionRequest, TransactionResponse } from 'ethers';
 import { MessagePort } from 'worker_threads';
 import { WalletTransactionOptions, WalletTransactionRequestMessage, WalletTransactionRequestResponse } from './wallet.types';
@@ -38,8 +39,8 @@ export class WalletInterface {
                         metadata: data.metadata,
                         tx: data.tx,
                         txReceipt: data.txReceipt,
-                        submissionError: data.submissionError,
-                        confirmationError: data.confirmationError
+                        submissionError: tryErrorToString(data.submissionError),
+                        confirmationError: tryErrorToString(data.confirmationError)
                     };
                     resolve(result);
                 }

@@ -5,7 +5,7 @@ import { ListenerWorkerData, VaultConfig } from "./listener.service";
 import { CatalystChainInterface__factory, ICatalystV1VaultEvents__factory } from "src/contracts";
 import { CatalystChainInterfaceInterface, ExpireUnderwriteEvent, FulfillUnderwriteEvent, SwapUnderwrittenEvent } from "src/contracts/CatalystChainInterface";
 import { ICatalystV1VaultEventsInterface, SendAssetEvent } from "src/contracts/ICatalystV1VaultEvents";
-import { calcAssetSwapIdentifier, wait } from "src/common/utils";
+import { calcAssetSwapIdentifier, tryErrorToString, wait } from "src/common/utils";
 import { Store } from "src/store/store.lib";
 import { decodeBytes65Address } from "src/common/decode.payload";
 import { ReceiveAssetEvent } from "src/contracts/CatalystVaultCommon";
@@ -266,7 +266,7 @@ class ListenerWorker {
             } catch (error) {
                 i++;
                 this.logger.warn(
-                    { ...filter, error, try: i },
+                    { ...filter, error: tryErrorToString(error), try: i },
                     `Failed to 'getLogs' on listener. Worker blocked until successful query.`
                 );
                 await wait(this.config.retryInterval);

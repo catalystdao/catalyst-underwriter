@@ -1,4 +1,4 @@
-import { calcAssetSwapIdentifier, calcUnderwriteIdentifier } from 'src/common/utils';
+import { calcAssetSwapIdentifier, calcUnderwriteIdentifier, tryErrorToString } from 'src/common/utils';
 import pino from "pino";
 import { HandleOrderResult, ProcessingQueue } from "../../processing-queue/processing-queue";
 import { EvalOrder, UnderwriteOrder } from "../underwriter.types";
@@ -247,7 +247,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             fromChainId: order.fromChainId,
             swapTxHash: order.swapTxHash,
             swapId: order.swapIdentifier,
-            error,
+            error: tryErrorToString(error),
             try: retryCount + 1
         };
 

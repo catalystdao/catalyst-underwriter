@@ -5,6 +5,7 @@ import { PoolConfig } from "src/config/config.types";
 import { CatalystChainInterface__factory } from "src/contracts";
 import { WalletInterface } from "src/wallet/wallet.interface";
 import { ExpireOrder, ExpireOrderResult } from "../expirer.types";
+import { tryErrorToString } from "src/common/utils";
 export class ExpireQueue extends ProcessingQueue<ExpireOrder, ExpireOrderResult> {
 
     constructor(
@@ -87,7 +88,7 @@ export class ExpireQueue extends ProcessingQueue<ExpireOrder, ExpireOrderResult>
             toChainId: order.toChainId,
             toInterface: order.toInterface,
             underwriteId: order.underwriteId,
-            error,
+            error: tryErrorToString(error),
             try: retryCount + 1
         };
 

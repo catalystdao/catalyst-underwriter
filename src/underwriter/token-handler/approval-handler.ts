@@ -4,6 +4,7 @@ import { WalletInterface } from "src/wallet/wallet.interface";
 import { JsonRpcProvider, MaxUint256, TransactionRequest } from "ethers";
 import pino from "pino";
 import { Token__factory } from "src/contracts";
+import { tryErrorToString } from "src/common/utils";
 
 export interface ApprovalDescription {
     interfaceAddress: string;
@@ -184,8 +185,8 @@ export class ApprovalHandler {
             newSetAllowance,
             requiredAllowance,
             txHash: result.txReceipt?.hash,
-            submissionError: result.submissionError,
-            confirmationError: result.confirmationError,
+            submissionError: tryErrorToString(result.submissionError),
+            confirmationError: tryErrorToString(result.confirmationError),
         }
 
         if (result.submissionError || result.confirmationError) {
