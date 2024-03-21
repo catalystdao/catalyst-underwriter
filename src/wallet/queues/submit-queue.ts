@@ -64,6 +64,8 @@ export class SubmitQueue extends ProcessingQueue<WalletTransactionRequest, Pendi
                     errorDescription,
                     'Transaction submission deadline exceeded.'
                 );
+
+                order.submissionError = error;
                 return false;   // Do not retry submission
             }
         }
@@ -79,6 +81,8 @@ export class SubmitQueue extends ProcessingQueue<WalletTransactionRequest, Pendi
         }
 
         this.logger.warn(errorDescription, `Error on transaction submission.`);
+
+        order.submissionError = error;
         return false;
 
     }
