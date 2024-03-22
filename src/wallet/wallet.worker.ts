@@ -6,7 +6,7 @@ import { wait } from "src/common/utils";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
 import { TransactionHelper } from "./transaction-helper";
-import { TransactionQueue as ConfirmQueue } from "./queues/confirm-queue";
+import { ConfirmQueue } from "./queues/confirm-queue";
 import { WalletWorkerData } from "./wallet.service";
 import { ConfirmedTransaction, GasFeeConfig, WalletGetPortMessage, WalletGetPortResponse, PendingTransaction, WalletTransactionOptions, WalletTransactionRequest, WalletTransactionRequestMessage, WalletTransactionRequestResponse, BalanceConfig } from "./wallet.types";
 import { SubmitQueue } from "./queues/submit-queue";
