@@ -1,6 +1,6 @@
 {
   "name": "catalyst-underwriter",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "The Catalyst Underwriter",
   "main": "dist/index.js",
   "author": "Ran Cohen",
