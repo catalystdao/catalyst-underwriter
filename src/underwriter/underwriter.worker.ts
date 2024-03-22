@@ -206,10 +206,11 @@ class UnderwriterWorker {
 
             await this.underwriteQueue.addOrders(...newUnderwriteOrders);
             await this.underwriteQueue.processOrders();
-            const [confirmedOrders, rejectedOrders, ] = this.underwriteQueue.getFinishedOrders();
+            const [confirmedOrders, rejectedOrders, failedOrders] = this.underwriteQueue.getFinishedOrders();
 
             await this.handleConfirmedOrders(confirmedOrders);
             await this.handleRejectedOrders(rejectedOrders);
+            await this.handleFailedOrders(failedOrders);
 
             await wait(this.config.processingInterval);
         }
@@ -251,6 +252,19 @@ class UnderwriterWorker {
     ): Promise<void> {
 
         for (const rejectedOrder of rejectedSubmitOrders) {
+            this.tokenHandler.registerRequiredAllowanceDecrease(
+                rejectedOrder.interfaceAddress,
+                rejectedOrder.toAsset,
+                rejectedOrder.toAssetAllowance
+            )
+        }
+    }
+
+    private async handleFailedOrders(
+        failedSubmitOrders: UnderwriteOrder[],
+    ): Promise<void> {
+
+        for (const rejectedOrder of failedSubmitOrders) {
             this.tokenHandler.registerRequiredAllowanceDecrease(
                 rejectedOrder.interfaceAddress,
                 rejectedOrder.toAsset,
