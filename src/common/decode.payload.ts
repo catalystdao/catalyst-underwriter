@@ -72,6 +72,7 @@ export type SOURCE_TO_DESTINATION = COMMON_MESSAGE & {
     messageIdentifier: string;
     rawToApplication: string;
     toApplication: string;
+    deadline: bigint;
     maxGasLimit: bigint;
 }
 export type DESTINATION_TO_SOURCE = COMMON_MESSAGE & {
@@ -98,7 +99,7 @@ export function parsePayload(generalisedIncentiveMessage: string): GeneralisedIn
     };
     if (context === MessageContext.CTX_SOURCE_TO_DESTINATION) {
         const toApplication = "0x" + generalisedIncentiveMessage.slice(counter, counter += (32*2*2 + 2));
-        counter += 8*2; // TODO implement deadline decoding
+        const deadline = BigInt("0x" + generalisedIncentiveMessage.slice(counter, counter += (8*2)));
         const maxGasLimit = BigInt("0x" + generalisedIncentiveMessage.slice(counter, counter += (6*2)));
         const message = "0x" + generalisedIncentiveMessage.slice(counter);
         return {
@@ -106,6 +107,7 @@ export function parsePayload(generalisedIncentiveMessage: string): GeneralisedIn
             context: context,
             rawToApplication: toApplication,
             toApplication: decodeBytes65Address(toApplication),
+            deadline,
             maxGasLimit,
             message,
         }
