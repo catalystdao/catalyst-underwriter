@@ -6,7 +6,7 @@ import { ConfirmedTransaction, PendingTransaction } from '../wallet.types';
 import { tryErrorToString } from 'src/common/utils';
 
 
-export class TransactionQueue extends ProcessingQueue<PendingTransaction, ConfirmedTransaction> {
+export class ConfirmQueue extends ProcessingQueue<PendingTransaction, ConfirmedTransaction> {
 
     constructor(
         readonly retryInterval: number,
