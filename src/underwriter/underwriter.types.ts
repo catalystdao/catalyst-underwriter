@@ -9,6 +9,7 @@ export interface Order {
     fromVault: string;
     swapTxHash: string;
     swapBlockNumber: number;
+    swapBlockTimestamp: number;
     swapObservedAtBlockNumber: number;
 
     // Derived from the SendAsset event

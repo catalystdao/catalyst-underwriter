@@ -6,7 +6,7 @@ import { PoolConfig, TokenConfig } from "src/config/config.types";
 import { CatalystVaultCommon__factory } from "src/contracts";
 import fetch from 'node-fetch';
 import { CatalystContext, catalystParse } from 'src/common/decode.catalyst';
-import { parsePayload } from 'src/common/decode.payload';
+import { MessageContext, parsePayload } from 'src/common/decode.payload';
 import { JsonRpcProvider } from 'ethers';
 import { Store } from 'src/store/store.lib';
 import { TokenHandler } from '../token-handler/token-handler';
@@ -21,6 +21,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         readonly retryInterval: number,
         readonly maxTries: number,
         private readonly underwriteBlocksMargin: number,
+        private readonly minRelayDeadlineDuration: bigint,
         private readonly tokenHandler: TokenHandler,
         private readonly store: Store,
         private readonly provider: JsonRpcProvider,
@@ -114,6 +115,24 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
                 "Skipping underwrite: too many blocks have passed since the swap transaction."
             );
             return null;
+        }
+
+        // Never underwrite if the incentives deadline is too low.
+        // NOTE: '0' means no deadline.
+        if (ambMessageData.deadline != 0n) {
+            const relayDeadlineDurationSeconds = ambMessageData.deadline - BigInt(order.swapBlockTimestamp);
+            if (relayDeadlineDurationSeconds < this.minRelayDeadlineDuration / 1000n) {
+                this.logger.info(
+                    {
+                        swapId: order.swapIdentifier,
+                        swapTxHash: order.swapTxHash,
+                        swapBlockNumber: order.swapBlockNumber,
+                        deadline: ambMessageData.deadline
+                    },
+                    "Skipping underwrite: incentivised message deadline is too short"
+                );
+                return null;
+            }
         }
 
         // Verify the token to underwrite is supported
@@ -321,7 +340,8 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         messageIdentifier: string;
         amb: string;
         sourceChainId: string;
-        destinationChainId: string;        
+        destinationChainId: string;
+        deadline: bigint;        
     } | undefined> {
 
         const relayerEndpoint = `http://${process.env.RELAYER_HOST}:${process.env.RELAYER_PORT}/getAMBs?`;
@@ -333,6 +353,8 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         for (const amb of ambs) {
             try {
                 const giPayload = parsePayload(amb.payload);
+
+                if (giPayload.context != MessageContext.CTX_SOURCE_TO_DESTINATION) continue;
 
                 if (giPayload.sourceApplicationAddress.toLowerCase() != sourceInterface.toLowerCase()) continue;
 
@@ -358,6 +380,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
                     amb: amb.amb,
                     sourceChainId: amb.sourceChain,
                     destinationChainId: amb.destinationChain,
+                    deadline: giPayload.deadline
                 };
 
             } catch {

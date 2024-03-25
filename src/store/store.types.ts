@@ -54,6 +54,7 @@ export interface SendAssetEventDetails extends TransactionDescription {
     fee: bigint;
     minOut: bigint;
     underwriteIncentiveX16: bigint;
+    blockTimestamp: number;
     observedAtBlockNumber: number;
 }
 

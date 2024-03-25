@@ -36,6 +36,7 @@ export interface UnderwriterGlobalConfig {
     maxTries?: number;
     maxPendingTransactions?: number;
     underwriteBlocksMargin?: number;
+    minRelayDeadlineDuration?: bigint;
     underwriteDelay?: number;
     maxSubmissionDelay?: number;
     maxUnderwriteAllowed?: bigint;

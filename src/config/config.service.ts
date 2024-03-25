@@ -218,6 +218,9 @@ export class ConfigService {
 
     private formatUnderwriterGlobalConfig(rawConfig: any): UnderwriterGlobalConfig {
         const config = {...rawConfig};
+        if (config.minRelayDeadlineDuration != undefined) {
+            config.minRelayDeadlineDuration = BigInt(config.minRelayDeadlineDuration);
+        }
         if (config.maxUnderwriteAllowed != undefined) {
             config.maxUnderwriteAllowed = BigInt(config.maxUnderwriteAllowed);
         }

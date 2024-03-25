@@ -130,6 +130,7 @@ const UNDERWRITER_SCHEMA = {
         maxTries: {$ref: "positive-number-schema"},
         maxPendingTransactions: {$ref: "positive-number-schema"},
         underwriteBlocksMargin: {$ref: "positive-number-schema"},
+        minRelayDeadlineDuration: {$ref: "positive-number-schema"},
         underwriteDelay: {$ref: "positive-number-schema"},
         maxSubmissionDelay: {$ref: "positive-number-schema"},
         maxUnderwriteAllowed: {$ref: "uint256-field-schema"},

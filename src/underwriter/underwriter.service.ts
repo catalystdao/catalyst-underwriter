@@ -16,9 +16,12 @@ export const DEFAULT_UNDERWRITER_PROCESSING_INTERVAL = 100;
 export const DEFAULT_UNDERWRITER_MAX_TRIES = 3;
 export const DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS = 50;
 export const DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN = 50;
+export const DEFAULT_UNDERWRITER_MIN_RELAY_DEADLINE_DURATION = 24n * 60n * 60n * 1000n; // 1 day
 export const DEFAULT_UNDERWRITER_UNDERWRITE_DELAY = 500;
 export const DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY = 300000;
 export const DEFAULT_UNDERWRITER_TOKEN_BALANCE_UPDATE_INTERVAL = 50;
+
+const MIN_ALLOWED_MIN_RELAY_DEADLINE_DURATION = 1n * 60n * 60n * 1000n; // 1 hour
 
 interface DefaultUnderwriterWorkerData {
     enabled: boolean;
@@ -27,6 +30,7 @@ interface DefaultUnderwriterWorkerData {
     maxTries: number;
     maxPendingTransactions: number;
     underwriteBlocksMargin: number;
+    minRelayDeadlineDuration: bigint;
     underwriteDelay: number;
     maxSubmissionDelay: number;
     maxUnderwriteAllowed: bigint | undefined;
@@ -49,6 +53,7 @@ export interface UnderwriterWorkerData {
     maxTries: number;
     maxPendingTransactions: number;
     underwriteBlocksMargin: number;
+    minRelayDeadlineDuration: bigint;
     underwriteDelay: number;
     maxSubmissionDelay: number;
     walletPublicKey: string;
@@ -127,6 +132,7 @@ export class UnderwriterService implements OnModuleInit {
         const maxTries = globalUnderwriterConfig.maxTries ?? DEFAULT_UNDERWRITER_MAX_TRIES;
         const maxPendingTransactions = globalUnderwriterConfig.maxPendingTransactions ?? DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS;
         const underwriteBlocksMargin = globalUnderwriterConfig.underwriteBlocksMargin ?? DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN;
+        const minRelayDeadlineDuration = globalUnderwriterConfig.minRelayDeadlineDuration ?? DEFAULT_UNDERWRITER_MIN_RELAY_DEADLINE_DURATION;
         const underwriteDelay = globalUnderwriterConfig.underwriteDelay ?? DEFAULT_UNDERWRITER_UNDERWRITE_DELAY;
         const maxSubmissionDelay = globalUnderwriterConfig.maxSubmissionDelay ?? DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY;
         const maxUnderwriteAllowed = globalUnderwriterConfig.maxUnderwriteAllowed;
@@ -134,6 +140,12 @@ export class UnderwriterService implements OnModuleInit {
         const lowTokenBalanceWarning = globalUnderwriterConfig.lowTokenBalanceWarning;
         const tokenBalanceUpdateInterval = globalUnderwriterConfig.tokenBalanceUpdateInterval ?? DEFAULT_UNDERWRITER_TOKEN_BALANCE_UPDATE_INTERVAL;
         const walletPublicKey = (new Wallet(this.configService.globalConfig.privateKey)).address;
+
+        if (minRelayDeadlineDuration < MIN_ALLOWED_MIN_RELAY_DEADLINE_DURATION) {
+            throw new Error(
+                `Invalid 'minRelayDeadlineDuration' global configuration. Value set is less than allowed (set: ${minRelayDeadlineDuration}, minimum: ${MIN_ALLOWED_MIN_RELAY_DEADLINE_DURATION}).`
+            );
+        }
     
         return {
             enabled,
@@ -142,6 +154,7 @@ export class UnderwriterService implements OnModuleInit {
             maxTries,
             maxPendingTransactions,
             underwriteBlocksMargin,
+            minRelayDeadlineDuration,
             underwriteDelay,
             maxSubmissionDelay,
             maxUnderwriteAllowed,
@@ -170,6 +183,14 @@ export class UnderwriterService implements OnModuleInit {
         });
 
         const chainUnderwriterConfig = chainConfig.underwriter;
+
+        const minRelayDeadlineDuration = chainUnderwriterConfig.minRelayDeadlineDuration ?? defaultConfig.minRelayDeadlineDuration;
+        if (minRelayDeadlineDuration < MIN_ALLOWED_MIN_RELAY_DEADLINE_DURATION) {
+            throw new Error(
+                `Invalid 'minRelayDeadlineDuration' chain configuration. Value set is less than allowed (set: ${minRelayDeadlineDuration}, minimum: ${MIN_ALLOWED_MIN_RELAY_DEADLINE_DURATION}).`
+            );
+        }
+
         return {
             enabled: defaultConfig.enabled && chainUnderwriterConfig.enabled != false,
             chainId,
@@ -190,6 +211,7 @@ export class UnderwriterService implements OnModuleInit {
             underwriteBlocksMargin:
                 chainUnderwriterConfig.underwriteBlocksMargin
                 ?? defaultConfig.underwriteBlocksMargin,
+            minRelayDeadlineDuration,
             underwriteDelay:
                 chainUnderwriterConfig.underwriteDelay
                 ?? defaultConfig.underwriteDelay,
