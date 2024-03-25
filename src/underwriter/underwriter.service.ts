@@ -54,6 +54,7 @@ export interface UnderwriterWorkerData {
     maxPendingTransactions: number;
     underwriteBlocksMargin: number;
     minRelayDeadlineDuration: bigint;
+    minMaxGasDelivery: bigint;
     underwriteDelay: number;
     maxSubmissionDelay: number;
     walletPublicKey: string;
@@ -212,6 +213,7 @@ export class UnderwriterService implements OnModuleInit {
                 chainUnderwriterConfig.underwriteBlocksMargin
                 ?? defaultConfig.underwriteBlocksMargin,
             minRelayDeadlineDuration,
+            minMaxGasDelivery: chainUnderwriterConfig.minMaxGasDelivery,
             underwriteDelay:
                 chainUnderwriterConfig.underwriteDelay
                 ?? defaultConfig.underwriteDelay,

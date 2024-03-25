@@ -45,7 +45,9 @@ export interface UnderwriterGlobalConfig {
     tokenBalanceUpdateInterval?: number;
 }
 
-export interface UnderwriterConfig extends UnderwriterGlobalConfig {}
+export interface UnderwriterConfig extends UnderwriterGlobalConfig {
+    minMaxGasDelivery: bigint;
+}
 
 
 export interface ExpirerGlobalConfig {

@@ -22,6 +22,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         readonly maxTries: number,
         private readonly underwriteBlocksMargin: number,
         private readonly minRelayDeadlineDuration: bigint,
+        private readonly minMaxGasDelivery: bigint,
         private readonly tokenHandler: TokenHandler,
         private readonly store: Store,
         private readonly provider: JsonRpcProvider,
@@ -133,6 +134,21 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
                 );
                 return null;
             }
+        }
+
+        // Never underwrite if the specified 'maxGasDelivery' is too low.
+        if (ambMessageData.maxGasDelivery < this.minMaxGasDelivery) {
+            this.logger.info(
+                {
+                    swapId: order.swapIdentifier,
+                    swapTxHash: order.swapTxHash,
+                    swapBlockNumber: order.swapBlockNumber,
+                    maxGasDelivery: ambMessageData.maxGasDelivery,
+                    minMaxGasDelivery: this.minMaxGasDelivery
+                },
+                "Skipping underwrite: incentivised message maxGasDelivery is too small."
+            );
+            return null;
         }
 
         // Verify the token to underwrite is supported
@@ -341,7 +357,8 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         amb: string;
         sourceChainId: string;
         destinationChainId: string;
-        deadline: bigint;        
+        deadline: bigint;
+        maxGasDelivery: bigint;
     } | undefined> {
 
         const relayerEndpoint = `http://${process.env.RELAYER_HOST}:${process.env.RELAYER_PORT}/getAMBs?`;
@@ -380,7 +397,8 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
                     amb: amb.amb,
                     sourceChainId: amb.sourceChain,
                     destinationChainId: amb.destinationChain,
-                    deadline: giPayload.deadline
+                    deadline: giPayload.deadline,
+                    maxGasDelivery: giPayload.maxGasLimit,
                 };
 
             } catch {

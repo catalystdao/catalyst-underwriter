@@ -81,7 +81,7 @@ const GLOBAL_SCHEMA = {
 
         monitor: {$ref: "monitor-schema"},
         listener: {$ref: "listener-schema"},
-        underwriter: {$ref: "underwriter-schema"},
+        underwriter: {$ref: "underwriter-global-schema"},
         expirer: {$ref: "expirer-schema"},
         wallet: {$ref: "wallet-schema"},
     },
@@ -118,8 +118,8 @@ const LISTENER_SCHEMA = {
     additionalProperties: false
 }
 
-const UNDERWRITER_SCHEMA = {
-    $id: "underwriter-schema",
+const UNDERWRITER_GLOBAL_SCHEMA = {
+    $id: "underwriter-global-schema",
     type: "object",
     properties: {
         enabled: {
@@ -138,6 +138,17 @@ const UNDERWRITER_SCHEMA = {
         lowTokenBalanceWarning: {$ref: "uint256-field-schema"},
         tokenBalanceUpdateInterval: {$ref: "positive-number-schema"},
     },
+    additionalProperties: false
+}
+
+const UNDERWRITER_SCHEMA = {
+    $id: "underwriter-schema",
+    type: "object",
+    properties: {
+        ...UNDERWRITER_GLOBAL_SCHEMA.properties,
+        minMaxGasDelivery: {$ref: "positive-number-schema"},
+    },
+    required: ["minMaxGasDelivery"],
     additionalProperties: false
 }
 
@@ -249,7 +260,7 @@ const CHAINS_SCHEMA = {
             expirer: {$ref: "expirer-schema"},
             wallet: {$ref: "wallet-schema"},
         },
-        required: ["chainId", "name", "rpc", "tokens"],
+        required: ["chainId", "name", "rpc", "tokens", "underwriter"],
         additionalProperties: false
     },
     minItems: 2
@@ -307,6 +318,7 @@ export function getConfigValidator(): AnyValidateFunction<unknown> {
     ajv.addSchema(GLOBAL_SCHEMA);
     ajv.addSchema(MONITOR_SCHEMA);
     ajv.addSchema(LISTENER_SCHEMA);
+    ajv.addSchema(UNDERWRITER_GLOBAL_SCHEMA);
     ajv.addSchema(UNDERWRITER_SCHEMA);
     ajv.addSchema(EXPIRER_SCHEMA);
     ajv.addSchema(WALLET_SCHEMA);

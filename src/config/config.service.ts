@@ -255,7 +255,9 @@ export class ConfigService {
     }
 
     private formatUnderwriterConfig(rawConfig: any): UnderwriterConfig {
-        return this.formatUnderwriterGlobalConfig(rawConfig);
+        const config = this.formatUnderwriterGlobalConfig(rawConfig) as UnderwriterConfig;
+        config.minMaxGasDelivery = BigInt(config.minMaxGasDelivery);
+        return config;
     }
 
     private formatWalletConfig(rawConfig: any): WalletConfig {

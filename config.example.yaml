@@ -34,7 +34,11 @@ global:
     minUnderwriteReward: "100000000000"           # Minimum acceptable token reward for an underwrite
     lowTokenBalanceWarning: "1000000000000000000" # Token balance below which a 'low balance' warning is emitted.
     tokenBalanceUpdateInterval: 50                # Number of transactions after which to update the 
-                                                  # Underwriter token balance from the rpc. 
+                                                  # Underwriter token balance from the rpc.
+
+    # ! The following setting is here for illustrative purposes, but it MUST ALWAYS be applied on
+    # ! a per-chain basis as it is CRITICAL to prevent the underwriter from being stolen from.
+    # minMaxGasDelivery: 100000
 
   expirer:
     enabled: true               # Defaults to 'true' if the key is missing. Disabling the expirer. (Not recommended!)
@@ -110,6 +114,7 @@ chains:
       interval: 3000
       # startingBlock   # The block number at which to start 'listening' for events
     underwriter:
+      minMaxGasDelivery: 100000 #TODO set value
       retryInterval: 3000
     expirer:
       retryInterval: 3000
@@ -125,6 +130,8 @@ chains:
       - name: "Wrapped gas"
         address: "0xE67ABDA0D43f7AC8f37876bBF00D1DFadbB93aaa"
         allowanceBuffer: "10000000000000000000"
+    underwriter:
+      minMaxGasDelivery: 100000 #TODO set value
 
 # Pools to underwrite configuration
 pools:
