@@ -199,6 +199,13 @@ export abstract class ProcessingQueue<OrderType, ReturnType = OrderType> {
         error: any,
         errorOnPending: boolean,
     ): Promise<void> {
+        const retryOrder = await this.handleFailedOrder(
+            order.order,
+            order.retryCount,
+            error,
+            errorOnPending,
+        );
+
         const maxTriesReached = order.retryCount >= this.maxTries - 1;
         if (maxTriesReached) {
             await this.onOrderCompletion(
@@ -210,13 +217,7 @@ export abstract class ProcessingQueue<OrderType, ReturnType = OrderType> {
             this.rejectedOrders.push(order.order);
             return;
         }
-  
-        const retryOrder = await this.handleFailedOrder(
-            order.order,
-            order.retryCount,
-            error,
-            errorOnPending,
-        );
+
         if (retryOrder) {
             this.addOrderToRetryQueue(order);
         } else {
