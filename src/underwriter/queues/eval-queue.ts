@@ -13,6 +13,8 @@ import { TokenHandler } from '../token-handler/token-handler';
 
 export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
+    private vaultAssets = new Map<string, string>();    // Maps a key formed by the vault+assetIndex to the asset address.
+
     constructor(
         private enabled: boolean,
         readonly chainId: string,
@@ -68,11 +70,11 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             throw new Error(`Underwrite evaluation fail: AMB of txHash ${order.swapTxHash} (chain ${order.fromChainId}) not found`);
         }
 
-        const toVaultContract = CatalystVaultCommon__factory.connect(
-            order.toVault,
-            this.provider
-        );
-        const toAsset = await toVaultContract._tokenIndexing(order.toAssetIndex);
+        const toAsset = await this.getVaultAsset(order.toVault, order.toAssetIndex);
+        if (toAsset == undefined) {
+            // NOTE: The following error is matched on `handleFailedOrder`
+            throw new Error('Failed to get the vault asset at the requested index.')
+        }
 
         // Save the 'toAsset' and 'calldata' for later use by the expirer
         await this.saveAdditionalSwapData(
@@ -167,6 +169,10 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         }
 
         // Estimate return
+        const toVaultContract = CatalystVaultCommon__factory.connect(
+            order.toVault,
+            this.provider
+        );
         const expectedReturn = await toVaultContract.calcReceiveAsset(toAsset, order.units);
         const toAssetAllowance = expectedReturn * 11n / 10n;    //TODO set customizable allowance margin
 
@@ -296,6 +302,20 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
                     `Error on underwrite evaluation. Dropping message.`,
                 );
                 return false;   // Do not retry eval
+            }
+
+            if (
+                /^Failed to get the vault asset at the requested index.$/.test(error.message)
+            ) {
+                this.logger.warn(
+                    {
+                        ...errorDescription,
+                        toVault: order.toVault,
+                        toAssetIndex: order.toAssetIndex
+                    },
+                    `Failed to get the vault asset at the requested index.`,
+                )
+                return true;    // Retry eval (in case of an rpc query error)
             }
         }
 
@@ -455,6 +475,29 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             }
         );
 
+    }
+
+    private async getVaultAsset(vault: string, assetIndex: bigint): Promise<string | undefined> {
+        const cachedAsset = this.vaultAssets.get(`${vault.toLowerCase()}.${assetIndex}`);
+        if (cachedAsset != undefined) {
+            return cachedAsset;
+        }
+        
+        return this.queryVaultAsset(vault, assetIndex);
+    }
+
+    private async queryVaultAsset(vault: string, assetIndex: bigint): Promise<string | undefined> {
+        try {
+            const vaultContract = CatalystVaultCommon__factory.connect(
+                vault,
+                this.provider
+            );
+            const asset = await vaultContract._tokenIndexing(assetIndex);
+            this.vaultAssets.set(`${vault.toLowerCase()}.${assetIndex}`, asset);
+            return asset;
+        } catch {
+            return undefined;
+        }
     }
 
 
