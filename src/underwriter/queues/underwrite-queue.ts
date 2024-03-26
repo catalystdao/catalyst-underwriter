@@ -47,6 +47,8 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
         ]);
 
         if (order.gasLimit == undefined) {
+            // Gas estimation and limit check are here as they cannot be performed until the token
+            // approval for the order is executed, which must happen after the 'evaluation' step.
             order.gasLimit = await this.provider.estimateGas({
                 to: order.interfaceAddress,
                 from: this.walletPublicKey,
