@@ -105,8 +105,6 @@ export class ConfigService {
         const chainConfig = new Map<string, ChainConfig>();
 
         for (const rawChainConfig of this.rawConfig.chains) {
-
-
             chainConfig.set(rawChainConfig.chainId.toString(), {
                 chainId: rawChainConfig.chainId.toString(),
                 name: rawChainConfig.name,
