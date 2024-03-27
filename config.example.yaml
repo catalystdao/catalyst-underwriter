@@ -76,21 +76,20 @@ global:
 
 # The AMBs configuration
 ambs:
-  - name: mock
+  - name: wormhole
     enabled: true               # TODO not implemented. Defaults to 'true' if the key is missing
     relayPrioritisation: true   # Defaults to 'true' if the key is missing
 
 # Chain configuration
 chains:
-
-  - chainId: 80001
-    name: "Mumbai"
-    rpc: "https://polygon-mumbai-pokt.nodies.app"
+  - chainId: 11155111
+    name: "Sepolia"
+    rpc: "https://eth-sepolia-public.unifra.io"
 
     # The tokens that are to be undewritten
     tokens:
       - name: "Wrapped gas"
-        address: "0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889"
+        address: "0xE67ABDA0D43f7AC8f37876bBF00D1DFadbB93aaa"
         allowanceBuffer: "10000000000000000000"   # Amount by which to 'buffer' the token approvals
                                                   # to prevent having to approve tokens for every
                                                   # single underwrite. If not specified an 
@@ -112,36 +111,55 @@ chains:
     expirer:
       retryInterval: 3000
     wallet:
-      # rpc: "https://polygon-mumbai-bor.publicnode.com"  # RPC used specifically for transaction submission. Defaults to the 'chain' rpc if not provided
+      # rpc: "https://eth-sepolia-public.unifra.io"  # RPC used specifically for transaction submission. Defaults to the 'chain' rpc if not provided
       retryInterval: 3000
   
 
-  - chainId: 11155111 
-    name: "Sepolia"
-    rpc: "https://eth-sepolia-public.unifra.io"
+  - chainId: 421614
+    name: 'Arbitrum Sepolia'
+    rpc: 'https://sepolia-rollup.arbitrum.io/rpc' # NOTE: This rpc errors easily with a 'requests rate too high' error
+    blockDelay: 12
     tokens:
-      - name: "Wrapped gas"
-        address: "0xE67ABDA0D43f7AC8f37876bBF00D1DFadbB93aaa"
-        allowanceBuffer: "10000000000000000000"
+      - name: 'WETH'
+        address: '0xC8bF2D5c0D6bEC807c21EF4cef2f1fd3bf16947e'
+        allowanceBuffer: '10000000000000000000'
+    monitor:
+      interval: 2000
+
+  - chainId: 11155420
+    name: 'OP Sepolia'
+    rpc: 'https://sepolia.optimism.io'
+    tokens:
+      - name: 'WETH'
+        address: '0x1BDD24840e119DC2602dCC587Dd182812427A5Cc'
+        allowanceBuffer: '10000000000000000000'
+    monitor:
+      interval: 2000
 
 # Pools to underwrite configuration
 pools:
-  - id: 0           # The id given to the vault (for logs only)
-    name: "Pool A"  # The name given to the vault (for logs only)
-    amb: "mock"     # The AMB used for the Pool
+  - id: 0
+    name: 'WormholeSepoliaOptimismArbitrum'
+    amb: 'wormhole'
     vaults:
-      - name: "Sepolia Test Vault"    # The vault name (for logs only)
-        chainId: 11155111             # The chain id in which the vault resides on
-        vaultAddress: "0x6243df63dc7e97a5968578e9ae35008af3ec69df"      # The vault address
-        interfaceAddress: "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"  # The interface address
-
-        # Mappings between the bytes32 channel id values used by the vault and the destination chain ids.
+      - name: 'Sepolia Tiger Testnet Vault'
+        chainId: 11155111
+        vaultAddress: '0xbd529ff730dae029fa85b38d98d6046721215fa4'
+        interfaceAddress: '0x169e7e77e463ffe86b30afd1605a09a632bea5b0'
         channels:
-          "0x0000000000000000000000000000000000000000000000000000000000013881": 80001
-
-      - name: "Mumbai Test Vault"
-        chainId: 80001
-        vaultAddress: "0x6243df63dc7e97a5968578e9ae35008af3ec69df"
-        interfaceAddress: "0xa55eAf1c45cDAbe41c374862982F1543A60A8139"
+          '0x0000000000000000000000000000000000000000000000000000000000002713': 421614
+          '0x0000000000000000000000000000000000000000000000000000000000002715': 11155420
+      - name: 'Arbitrum Sepolia Tiger Testnet Vault'
+        chainId: 421614
+        vaultAddress: '0xbd529ff730dae029fa85b38d98d6046721215fa4'
+        interfaceAddress: '0xf779d8e1b07f1e3df141a81c4f1f7d65c0a38611'
         channels:
-          "0x0000000000000000000000000000000000000000000000000000000000AA36A7": 11155111
+          '0x0000000000000000000000000000000000000000000000000000000000002712': 11155111
+          '0x0000000000000000000000000000000000000000000000000000000000002715': 11155420
+      - name: 'Optimism Sepolia Tiger Testnet Vault'
+        chainId: 11155420
+        vaultAddress: '0xbd529ff730dae029fa85b38d98d6046721215fa4'
+        interfaceAddress: '0x2603e874d589373a0c4766808b93e3d4b63164c8'
+        channels:
+          '0x0000000000000000000000000000000000000000000000000000000000002712': 11155111
+          '0x0000000000000000000000000000000000000000000000000000000000002713': 421614
