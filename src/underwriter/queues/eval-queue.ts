@@ -381,7 +381,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         maxGasDelivery: bigint;
     } | undefined> {
 
-        const relayerEndpoint = `http://${process.env.RELAYER_HOST}:${process.env.RELAYER_PORT}/getAMBs?`;
+        const relayerEndpoint = `http://${process.env.RELAYER_HOST}:${process.env.RELAYER_PORT}/getAMBMessages?`;
 
         const res = await fetch(relayerEndpoint + new URLSearchParams({chainId, txHash}));
         const ambs = (await res.json());    //TODO type
