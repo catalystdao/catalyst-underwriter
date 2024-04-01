@@ -103,8 +103,6 @@ chains:
 
     # Overrides
     blockDelay: 2
-    listener:
-      interval: 3000
   
 
   - chainId: 421614
