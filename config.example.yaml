@@ -105,14 +105,6 @@ chains:
     blockDelay: 2
     listener:
       interval: 3000
-      # startingBlock   # The block number at which to start 'listening' for events
-    underwriter:
-      retryInterval: 3000
-    expirer:
-      retryInterval: 3000
-    wallet:
-      # rpc: "https://eth-sepolia-public.unifra.io"  # RPC used specifically for transaction submission. Defaults to the 'chain' rpc if not provided
-      retryInterval: 3000
   
 
   - chainId: 421614
