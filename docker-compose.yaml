@@ -11,6 +11,7 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV}
       - USE_DOCKER=true
+      - RELAYER_HOST=relayer
     container_name: underwriter
     restart: unless-stopped
     networks:
