@@ -29,7 +29,7 @@ global:
     maxSubmissionDelay: 300000  # Maximum time for the wallet to submit the 'underwrite' transaction.
 
     maxUnderwriteAllowed: "10000000000000000000"  # Maximum tokens to risk on a single underwrite
-    minUnderwriteReward: "100000000000"           # Minimum acceptable token reward for an underwrite
+    minUnderwriteReward: "10000000000"           # Minimum acceptable token reward for an underwrite
     lowTokenBalanceWarning: "1000000000000000000" # Token balance below which a 'low balance' warning is emitted.
     tokenBalanceUpdateInterval: 50                # Number of transactions after which to update the 
                                                   # Underwriter token balance from the rpc. 
