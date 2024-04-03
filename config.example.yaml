@@ -35,7 +35,7 @@ global:
                                                   # Underwriter token balance from the rpc. 
 
   expirer:
-    enabled: true               # Defaults to 'true' if the key is missing. Disabling the expirer. (Not recommended!)
+    enabled: false               # Defaults to 'true' if the key is missing. Disabling the expirer. (Not recommended!)
     # ! The following properties default to the values of the 'underwriter' if missing
     retryInterval: 30000        # Time to wait before retrying an expiry
     processingInterval: 100     # Throttle for the Expirer main 'run' loop
