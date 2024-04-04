@@ -407,14 +407,14 @@ class ListenerWorker {
             sendAssetEvent: {
                 txHash: log.transactionHash,
                 blockHash: log.blockHash,
-                blockNumber: log.blockNumber,
+                blockNumber: log.blockNumber, // ! TODO what block number to use for arbitrum?
                 fromChannelId: event.channelId,
                 toAssetIndex: event.toAssetIndex,
                 fromAmount: event.fromAmount,
                 fee: event.fee,
                 minOut: event.minOut,
                 underwriteIncentiveX16: event.underwriteIncentiveX16,
-                observedAtBlockNumber: this.currentStatus!.blockNumber
+                observedAtBlockNumber: this.currentStatus!.blockNumber // ! TODO what block number to use for arbitrum?
             },
         }
     
@@ -472,7 +472,7 @@ class ListenerWorker {
             receiveAssetEvent: {
                 txHash: log.transactionHash,
                 blockHash: log.blockHash,
-                blockNumber: log.blockNumber,
+                blockNumber: log.blockNumber, // ! TODO what block number to use for arbitrum?
                 toChannelId: event.channelId,
                 toAsset: event.toAsset,
                 toAmount: event.toAmount,
@@ -517,7 +517,7 @@ class ListenerWorker {
                 poolId,
                 txHash: log.transactionHash,
                 blockHash: log.blockHash,
-                blockNumber: log.blockNumber,
+                blockNumber: log.blockNumber, // ! TODO what block number to use for arbitrum?
                 underwriter: event.underwriter,
                 expiry: Number(event.expiry),
                 targetVault: event.targetVault,
@@ -555,7 +555,7 @@ class ListenerWorker {
             fulfillUnderwriteEvent: {
                 txHash: log.transactionHash,
                 blockHash: log.blockHash,
-                blockNumber: log.blockNumber,
+                blockNumber: log.blockNumber, // ! TODO what block number to use for arbitrum?
             }
         }
 
@@ -586,7 +586,7 @@ class ListenerWorker {
             expireUnderwriteEvent: {
                 txHash: log.transactionHash,
                 blockHash: log.blockHash,
-                blockNumber: log.blockNumber,
+                blockNumber: log.blockNumber, // ! TODO what block number to use for arbitrum?
                 expirer: event.expirer,
                 reward: event.reward,
 
