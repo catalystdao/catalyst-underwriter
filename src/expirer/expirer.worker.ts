@@ -28,6 +28,7 @@ class ExpirerWorker {
     readonly pools: PoolConfig[];
 
     private currentStatus: MonitorStatus | null;
+    private effectiveBlockNumber: number | undefined;   // Patch for arbitrum //TODO implement a better fix
 
     readonly underwriterPublicKey: string;
     readonly wallet: WalletInterface;
@@ -126,6 +127,7 @@ class ExpirerWorker {
         const monitor = new MonitorInterface(port);
 
         monitor.addListener((status) => {
+            this.effectiveBlockNumber = undefined;   // Patch for arbitrum //TODO implement a better fix
             this.currentStatus = status;
         });
 
@@ -161,7 +163,7 @@ class ExpirerWorker {
         await this.listenForOrders();
 
         while (true) {
-            const evalOrders = this.processNewOrdersQueue();
+            const evalOrders = await this.processNewOrdersQueue();
 
             await this.evalQueue.addOrders(...evalOrders);
             await this.evalQueue.processOrders();
@@ -255,13 +257,35 @@ class ExpirerWorker {
 
     }
 
-    private getCurrentBlockNumber(): number {
-        return this.currentStatus?.blockNumber ?? -1;
+    private async getCurrentBlockNumber(): Promise<number> {
+        let blockNumber = this.currentStatus?.blockNumber;
+
+        if (blockNumber == undefined) {
+            return -1;
+        }
+
+        //TODO implement a better (generic) block number fix
+        if (this.chainId == '421614') { // Arbitrum sepolia
+            if (this.effectiveBlockNumber == undefined) {
+                try {
+                    const blockData = await this.provider.send(
+                        "eth_getBlockByNumber",
+                        ["0x"+blockNumber.toString(16), false]
+                    );
+                    this.effectiveBlockNumber = parseInt(blockData.l1BlockNumber, 16);
+                } catch (error) {
+                    //TODO how to handle the failure? Add retry?
+                }
+            }
+            
+            blockNumber = this.effectiveBlockNumber;
+        }
+        return blockNumber ?? -1;
     }
 
-    private processNewOrdersQueue(): ExpireEvalOrder[] {
+    private async processNewOrdersQueue(): Promise<ExpireEvalOrder[]> {
         const capacity = this.getExpirerCapacity();
-        const currentBlockNumber = this.getCurrentBlockNumber();
+        const currentBlockNumber = await this.getCurrentBlockNumber();
 
         let i;
         for (i = 0; i < this.newOrdersQueue.length; i++) {
