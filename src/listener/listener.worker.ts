@@ -365,7 +365,7 @@ class ListenerWorker {
                 "eth_getBlockByNumber",
                 ["0x"+blockNumber.toString(16), false]
             );
-            blockNumber = blockData.l1BlockNumber;
+            blockNumber = parseInt(blockData.l1BlockNumber, 16);
         }
         
         //TODO the way in which the hash is calculated should depend on the fromVault template
