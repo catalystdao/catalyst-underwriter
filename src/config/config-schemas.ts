@@ -30,6 +30,12 @@ const ADDRESS_FIELD_SCHEMA = {
     pattern: EVM_ADDRESS_EXPR
 }
 
+const BYTES32_FIELD_SCHMEA = {
+    $id: "bytes32-field-schema",
+    type: "string",
+    pattern: BYTES_32_HEX_EXPR
+}
+
 const GAS_FIELD_SCHEMA = {
     $id: "gas-field-schema",
     type: "string",
@@ -62,6 +68,7 @@ const CONFIG_SCHEMA = {
         global: {$ref: "global-schema"},
         ambs: {$ref: "ambs-schema"},
         chains: {$ref: "chains-schema"},
+        endpoints: {$ref: "endpoints-schema"},
         pools: {$ref: "pools-schema"},
     },
     required: ["global", "ambs", "chains", "pools"],
@@ -266,6 +273,30 @@ const CHAINS_SCHEMA = {
     minItems: 2
 }
 
+const ENDPOINTS_SCHMEA = {
+    $id: "endpoints-schema",
+    type: "array",
+    items: {
+        type: "object",
+        properties: {
+            name: {$ref: "non-empty-string-schema"},
+            amb: {$ref: "non-empty-string-schema"},
+            chainId: {$ref: "chain-id-schema"},
+            interfaceAddress: {$ref: "address-field-schema"},
+            incentivesAddress: {$ref: "address-field-schema"},
+            channelsOnDestination: {
+                type: "object",
+                patternProperties: {
+                    ['^[0-9]{1,64}$']: {$ref: "bytes32-field-schema"}, //TODO specify a better match for the key (i.e. the chain id)
+                },
+                additionalProperties: false
+            },
+        },
+        required: ["name", "amb", "chainId", "interfaceAddress", "incentivesAddress", "channelsOnDestination"],
+    },
+    minItems: 2
+}
+
 const POOLS_SCHEMA = {
     $id: "pools-schema",
     type: "array",
@@ -310,6 +341,7 @@ export function getConfigValidator(): AnyValidateFunction<unknown> {
     ajv.addSchema(POSITIVE_NON_ZERO_INTEGER_SCHEMA);
     ajv.addSchema(NON_EMPTY_STRING_SCHEMA);
     ajv.addSchema(ADDRESS_FIELD_SCHEMA);
+    ajv.addSchema(BYTES32_FIELD_SCHMEA);
     ajv.addSchema(GAS_FIELD_SCHEMA);
     ajv.addSchema(UINT256_FIELD_SCHEMA);
     ajv.addSchema(CHAIN_ID_SCHEMA);
@@ -325,6 +357,7 @@ export function getConfigValidator(): AnyValidateFunction<unknown> {
     ajv.addSchema(AMBS_SCHEMA);
     ajv.addSchema(TOKENS_SCHEMA);
     ajv.addSchema(CHAINS_SCHEMA);
+    ajv.addSchema(ENDPOINTS_SCHMEA);
     ajv.addSchema(POOLS_SCHEMA);
 
     const verifier = ajv.getSchema('config-schema');

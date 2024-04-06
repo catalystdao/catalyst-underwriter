@@ -164,21 +164,23 @@ export class Store {
         }
 
         const swapState = JSON.parse(query);
-        swapState.swapAmount = BigInt(swapState.swapAmount);
-        swapState.units = BigInt(swapState.units);
 
-        if (swapState.sendAssetEvent) {
-            const event = swapState.sendAssetEvent;
-            event.toAssetIndex = BigInt(event.toAssetIndex);
-            event.fromAmount = BigInt(event.fromAmount);
-            event.fee = BigInt(event.fee);
-            event.minOut = BigInt(event.minOut);
-            event.underwriteIncentiveX16 = BigInt(event.underwriteIncentiveX16);
+        if (swapState.ambMessageSendAssetDetails) {
+            const details = swapState.ambMessageSendAssetDetails;
+            details.deadline = BigInt(details.deadline);
+            details.maxGasDelivery = BigInt(details.maxGasDelivery);
+            details.units = BigInt(details.units);
+            details.toAssetIndex = BigInt(details.toAssetIndex);
+            details.minOut = BigInt(details.minOut);
+            details.swapAmount = BigInt(details.swapAmount);
+            details.blockNumberMod = BigInt(details.blockNumberMod);
+            details.underwriteIncentiveX16 = BigInt(details.underwriteIncentiveX16);
         }
         
-        if (swapState.receiveAssetEvent) {
-            const event = swapState.receiveAssetEvent;
-            event.toAmount = BigInt(event.toAmount);
+        if (swapState.sendAssetCompletionDetails) {
+            // TODO
+            // const event = swapState.receiveAssetEvent;
+            // event.toAmount = BigInt(event.toAmount);
             
         }
 
@@ -199,14 +201,14 @@ export class Store {
 
         if (overridingState) {
             //TODO contrast the saved 'common' state with the incoming data? (e.g. fromVault, fromAsset, etc...)
-            newState.sendAssetEvent = state.sendAssetEvent
-                ?? currentState.sendAssetEvent;
-            newState.receiveAssetEvent = state.receiveAssetEvent
-                ?? currentState.receiveAssetEvent;
+            newState.ambMessageSendAssetDetails = state.ambMessageSendAssetDetails
+                ?? currentState.ambMessageSendAssetDetails;
+            newState.sendAssetCompletionDetails = state.sendAssetCompletionDetails
+                ?? currentState.sendAssetCompletionDetails;
         }
 
         // Update the swap 'status'
-        if (newState.receiveAssetEvent) {
+        if (newState.sendAssetCompletionDetails) {
             newState.status = SwapStatus.Completed;
         } else {
             newState.status = SwapStatus.Pending;
@@ -214,42 +216,15 @@ export class Store {
 
         await this.set(key, JSON.stringify(newState));
 
-        if (state.sendAssetEvent) {
+        if (state.ambMessageSendAssetDetails) {
             const swapDescription: SwapDescription = {
-                poolId: state.poolId,
                 fromChainId: state.fromChainId,
-                toChainId: state.toChainId,
+                toChainId: state.ambMessageSendAssetDetails.toChainId,
                 fromVault: state.fromVault,
                 swapId: state.swapId,
             }
             await this.postMessage(Store.onSendAssetChannel, swapDescription);
         }
-    }
-
-    async saveAdditionalSwapData(
-        fromChainId: string,
-        fromVault: string,
-        swapId: string,
-        toAsset: string,
-        calldata: string
-    ): Promise<void> {
-
-        const key = Store.getSwapStateKey(
-            fromChainId,
-            fromVault,
-            swapId,
-        );
-        
-        const state = await this.getSwapStateByKey(key);
-
-        if (state == null) {
-            throw new Error(`Unable to store additional swap data: swap state not found (fromChainId: ${fromChainId}, fromVault: ${fromVault}, swapId: ${swapId}.`);
-        }
-
-        state.toAsset = toAsset;
-        state.calldata = calldata;
-
-        await this.set(key, JSON.stringify(state));
     }
 
     async getSwapStateByExpectedUnderwrite(

@@ -1,55 +1,48 @@
-import { BytesLike, TransactionReceipt, TransactionResponse } from "ethers";
+import { TransactionReceipt, TransactionResponse } from "ethers";
 
 
-export interface Order {
-    // Trusted fields (provided by the listener)
-    poolId: string;
-    amb: string;
+export interface DiscoverOrder {
+    // ! These are unsafe until the DiscoverQueue validates the order
+
+    // Swap description
     fromChainId: string;
     fromVault: string;
+    swapIdentifier: string;
+
+    // Swap Parameters
+    toVault: string;
+    toAccount: string;
+    units: bigint;
+    toAssetIndex: bigint;
+    minOut: bigint;
+    underwriteIncentiveX16: bigint;
+    calldata: string;
+
     swapTxHash: string;
     swapBlockNumber: number;
     swapBlockTimestamp: number;
     swapObservedAtBlockNumber: number;
 
-    // Derived from the SendAsset event
-    swapIdentifier: string;
+    // AMB/Incentive Parameters
+    amb: string;
     sourceIdentifier: string;
-
-    // SendAsset event fields
-    channelId: string;
-    toVault: string;
-    toAccount: string;
-    fromAsset: string;
-    toAssetIndex: bigint;
-    fromAmount: bigint;
-    minOut: bigint;
-    units: bigint;
-    fee: bigint;
-    underwriteIncentiveX16: bigint;
+    toIncentivesAddress: string;
+    interfaceAddress: string;
+    messageIdentifier: string;
+    deadline: bigint;
+    maxGasDelivery: bigint;
 
     submissionDeadline: number;
 }
 
-export interface EvalOrder extends Order {
+export interface EvalOrder extends DiscoverOrder {
+    toAsset: string;
 }
 
-export interface UnderwriteOrder extends Order {
-    calldata: BytesLike;
-
+export interface UnderwriteOrder extends EvalOrder {
     maxGasLimit: bigint | null;
     gasLimit?: bigint;
-    toAsset: string;
     toAssetAllowance: bigint;
-    interfaceAddress: string;
-
-    // The following fields are for message prioritisation
-    ambMessageData: {
-        messageIdentifier: string;
-        amb: string;
-        sourceChainId: string;
-        destinationChainId: string;
-    }
 }
 
 export interface UnderwriteOrderResult extends UnderwriteOrder {

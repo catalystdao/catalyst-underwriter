@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import * as yaml from 'js-yaml';
 import dotenv from 'dotenv';
 import { getConfigValidator } from './config-schemas';
-import { GlobalConfig, ChainConfig, AMBConfig, PoolConfig, MonitorGlobalConfig, ListenerGlobalConfig, UnderwriterGlobalConfig, ExpirerGlobalConfig, WalletGlobalConfig, MonitorConfig, ListenerConfig, UnderwriterConfig, WalletConfig, ExpirerConfig, TokensConfig } from './config.types';
+import { GlobalConfig, ChainConfig, AMBConfig, PoolConfig, MonitorGlobalConfig, ListenerGlobalConfig, UnderwriterGlobalConfig, ExpirerGlobalConfig, WalletGlobalConfig, MonitorConfig, ListenerConfig, UnderwriterConfig, WalletConfig, ExpirerConfig, TokensConfig, EndpointConfig } from './config.types';
 
 
 @Injectable()
@@ -16,6 +16,7 @@ export class ConfigService {
     readonly chainsConfig: Map<string, ChainConfig>;
     readonly ambsConfig: Map<string, AMBConfig>;
     readonly poolsConfig: Map<string, PoolConfig>;
+    readonly endpointsConfig: Map<string, EndpointConfig[]>;
 
     constructor() {
         this.nodeEnv = this.loadNodeEnv();
@@ -29,6 +30,9 @@ export class ConfigService {
 
         const ambNames = Array.from(this.ambsConfig.keys());
         this.poolsConfig = this.loadPoolsConfig(ambNames);
+
+        const chainIds = Array.from(this.chainsConfig.keys());
+        this.endpointsConfig = this.loadEndpointsConfig(chainIds, ambNames);
     }
 
     private loadNodeEnv(): string {
@@ -186,6 +190,47 @@ export class ConfigService {
 
         return poolsConfig;
 
+    }
+
+    private loadEndpointsConfig(chainIds: string[], ambNames: string[]): Map<string, EndpointConfig[]> {
+        const endpointConfig: Map<string, EndpointConfig[]> = new Map();
+
+        for (const rawEndpointConfig of this.rawConfig.endpoints) {
+
+            const chainId = rawEndpointConfig.chainId.toString();
+
+            if (!chainIds.includes(chainId)) {
+                throw new Error(
+                    `Invalid endpoint configuration: invalid 'chainId' value (chain configuration does not exist for ${chainId}).`,
+                );
+            }
+
+            if (!ambNames.includes(rawEndpointConfig.amb)) {
+                throw new Error(
+                    `Invalid endpoint configuration: invalid 'amb' value (${rawEndpointConfig.amb}).`,
+                );
+            }
+
+            const channelsOnDestination: Record<string, string> = {};
+            for (const [channelChainId, channelId] of Object.entries(rawEndpointConfig.channelsOnDestination)) {
+                channelsOnDestination[channelChainId] = (channelId as string).toLowerCase();
+            }
+
+            const currentEndpoints = endpointConfig.get(chainId) ?? [];
+
+            //TODO verify that there are no duplicates (interfaceAddress)
+            currentEndpoints.push({
+                name: rawEndpointConfig.name,
+                amb: rawEndpointConfig.amb,
+                chainId,
+                interfaceAddress: rawEndpointConfig.interfaceAddress.toLowerCase(),
+                incentivesAddress: rawEndpointConfig.incentivesAddress.toLowerCase(),
+                channelsOnDestination,
+            });
+            endpointConfig.set(chainId, currentEndpoints);
+        }
+
+        return endpointConfig;
     }
 
     getAMBConfig<T = unknown>(amb: string, key: string, chainId?: string): T {

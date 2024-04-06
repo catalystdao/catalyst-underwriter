@@ -7,10 +7,14 @@ import { CatalystChainInterfaceInterface, ExpireUnderwriteEvent, FulfillUnderwri
 import { ICatalystV1VaultEventsInterface, SendAssetEvent } from "src/contracts/ICatalystV1VaultEvents";
 import { calcAssetSwapIdentifier, tryErrorToString, wait } from "src/common/utils";
 import { Store } from "src/store/store.lib";
-import { decodeBytes65Address } from "src/common/decode.payload";
+import { MessageContext, SOURCE_TO_DESTINATION, decodeBytes65Address, parsePayload } from "src/common/decode.payload";
 import { ReceiveAssetEvent } from "src/contracts/CatalystVaultCommon";
 import { SwapState, SwapStatus, UnderwriteState, UnderwriteStatus } from "src/store/store.types";
 import { MonitorInterface, MonitorStatus } from "src/monitor/monitor.interface";
+import { ASSET_SWAP, CatalystContext, catalystParse } from "src/common/decode.catalyst";
+import { EndpointConfig } from "src/config/config.types";
+
+const BYTES_4_MASK = 4294967295;
 
 class ListenerWorker {
     readonly store: Store;
@@ -408,9 +412,6 @@ class ListenerWorker {
         const vaultAddress = log.address;
         const event = parsedLog.args as unknown as SendAssetEvent.OutputObject;
 
-        const toVault = decodeBytes65Address(event.toVault);
-        const toAccount = decodeBytes65Address(event.toAccount);
-
         //TODO implement a better (generic) block number fix
         let blockNumber = log.blockNumber;
         if (this.chainId == '421614') { // Arbitrum sepolia
@@ -423,7 +424,7 @@ class ListenerWorker {
         
         //TODO the way in which the hash is calculated should depend on the fromVault template
         const swapId = calcAssetSwapIdentifier(
-            toAccount,
+            decodeBytes65Address(event.toAccount),
             event.units,
             event.fromAmount - event.fee,
             event.fromAsset,
@@ -434,16 +435,6 @@ class ListenerWorker {
             { vaultAddress: vaultAddress, txHash: log.transactionHash, swapId },
             `SendAsset event captured.`
         );
-
-        const toChainId = vaultConfig.channels[event.channelId.toLowerCase()];
-
-        if (toChainId == undefined) {
-            this.logger.warn(
-                { channelId: event.channelId },
-                `Dropping SendAsset event. No mapping for the event's channelId found.`
-            );
-            return;
-        }
 
         const blockTimestamp = await this.getBlockTimestamp(log.blockNumber);
         if (blockTimestamp == null) {
@@ -457,35 +448,237 @@ class ListenerWorker {
             return;
         }
 
-        const swapState: SwapState = {
-            poolId: vaultConfig.poolId,
-            fromChainId: this.chainId,
-            fromVault: vaultAddress,
-            status: SwapStatus.Pending,
-            toChainId,
+        void this.getAMBMessageData(
+            log.transactionHash,
             swapId,
-            toVault,
-            toAccount,
-            fromAsset: event.fromAsset,
-            swapAmount: event.fromAmount - event.fee,
-            units: event.units,
-            sendAssetEvent: {
-                txHash: log.transactionHash,
-                blockHash: log.blockHash,
-                blockNumber: log.blockNumber,
-                fromChannelId: event.channelId,
-                toAssetIndex: event.toAssetIndex,
-                fromAmount: event.fromAmount,
-                fee: event.fee,
-                minOut: event.minOut,
-                underwriteIncentiveX16: event.underwriteIncentiveX16,
-                blockTimestamp,
-                observedAtBlockNumber: this.currentStatus!.blockNumber
-            },
-        }
-    
-        await this.store.saveSwapState(swapState);
+            vaultAddress,
+            blockNumber
+        ).then(async (ambMessageData) => {
+            if (ambMessageData == undefined) {
+                this.logger.info(
+                    {
+                        txHash: log.transactionHash,
+                        sourceVault: vaultAddress,
+                        swapId,
+                    },
+                    `Failed to get the AMB message data for the given asset swap. Swap will not be underwritten.`
+                );
+                return;
+            }
+            
+            const {ambMessageMetadata, incentivesMessage, assetSwapPayload} = ambMessageData;
+
+            const originEndpoint = this.getSwapOriginEndpoint(
+                incentivesMessage.sourceApplicationAddress,
+                "" // TODO
+            );
+
+            if (originEndpoint == undefined) {
+                this.logger.info(
+                    {
+                        txHash: log.transactionHash,
+                        sourceVault: vaultAddress,
+                        swapId,
+                    },
+                    'Swap source endpoint not found. Skipping.'
+                );
+                return;
+            }
+
+            const fromChannelId = originEndpoint.channelsOnDestination[ambMessageMetadata.destinationChain];
+            if (fromChannelId == undefined) {
+                this.logger.info(
+                    {
+                        txHash: log.transactionHash,
+                        sourceVault: vaultAddress,
+                        swapId,
+                        fromInterfaceAddress: incentivesMessage.sourceApplicationAddress,
+                        fromIncentivesAddress: "", // TODO,
+                        toChainId: ambMessageMetadata.destinationChain
+                    },
+                    `'fromChannelId' for the given swap not found. Skipping.`
+                );
+                return;
+            }
+
+            // TODO validate the sourceEscrow
+
+            const swapState: SwapState = {
+                fromChainId: this.chainId,
+                fromVault: vaultAddress,
+                swapId,
+                status: SwapStatus.Pending,
+                ambMessageSendAssetDetails: {
+                    txHash: log.transactionHash,
+                    blockHash: log.blockHash,
+                    blockNumber,
+            
+                    amb: ambMessageMetadata.amb,
+                    toChainId: ambMessageMetadata.destinationChain,
+                    fromChannelId,
+
+                    toIncentivesAddress: "", // ! TODO
+                    toApplication: incentivesMessage.toApplication,
+                    messageIdentifier: ambMessageMetadata.messageIdentifier,
+                    deadline: incentivesMessage.deadline,
+                    maxGasDelivery: incentivesMessage.maxGasLimit,
+            
+                    fromVault: assetSwapPayload.fromVault,
+                    toVault: assetSwapPayload.toVault,
+                    toAccount: assetSwapPayload.toAccount,
+                    units: assetSwapPayload.units,
+                    toAssetIndex: BigInt(assetSwapPayload.toAssetIndex),
+                    minOut: assetSwapPayload.minOut,
+                    swapAmount: assetSwapPayload.fromAmount,
+                    fromAsset: assetSwapPayload.fromAsset,
+                    blockNumberMod: BigInt(assetSwapPayload.blockNumber),
+                    underwriteIncentiveX16: BigInt(assetSwapPayload.underwritingIncentive),
+                    calldata: assetSwapPayload.cdata,
+
+                    blockTimestamp,
+                    observedAtBlockNumber: this.currentStatus!.blockNumber,
+                },
+            }
+        
+            await this.store.saveSwapState(swapState);
+        })
+
     };
+
+    private getSwapOriginEndpoint(fromInterfaceAddress: string, fromIncentivesAddress: string): EndpointConfig | undefined {
+        // TODO implement:
+        // NOTE: the 'interfaceAddress' fields within the 'endpointConfigs' array are unique (verified on config service)
+        const matchingFromEndpointConfig = this.config.endpointConfigs
+            .find(config => config.interfaceAddress == fromInterfaceAddress);
+
+        if (matchingFromEndpointConfig == undefined) {
+            return undefined;
+        }
+
+        //TODO implement
+        // if (matchingFromEndpointConfig.incentivesAddress != fromIncentivesAddress) {
+        //     this.logger.info(
+        //         {
+        //             fromInterfaceAddress,
+        //             fromIncentivesAddress
+        //         },
+        //         `Invalid 'fromIncentivesAddress' observed for the given 'fromInterfaceAddress'.`
+        //     );
+        //     return undefined;
+        // }
+
+        return matchingFromEndpointConfig;        
+    }
+
+
+    private async getAMBMessageData(
+        txHash: string,
+        swapId: string,
+        sourceVault: string,
+        blockNumber: number,
+    ): Promise<{
+        ambMessageMetadata: any, // TODO type
+        incentivesMessage: SOURCE_TO_DESTINATION,
+        assetSwapPayload: ASSET_SWAP
+    } | undefined> {
+
+        const maxTries = 3; //TODO move to config
+        for (let tryCount = 0; tryCount < maxTries; tryCount++) {
+            try {
+                const ambMessageData = await this.queryAMBMessageData(txHash, swapId, sourceVault, blockNumber);
+                if (ambMessageData == undefined) {
+                    throw new Error('No matching AMB message found.')
+                }
+
+                return ambMessageData;
+
+            } catch (error) {
+
+                this.logger.info(
+                    {
+                        txHash,
+                        sourceVault,
+                        swapId,
+                        try: tryCount + 1,
+                        error: tryErrorToString(error),
+                    },
+                    `Failed to get the AMB message data for the given asset swap. Retrying if possible.`
+                );
+
+                if (tryCount == maxTries - 1) {
+                    return undefined;
+                }
+
+                await wait(this.config.retryInterval);
+            }
+        }
+
+        return undefined;
+    }
+
+    private async queryAMBMessageData(
+        txHash: string,
+        swapId: string,
+        sourceVault: string,
+        blockNumber: number,
+    ): Promise<{
+        ambMessageMetadata: any, // TODO type
+        incentivesMessage: SOURCE_TO_DESTINATION,
+        assetSwapPayload: ASSET_SWAP
+    } | undefined> {
+        
+        const relayerEndpoint = `http://${process.env.RELAYER_HOST}:${process.env.RELAYER_PORT}/getAMBMessages?`;
+
+        const res = await fetch(relayerEndpoint + new URLSearchParams({chainId: this.chainId, txHash}));
+        const ambs = (await res.json());    //TODO type
+
+        // Find the AMB that matches the SendAsset event
+        for (const amb of ambs) {
+            try {
+                if (amb.sourceChain != this.chainId) continue;
+
+                const giPayload = parsePayload(amb.payload);
+
+                if (giPayload.context != MessageContext.CTX_SOURCE_TO_DESTINATION) continue;
+
+                // TODO validate 'sourceApplicationAddress' (i.e. is it an approved 'sourceInterface'?)
+                // if (giPayload.sourceApplicationAddress.toLowerCase() != sourceInterface.toLowerCase()) continue;
+
+                const catalystPayload = catalystParse(giPayload.message);
+
+                if (catalystPayload.context != CatalystContext.ASSET_SWAP) continue;
+
+                // ! It is very important to validate that the 'fromVault' encoded within the swap
+                // ! message is the same as the address of the contract which emitted the SendAsset
+                // ! event. (Technically, the address of the vault is irrelevant if the destination
+                // ! vault accepts the message, but other parts of this underwriter implementation
+                // ! may rely on this fact.)
+                if (catalystPayload.fromVault.toLowerCase() != sourceVault.toLowerCase()) continue;
+                if (catalystPayload.blockNumber != (blockNumber & BYTES_4_MASK)) continue;
+
+                const ambSwapId = calcAssetSwapIdentifier(
+                    catalystPayload.toAccount,
+                    catalystPayload.units,
+                    catalystPayload.fromAmount,
+                    catalystPayload.fromAsset,
+                    catalystPayload.blockNumber
+                )
+
+                if (ambSwapId.toLowerCase() != swapId.toLowerCase()) continue;
+
+                return {
+                    ambMessageMetadata: amb,
+                    incentivesMessage: giPayload,
+                    assetSwapPayload: catalystPayload,
+                };
+
+            } catch {
+                // Continue
+            }
+        }
+
+        return undefined;
+    }
 
     private async handleReceiveAssetEvent(
         log: Log,
@@ -493,60 +686,61 @@ class ListenerWorker {
         vaultConfig: VaultConfig
     ): Promise<void> {
 
-        const vaultAddress = log.address;
-        const event = parsedLog.args as unknown as ReceiveAssetEvent.OutputObject;
+        //TODO
+        // const vaultAddress = log.address;
+        // const event = parsedLog.args as unknown as ReceiveAssetEvent.OutputObject;
 
-        //TODO the way in which the hash is calculated should depend on the fromVault template
-        const fromVault = decodeBytes65Address(event.fromVault);
-        const fromAsset = decodeBytes65Address(event.fromAsset);
+        // //TODO the way in which the hash is calculated should depend on the fromVault template
+        // const fromVault = decodeBytes65Address(event.fromVault);
+        // const fromAsset = decodeBytes65Address(event.fromAsset);
 
-        const swapId = calcAssetSwapIdentifier(
-            event.toAccount,
-            event.units,
-            event.fromAmount,
-            fromAsset,
-            Number(event.sourceBlockNumberMod)
-        );
+        // const swapId = calcAssetSwapIdentifier(
+        //     event.toAccount,
+        //     event.units,
+        //     event.fromAmount,
+        //     fromAsset,
+        //     Number(event.sourceBlockNumberMod)
+        // );
     
-        this.logger.info(
-            { vaultAddress: vaultAddress, txHash: log.transactionHash, swapId },
-            `ReceiveAsset event captured.`
-        );
+        // this.logger.info(
+        //     { vaultAddress: vaultAddress, txHash: log.transactionHash, swapId },
+        //     `ReceiveAsset event captured.`
+        // );
 
-        const fromChainId = vaultConfig.channels[event.channelId.toLowerCase()];
+        // const fromChainId = vaultConfig.channels[event.channelId.toLowerCase()];
 
-        if (fromChainId == undefined) {
-            this.logger.warn(
-                { channelId: event.channelId },
-                `Dropping ReceiveAsset event. No mapping for the event's channelId found.`
-            );
-            return;
-        }
+        // if (fromChainId == undefined) {
+        //     this.logger.warn(
+        //         { channelId: event.channelId },
+        //         `Dropping ReceiveAsset event. No mapping for the event's channelId found.`
+        //     );
+        //     return;
+        // }
 
-        const swapState: SwapState = {
-            poolId: vaultConfig.poolId,
-            fromChainId,
-            fromVault,
-            status: SwapStatus.Completed,
-            toChainId: this.chainId,
-            swapId,
-            toVault: vaultAddress,
-            toAccount: event.toAccount,
-            fromAsset,
-            swapAmount: event.fromAmount,
-            units: event.units,
-            receiveAssetEvent: {
-                txHash: log.transactionHash,
-                blockHash: log.blockHash,
-                blockNumber: log.blockNumber,
-                toChannelId: event.channelId,
-                toAsset: event.toAsset,
-                toAmount: event.toAmount,
-                sourceBlockNumberMod: Number(event.sourceBlockNumberMod),
-            },
-        }
+        // const swapState: SwapState = {
+        //     poolId: vaultConfig.poolId,
+        //     fromChainId,
+        //     fromVault,
+        //     status: SwapStatus.Completed,
+        //     toChainId: this.chainId,
+        //     swapId,
+        //     toVault: vaultAddress,
+        //     toAccount: event.toAccount,
+        //     fromAsset,
+        //     swapAmount: event.fromAmount,
+        //     units: event.units,
+        //     receiveAssetEvent: {
+        //         txHash: log.transactionHash,
+        //         blockHash: log.blockHash,
+        //         blockNumber: log.blockNumber,
+        //         toChannelId: event.channelId,
+        //         toAsset: event.toAsset,
+        //         toAmount: event.toAmount,
+        //         sourceBlockNumberMod: Number(event.sourceBlockNumberMod),
+        //     },
+        // }
     
-        await this.store.saveSwapState(swapState);
+        // await this.store.saveSwapState(swapState);
     };
 
     

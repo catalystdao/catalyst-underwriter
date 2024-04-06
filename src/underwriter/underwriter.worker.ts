@@ -7,11 +7,12 @@ import { AMBConfig, PoolConfig, TokenConfig } from "src/config/config.types";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
 import { SwapDescription } from "src/store/store.types";
-import { EvalOrder, NewOrder, Order, UnderwriteOrder, UnderwriteOrderResult } from "./underwriter.types";
+import { DiscoverOrder, NewOrder, UnderwriteOrder, UnderwriteOrderResult } from "./underwriter.types";
 import { EvalQueue } from "./queues/eval-queue";
 import { UnderwriteQueue } from "./queues/underwrite-queue";
 import { TokenHandler } from "./token-handler/token-handler";
 import { WalletInterface } from "src/wallet/wallet.interface";
+import { DiscoverQueue } from "./queues/discover-queue";
 
 
 class UnderwriterWorker {
@@ -32,7 +33,8 @@ class UnderwriterWorker {
     readonly wallet: WalletInterface;
     readonly tokenHandler: TokenHandler;
 
-    readonly newOrdersQueue: NewOrder<EvalOrder>[] = [];
+    readonly newOrdersQueue: NewOrder<DiscoverOrder>[] = [];
+    readonly discoverQueue: DiscoverQueue;
     readonly evalQueue: EvalQueue;
     readonly underwriteQueue: UnderwriteQueue;
 
@@ -67,7 +69,7 @@ class UnderwriterWorker {
             this.logger
         );
 
-        [this.evalQueue, this.underwriteQueue] = this.initializeQueues(
+        [this.discoverQueue, this.evalQueue, this.underwriteQueue] = this.initializeQueues(
             this.config.enabled,
             this.chainId,
             this.tokens,
@@ -131,25 +133,33 @@ class UnderwriterWorker {
         store: Store,
         provider: JsonRpcProvider,
         logger: pino.Logger,
-    ): [EvalQueue, UnderwriteQueue] {
+    ): [DiscoverQueue, EvalQueue, UnderwriteQueue] {
+        const discoverQueue = new DiscoverQueue(
+            chainId,
+            tokens,
+            retryInterval,
+            maxTries,
+            store,
+            provider,
+            logger
+        );
+
         const evalQueue = new EvalQueue(
             enabled,
             chainId,
             tokens,
-            pools,
             retryInterval,
             maxTries,
             underwriteBlocksMargin,
             minRelayDeadlineDuration,
             minMaxGasDelivery,
             tokenHandler,
-            store,
             provider,
             logger
         );
 
         const underwriteQueue = new UnderwriteQueue(
-            pools,
+            chainId,
             ambs,
             retryInterval,
             maxTries,
@@ -159,7 +169,7 @@ class UnderwriterWorker {
             logger
         );
 
-        return [evalQueue, underwriteQueue];
+        return [discoverQueue, evalQueue, underwriteQueue];
     }
 
     private initiateIntervalStatusLog(): void {
@@ -195,12 +205,15 @@ class UnderwriterWorker {
         await this.listenForOrders();
 
         while (true) {
-            const evalOrders = await this.processNewOrdersQueue();
+            const discoverOrders = await this.processNewOrdersQueue();
+
+            await this.discoverQueue.addOrders(...discoverOrders);
+            await this.discoverQueue.processOrders();
+            const [evalOrders] = this.discoverQueue.getFinishedOrders();
 
             await this.evalQueue.addOrders(...evalOrders);
             await this.evalQueue.processOrders();
-
-            const [newUnderwriteOrders, ,] = this.evalQueue.getFinishedOrders();
+            const [underwriteOrders] = this.evalQueue.getFinishedOrders();
 
             // ! The following call blocks the pipeline until the submitted approvals are
             // ! confirmed! Approvals should be configured to not be issued at a high frequency
@@ -208,9 +221,9 @@ class UnderwriterWorker {
             // ! Failed allowance updates are not retried, thus any depending underwrites will
             // ! fail. However, consequtive 'processOrders' calls of this handler will always
             // ! reissue any required allowance updates.
-            await this.tokenHandler.processNewAllowances(...newUnderwriteOrders);
+            await this.tokenHandler.processNewAllowances(...underwriteOrders);
 
-            await this.underwriteQueue.addOrders(...newUnderwriteOrders);
+            await this.underwriteQueue.addOrders(...underwriteOrders);
             await this.underwriteQueue.processOrders();
             const [confirmedOrders, rejectedOrders, failedOrders] = this.underwriteQueue.getFinishedOrders();
 
@@ -297,25 +310,30 @@ class UnderwriterWorker {
                     throw new Error(`No data found for the swap description ${swapDescription}.`)
                 }
 
+                const sendAssetDetails = swapStatus.ambMessageSendAssetDetails!;
+
                 void this.addUnderwriteOrder(
-                    swapStatus.poolId,
                     swapStatus.fromChainId,
                     swapStatus.fromVault,
-                    swapStatus.sendAssetEvent!.txHash,
-                    swapStatus.sendAssetEvent!.blockNumber,
-                    swapStatus.sendAssetEvent!.blockTimestamp,
-                    swapStatus.sendAssetEvent!.observedAtBlockNumber,
                     swapStatus.swapId,
-                    swapStatus.sendAssetEvent!.fromChannelId,
-                    swapStatus.toVault,
-                    swapStatus.toAccount,
-                    swapStatus.fromAsset,
-                    swapStatus.sendAssetEvent!.toAssetIndex,
-                    swapStatus.sendAssetEvent!.fromAmount,
-                    swapStatus.sendAssetEvent!.minOut,
-                    swapStatus.units,
-                    swapStatus.sendAssetEvent!.fee,
-                    swapStatus.sendAssetEvent!.underwriteIncentiveX16,
+                    sendAssetDetails.toVault,
+                    sendAssetDetails.toAccount,
+                    sendAssetDetails.units,
+                    sendAssetDetails.toAssetIndex,
+                    sendAssetDetails.minOut,
+                    sendAssetDetails.underwriteIncentiveX16,
+                    sendAssetDetails.calldata,
+                    sendAssetDetails.txHash,
+                    sendAssetDetails.blockNumber,
+                    sendAssetDetails.blockTimestamp,
+                    sendAssetDetails.observedAtBlockNumber,
+                    sendAssetDetails.amb,
+                    sendAssetDetails.fromChannelId,
+                    sendAssetDetails.toIncentivesAddress,
+                    sendAssetDetails.toApplication, // ! It must be verified that the 'toApplication' should be the 'interface'
+                    sendAssetDetails.messageIdentifier,
+                    sendAssetDetails.deadline,
+                    sendAssetDetails.maxGasDelivery,
                 );
 
             }).catch((rejection: any) => {
@@ -328,7 +346,7 @@ class UnderwriterWorker {
         });
     }
 
-    private async processNewOrdersQueue(): Promise<EvalOrder[]> {
+    private async processNewOrdersQueue(): Promise<DiscoverOrder[]> {
         const currentTimestamp = Date.now();
         const capacity = this.getUnderwritterCapacity();
 
@@ -341,17 +359,18 @@ class UnderwriterWorker {
             }
         }
 
-        const ordersToEval = this.newOrdersQueue.splice(0, i).map((newOrder) => {
+        const ordersToProcess = this.newOrdersQueue.splice(0, i).map((newOrder) => {
             return newOrder.order;
         });
 
-        return ordersToEval;
+        return ordersToProcess;
     }
 
     private getUnderwritterCapacity(): number {
         return Math.max(
             0,
             this.config.maxPendingTransactions
+                - this.discoverQueue.size
                 - this.evalQueue.size
                 - this.underwriteQueue.size
         );
@@ -359,24 +378,30 @@ class UnderwriterWorker {
 
     //TODO refactor arguments? (abstract into different objects?)
     private async addUnderwriteOrder(
-        poolId: string,
         fromChainId: string,
         fromVault: string,
+        swapIdentifier: string,
+
+        toVault: string,
+        toAccount: string,
+        units: bigint,
+        toAssetIndex: bigint,
+        minOut: bigint,
+        underwriteIncentiveX16: bigint,
+        calldata: string,
+
         swapTxHash: string,
         swapBlockNumber: number,
         swapBlockTimestamp: number,
         swapObservedAtBlockNumber: number,
-        swapIdentifier: string,
-        channelId: string,
-        toVault: string,
-        toAccount: string,
-        fromAsset: string,
-        toAssetIndex: bigint,
-        fromAmount: bigint,
-        minOut: bigint,
-        units: bigint,
-        fee: bigint,
-        underwriteIncentiveX16: bigint
+
+        amb: string,
+        sourceIdentifier: string,
+        toIncentivesAddress: string,
+        interfaceAddress: string,
+        messageIdentifier: string,
+        deadline: bigint,
+        maxGasDelivery: bigint,
     ) {
         this.logger.debug(
             { fromVault, fromChainId, swapTxHash, swapId: swapIdentifier },
@@ -385,45 +410,32 @@ class UnderwriterWorker {
 
         const submissionDeadline = Date.now() + this.config.maxSubmissionDelay;
 
-        const sourceIdentifier = this.getSourceIdentifierOfSwap(poolId, fromChainId);
-        if (sourceIdentifier == undefined) {
-            this.logger.warn(
-                { poolId, fromVault, fromChainId, swapTxHash, swapId: swapIdentifier },
-                'Unable to find the \'sourceIdentifier\' corresponding to the received asset swap. Skipping underwrite.'
-            );
-            return;
-        }
-
-        const poolConfig = this.pools.find(pool => pool.id == poolId);
-        if (poolConfig == undefined) {
-            this.logger.warn(
-                { poolId, fromVault, fromChainId, swapTxHash, swapId: swapIdentifier },
-                'Unable to find the pool configuration corresponding to the given \'poolId\'. Skipping underwrite.'
-            );
-            return;
-        }
-
-        const order: Order = {
-            poolId,
-            amb: poolConfig.amb,
+        const order: DiscoverOrder = {
             fromChainId,
             fromVault,
+            swapIdentifier,
+
+            toVault,
+            toAccount,
+            units,
+            toAssetIndex,
+            minOut,
+            underwriteIncentiveX16,
+            calldata,
+
             swapTxHash,
             swapBlockNumber,
             swapBlockTimestamp,
             swapObservedAtBlockNumber,
-            swapIdentifier,
+
+            amb,
             sourceIdentifier,
-            channelId,
-            toVault,
-            toAccount,
-            fromAsset,
-            toAssetIndex,
-            fromAmount,
-            minOut,
-            units,
-            fee,
-            underwriteIncentiveX16,
+            toIncentivesAddress,
+            interfaceAddress,
+            messageIdentifier,
+            deadline,
+            maxGasDelivery,
+
             submissionDeadline,
         };
 
@@ -433,27 +445,6 @@ class UnderwriterWorker {
             processAt: Date.now() + processDelay,
             order
         });
-    }
-
-    private getSourceIdentifierOfSwap(
-        poolId: string,
-        fromChainId: string,
-    ): string | undefined {
-        const poolConfig = this.pools.find((pool) => pool.id == poolId);
-        if (poolConfig == undefined) {
-            return undefined;
-        }
-
-        const vaultConfig = poolConfig.vaults.find((vault) => vault.chainId == this.chainId);
-        if (vaultConfig == undefined) {
-            return undefined;
-        }
-
-        for (const [channelId, chainId] of Object.entries(vaultConfig.channels)) {
-            if (chainId == fromChainId) return channelId;
-        }
-
-        return undefined;
     }
 
 

@@ -139,6 +139,8 @@ chains:
     monitor:
       interval: 2000
 
+# TODO specify 'endpoints' config
+
 # Pools to underwrite configuration
 pools:
   - id: 0

@@ -12,7 +12,6 @@ export enum SwapStatus {
 }
 
 export interface SwapDescription {
-    poolId: string;
     fromChainId: string;
     toChainId: string;
     fromVault: string;
@@ -21,48 +20,56 @@ export interface SwapDescription {
 
 export interface SwapState {
 
-    // Trusted fields (provided by the listener)
-    poolId: string;
+    // Trusted fields (these define the entry)
     fromChainId: string;
     fromVault: string;
-
-    // Common swap fields (derived from events)
-    status: SwapStatus;
-    toChainId: string;
     swapId: string;
-    toVault: string;
-    toAccount: string;
-    fromAsset: string;
-    swapAmount: bigint;
-    units: bigint;
 
-    toAsset?: string;
-    calldata?: string;
-
-    underwriteId?: string;
-    underwriteTxhash?: string;
+    // Derived from event-specific details
+    status: SwapStatus;
 
     // Event-specific details
-    sendAssetEvent?: SendAssetEventDetails;
-    receiveAssetEvent?: ReceiveAssetEventDetails;
+    ambMessageSendAssetDetails?: AMBMessageSendAssetDetails;
+    sendAssetCompletionDetails?: ReceiveAssetEventDetails | FulfillUnderwriteEventDetails;
 }
 
-export interface SendAssetEventDetails extends TransactionDescription {
+// ! The following must be populated using AMB message data, **NOT** using SendAsset events, as
+// ! these could be malicious.
+export interface AMBMessageSendAssetDetails extends TransactionDescription {
+    // Relayer AMB message data
+    amb: string;
+    toChainId: string;
     fromChannelId: string;
+
+    // Decoded GeneralisedIncentives data
+    toIncentivesAddress: string;
+    toApplication: string;
+    messageIdentifier: string;
+    deadline: bigint;
+    maxGasDelivery: bigint;
+
+    // Decoded swap data (from AMB message)
+    fromVault: string; // ! It must be verified that this field matches the 'fromVault' of the 'SwapState'.
+    toVault: string;
+    toAccount: string;
+    units: bigint;
     toAssetIndex: bigint;
-    fromAmount: bigint;
-    fee: bigint;
     minOut: bigint;
+    swapAmount: bigint;
+    fromAsset: string;
+    blockNumberMod: bigint;
     underwriteIncentiveX16: bigint;
+    calldata: string;
+
+    // Additional data
     blockTimestamp: number;
     observedAtBlockNumber: number;
 }
 
 export interface ReceiveAssetEventDetails extends TransactionDescription {
-    toChannelId: string;
-    toAsset: string;
-    toAmount: bigint;
-    sourceBlockNumberMod: number;
+}
+
+export interface SwapUnderwrittenEvent extends TransactionDescription {
 }
 
 

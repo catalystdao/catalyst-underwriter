@@ -6,6 +6,7 @@ import { ConfigService } from 'src/config/config.service';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { MonitorService } from 'src/monitor/monitor.service';
 import { tryErrorToString } from 'src/common/utils';
+import { EndpointConfig } from 'src/config/config.types';
 
 export const DEFAULT_LISTENER_MAX_BLOCKS = null;
 export const DEFAULT_LISTENER_RETRY_INTERVAL = 2000;
@@ -34,6 +35,7 @@ export interface ListenerWorkerData {
     processingInterval: number,
     maxBlocks: number | null,
     vaultConfigs: VaultConfig[],
+    endpointConfigs: EndpointConfig[],
     monitorPort: MessagePort;
     loggerOptions: LoggerOptions
 }
@@ -63,7 +65,12 @@ export class ListenerService implements OnModuleInit {
 
         for (const [chainId, chainVaultConfigs] of Object.entries(vaultConfigs)) {
 
-            const workerData = await this.loadWorkerConfig(chainId, chainVaultConfigs, defaultWorkerConfig);
+            const workerData = await this.loadWorkerConfig(chainId, this.configService.endpointsConfig, chainVaultConfigs, defaultWorkerConfig);
+
+            if (workerData == undefined) {
+                this.loggerService.warn('Skipping listener for chain.');
+                continue;
+            }
 
             const worker = new Worker(join(__dirname, 'listener.worker.js'), {
                 workerData,
@@ -105,13 +112,20 @@ export class ListenerService implements OnModuleInit {
 
     private async loadWorkerConfig(
         chainId: string,
+        endpointConfigs: Map<string, EndpointConfig[]>,
         vaultConfigs: VaultConfig[],
         defaultConfig: DefaultListenerWorkerData
-    ): Promise<ListenerWorkerData> {
+    ): Promise<ListenerWorkerData | undefined> {
 
         const chainConfig = this.configService.chainsConfig.get(chainId);
         if (chainConfig == undefined) {
             throw new Error(`Unable to load config for chain ${chainId}`);
+        }
+
+        const chainEndpointConfigs = endpointConfigs.get(chainId);
+        if (chainEndpointConfigs == undefined) {
+            this.loggerService.warn('No endpoints specified. Skipping chain.');
+            return undefined;
         }
 
         const chainListenerConfig = chainConfig.listener;
@@ -124,6 +138,7 @@ export class ListenerService implements OnModuleInit {
             processingInterval: chainListenerConfig.processingInterval ?? defaultConfig.processingInterval,
             maxBlocks: chainListenerConfig.maxBlocks ?? defaultConfig.maxBlocks,
             vaultConfigs,
+            endpointConfigs: chainEndpointConfigs,
             monitorPort: await this.monitorService.attachToMonitor(chainId),
             loggerOptions: this.loggerService.loggerOptions
         };

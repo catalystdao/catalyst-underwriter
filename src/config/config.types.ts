@@ -128,3 +128,12 @@ export interface PoolConfig {
         channels: Record<string, string>;
     }[];
 }
+
+export interface EndpointConfig {
+    name: string;
+    amb: string;
+    chainId: string;
+    interfaceAddress: string;
+    incentivesAddress: string;
+    channelsOnDestination: Record<string, string>;
+}
