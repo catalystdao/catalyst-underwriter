@@ -273,7 +273,7 @@ const CHAINS_SCHEMA = {
     minItems: 2
 }
 
-const ENDPOINTS_SCHMEA = {
+const ENDPOINTS_SCHEMA = {
     $id: "endpoints-schema",
     type: "array",
     items: {
@@ -372,8 +372,7 @@ export function getConfigValidator(): AnyValidateFunction<unknown> {
     ajv.addSchema(AMBS_SCHEMA);
     ajv.addSchema(TOKENS_SCHEMA);
     ajv.addSchema(CHAINS_SCHEMA);
-    ajv.addSchema(ENDPOINTS_SCHMEA);
-    ajv.addSchema(POOLS_SCHEMA);
+    ajv.addSchema(ENDPOINTS_SCHEMA);
 
     const verifier = ajv.getSchema('config-schema');
     if (verifier == undefined) {
