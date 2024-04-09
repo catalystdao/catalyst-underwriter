@@ -47,6 +47,9 @@ dependencies:
   rxjs:
     specifier: ^7.8.1
     version: 7.8.1
+  ws:
+    specifier: ^8.16.0
+    version: 8.16.0
 
 devDependencies:
   '@nestjs/cli':
@@ -73,6 +76,9 @@ devDependencies:
   '@types/supertest':
     specifier: ^2.0.12
     version: 2.0.16
+  '@types/ws':
+    specifier: ^8.5.10
+    version: 8.5.10
   '@typescript-eslint/eslint-plugin':
     specifier: ^6.10.0
     version: 6.21.0(@typescript-eslint/parser@6.21.0)(eslint@8.57.0)(typescript@5.4.2)
@@ -1336,6 +1342,12 @@ packages:
     resolution: {integrity: sha512-6c2ogktZ06tr2ENoZivgm7YnprnhYE4ZoXGMY+oA7IuAf17M8FWvujXZGmxLv8y0PTyts4x5A+erSwVUFA8XSg==}
     dependencies:
       '@types/superagent': 8.1.4
+    dev: true
+
+  /@types/ws@8.5.10:
+    resolution: {integrity: sha512-vmQSUcfalpIq0R9q7uTo2lXs6eGIpt9wtnLdMv9LVpIjCA/+ufZRozlVoVelIYixx1ugCBKDhn89vnsEGOCx9A==}
+    dependencies:
+      '@types/node': 20.11.25
     dev: true
 
   /@types/yargs-parser@21.0.3:
@@ -5624,6 +5636,19 @@ packages:
       imurmurhash: 0.1.4
       signal-exit: 3.0.7
     dev: true
+
+  /ws@8.16.0:
+    resolution: {integrity: sha512-HS0c//TP7Ina87TfiPUz1rQzMhHrl/SG2guqRcTOIUYD2q8uhUdNHZYJUaQ8aTGPzCh+c6oawMKW35nFl1dxyQ==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+    dev: false
 
   /ws@8.5.0:
     resolution: {integrity: sha512-BWX0SWVgLPzYwF8lTzEy1egjhS4S4OEAHfsO8o65WOVsrnSRGaSiUaa9e0ggGlkMTtBlmOpEXiie9RUcBO86qg==}

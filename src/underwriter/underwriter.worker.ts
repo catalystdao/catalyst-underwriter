@@ -3,7 +3,7 @@ import pino, { LoggerOptions } from "pino";
 import { parentPort, workerData } from 'worker_threads';
 import { UnderwriterWorkerCommand, UnderwriterWorkerCommandId, UnderwriterWorkerData } from "./underwriter.service";
 import { tryErrorToString, wait } from "src/common/utils";
-import { AMBConfig, PoolConfig, TokenConfig } from "src/config/config.types";
+import { AMBConfig, EndpointConfig, PoolConfig, TokenConfig } from "src/config/config.types";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
 import { SwapDescription } from "src/store/store.types";
@@ -72,6 +72,7 @@ class UnderwriterWorker {
         [this.discoverQueue, this.evalQueue, this.underwriteQueue] = this.initializeQueues(
             this.config.enabled,
             this.chainId,
+            this.config.endpointConfigs,
             this.tokens,
             this.pools,
             this.ambs,
@@ -119,6 +120,7 @@ class UnderwriterWorker {
     private initializeQueues(
         enabled: boolean,
         chainId: string,
+        endpointConfigs: EndpointConfig[],
         tokens: Record<string, TokenConfig>,
         pools: PoolConfig[],
         ambs: Record<string, AMBConfig>,
@@ -136,6 +138,7 @@ class UnderwriterWorker {
     ): [DiscoverQueue, EvalQueue, UnderwriteQueue] {
         const discoverQueue = new DiscoverQueue(
             chainId,
+            endpointConfigs,
             tokens,
             retryInterval,
             maxTries,

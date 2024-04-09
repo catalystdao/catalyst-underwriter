@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import * as yaml from 'js-yaml';
 import dotenv from 'dotenv';
 import { getConfigValidator } from './config-schemas';
-import { GlobalConfig, ChainConfig, AMBConfig, PoolConfig, MonitorGlobalConfig, ListenerGlobalConfig, UnderwriterGlobalConfig, ExpirerGlobalConfig, WalletGlobalConfig, MonitorConfig, ListenerConfig, UnderwriterConfig, WalletConfig, ExpirerConfig, TokensConfig, EndpointConfig } from './config.types';
+import { GlobalConfig, ChainConfig, AMBConfig, PoolConfig, MonitorGlobalConfig, ListenerGlobalConfig, UnderwriterGlobalConfig, ExpirerGlobalConfig, WalletGlobalConfig, MonitorConfig, ListenerConfig, UnderwriterConfig, WalletConfig, ExpirerConfig, TokensConfig, EndpointConfig, VaultTemplateConfig } from './config.types';
 
 
 @Injectable()
@@ -216,6 +216,14 @@ export class ConfigService {
                 channelsOnDestination[channelChainId] = (channelId as string).toLowerCase();
             }
 
+            const vaultTemplates: VaultTemplateConfig[] = [];
+            for (const rawVaultTemplateConfig of rawEndpointConfig.vaultTemplates) {
+                vaultTemplates.push({
+                    name: rawVaultTemplateConfig.name,
+                    address: rawVaultTemplateConfig.address.toLowerCase()
+                });
+            }
+
             const currentEndpoints = endpointConfig.get(chainId) ?? [];
 
             //TODO verify that there are no duplicates (interfaceAddress)
@@ -223,9 +231,11 @@ export class ConfigService {
                 name: rawEndpointConfig.name,
                 amb: rawEndpointConfig.amb,
                 chainId,
+                factoryAddress: rawEndpointConfig.factoryAddress.toLowerCase(),
                 interfaceAddress: rawEndpointConfig.interfaceAddress.toLowerCase(),
                 incentivesAddress: rawEndpointConfig.incentivesAddress.toLowerCase(),
                 channelsOnDestination,
+                vaultTemplates,
             });
             endpointConfig.set(chainId, currentEndpoints);
         }

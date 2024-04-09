@@ -133,7 +133,14 @@ export interface EndpointConfig {
     name: string;
     amb: string;
     chainId: string;
+    factoryAddress: string;
     interfaceAddress: string;
     incentivesAddress: string;
     channelsOnDestination: Record<string, string>;
+    vaultTemplates: VaultTemplateConfig[];
+}
+
+export interface VaultTemplateConfig {
+    name: string;
+    address: string;
 }

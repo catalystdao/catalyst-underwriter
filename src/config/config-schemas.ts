@@ -282,6 +282,7 @@ const ENDPOINTS_SCHMEA = {
             name: {$ref: "non-empty-string-schema"},
             amb: {$ref: "non-empty-string-schema"},
             chainId: {$ref: "chain-id-schema"},
+            factoryAddress: {$ref: "address-field-schema"},
             interfaceAddress: {$ref: "address-field-schema"},
             incentivesAddress: {$ref: "address-field-schema"},
             channelsOnDestination: {
@@ -291,8 +292,22 @@ const ENDPOINTS_SCHMEA = {
                 },
                 additionalProperties: false
             },
+            vaultTemplates: {
+                type: "array",
+                items: {
+                    type: "object",
+                    properties: {
+                        name: {$ref: "non-empty-string-schema"},
+                        address: {$ref: "address-field-schema"},
+                    },
+                    required: ["name", "address"],
+                    additionalProperties: false
+                },
+                minItems: 1
+            }
         },
-        required: ["name", "amb", "chainId", "interfaceAddress", "incentivesAddress", "channelsOnDestination"],
+        required: ["name", "amb", "chainId", "factoryAddress", "interfaceAddress", "incentivesAddress", "channelsOnDestination", "vaultTemplates"],
+        additionalProperties: false
     },
     minItems: 2
 }

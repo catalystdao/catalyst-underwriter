@@ -3,7 +3,7 @@ import { join } from 'path';
 import { LoggerOptions } from 'pino';
 import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService } from 'src/config/config.service';
-import { AMBConfig, ChainConfig, PoolConfig, TokensConfig } from 'src/config/config.types';
+import { AMBConfig, ChainConfig, EndpointConfig, PoolConfig, TokensConfig } from 'src/config/config.types';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { WalletService } from 'src/wallet/wallet.service';
 import { Wallet } from 'ethers';
@@ -46,6 +46,7 @@ export interface UnderwriterWorkerData {
     chainName: string,
     tokens: TokensConfig,
     pools: PoolConfig[],
+    endpointConfigs: EndpointConfig[],
     ambs: Record<string, AMBConfig>,
     rpc: string,
     retryInterval: number;
@@ -99,7 +100,12 @@ export class UnderwriterService implements OnModuleInit {
 
         for (const [chainId, ] of this.configService.chainsConfig) {
 
-            const workerData = await this.loadWorkerConfig(chainId, pools, ambs, defaultWorkerConfig);
+            const workerData = await this.loadWorkerConfig(chainId, this.configService.endpointsConfig, pools, ambs, defaultWorkerConfig);
+
+            if (workerData == undefined) {
+                this.loggerService.warn('Skipping underwriter for chain (no endpoints found).');
+                continue;
+            }
 
             const worker = new Worker(join(__dirname, 'underwriter.worker.js'), {
                 workerData,
@@ -168,10 +174,11 @@ export class UnderwriterService implements OnModuleInit {
 
     private async loadWorkerConfig(
         chainId: string,
+        endpointConfigs: Map<string, EndpointConfig[]>,
         pools: PoolConfig[],
         ambs: Record<string, AMBConfig>,
         defaultConfig: DefaultUnderwriterWorkerData
-    ): Promise<UnderwriterWorkerData> {
+    ): Promise<UnderwriterWorkerData | undefined> {
 
         const chainConfig = this.configService.chainsConfig.get(chainId);
         if (chainConfig == undefined) {
@@ -182,6 +189,12 @@ export class UnderwriterService implements OnModuleInit {
         const filteredPools = pools.filter(pool => {
             return pool.vaults.some((vault) => vault.chainId == chainId)
         });
+
+        const chainEndpointConfigs = endpointConfigs.get(chainId);
+        if (chainEndpointConfigs == undefined) {
+            this.loggerService.warn('No endpoints specified. Skipping chain.');
+            return undefined;
+        }
 
         const chainUnderwriterConfig = chainConfig.underwriter;
 
@@ -197,6 +210,7 @@ export class UnderwriterService implements OnModuleInit {
             chainId,
             chainName: chainConfig.name,
             tokens: this.loadTokensConfig(chainConfig, defaultConfig),
+            endpointConfigs: chainEndpointConfigs,
             pools: filteredPools,
             ambs,
             rpc: chainConfig.rpc,
