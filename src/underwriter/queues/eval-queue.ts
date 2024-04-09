@@ -221,17 +221,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         };
 
         if (typeof error.message == "string") {
-            if (
-                /^Unknown pool id (0x)?[0-9a-fA-F]*/.test(error.message)
-                || /^No vault on chain [0-9a-fA-F]* defined on pool (0x)?[0-9a-fA-F]*/.test(error.message)
-            ) {
-                this.logger.warn(
-                    errorDescription,
-                    `Error on underwrite evaluation. Dropping message.`,
-                );
-                return false;   // Do not retry eval
-            }
-
+            //TODO move this to the 'discover' queue
             if (
                 /^Failed to get the vault asset at the requested index.$/.test(error.message)
             ) {

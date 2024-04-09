@@ -1,7 +1,7 @@
 import pino from "pino";
 import { UnderwriteOrder } from "../underwriter.types";
 import { JsonRpcProvider } from "ethers";
-import { PoolConfig, TokenConfig } from "src/config/config.types";
+import { EndpointConfig, TokenConfig } from "src/config/config.types";
 import { ApprovalHandler } from "./approval-handler";
 import { WalletInterface } from "src/wallet/wallet.interface";
 import { BalanceHandler } from "./balance-handler";
@@ -18,7 +18,7 @@ export class TokenHandler {
     constructor(
         private readonly chainId: string,
         private readonly retryInterval: number,
-        private readonly pools: PoolConfig[],
+        private readonly endpoints: EndpointConfig[],
         private readonly tokens: Record<string, TokenConfig>,
         private readonly walletPublicKey: string,
         private readonly wallet: WalletInterface,
@@ -109,15 +109,13 @@ export class TokenHandler {
     // ********************************************************************************************
     private initializeApprovalHandlers(): void {
 
-        for (const poolConfig of this.pools) {
-            for (const vaultConfig of poolConfig.vaults) {
-                if (vaultConfig.chainId != this.chainId) {
-                    continue
-                }
+        for (const endpoint of this.endpoints) {
+            if (endpoint.chainId != this.chainId) {
+                continue
+            }
 
-                if (!this.approvalHandlers.has(vaultConfig.interfaceAddress)) {
-                    this.initializeApprovalHandler(vaultConfig.interfaceAddress);
-                }
+            if (!this.approvalHandlers.has(endpoint.interfaceAddress)) {
+                this.initializeApprovalHandler(endpoint.interfaceAddress);
             }
         }
     }

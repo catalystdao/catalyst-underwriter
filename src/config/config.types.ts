@@ -116,19 +116,6 @@ export interface TokenConfig {
 export type TokensConfig = Record<string, TokenConfig>;
 
 
-export interface PoolConfig {
-    id: string;
-    name: string;
-    amb: string;
-    vaults: {
-        name: string;
-        chainId: string;
-        vaultAddress: string;
-        interfaceAddress: string;
-        channels: Record<string, string>;
-    }[];
-}
-
 export interface EndpointConfig {
     name: string;
     amb: string;

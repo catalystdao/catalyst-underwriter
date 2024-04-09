@@ -1,7 +1,6 @@
 import { JsonRpcProvider, TransactionRequest } from "ethers";
 import pino from "pino";
 import { HandleOrderResult, ProcessingQueue } from "../../processing-queue/processing-queue";
-import { PoolConfig } from "src/config/config.types";
 import { CatalystChainInterface__factory } from "src/contracts";
 import { WalletInterface } from "src/wallet/wallet.interface";
 import { ExpireOrder, ExpireOrderResult } from "../expirer.types";
@@ -9,7 +8,6 @@ import { tryErrorToString } from "src/common/utils";
 export class ExpireQueue extends ProcessingQueue<ExpireOrder, ExpireOrderResult> {
 
     constructor(
-        readonly pools: PoolConfig[],
         readonly retryInterval: number,
         readonly maxTries: number,
         private readonly wallet: WalletInterface,
@@ -84,7 +82,6 @@ export class ExpireQueue extends ProcessingQueue<ExpireOrder, ExpireOrderResult>
     protected async handleFailedOrder(order: ExpireOrder, retryCount: number, error: any): Promise<boolean> {
 
         const errorDescription = {
-            poolId: order.poolId,
             toChainId: order.toChainId,
             toInterface: order.toInterface,
             underwriteId: order.underwriteId,
@@ -106,7 +103,6 @@ export class ExpireQueue extends ProcessingQueue<ExpireOrder, ExpireOrderResult>
     ): Promise<void> {
 
         const orderDescription = {
-            poolId: order.poolId,
             toChainId: order.toChainId,
             toInterface: order.toInterface,
             underwriteId: order.underwriteId,

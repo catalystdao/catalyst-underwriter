@@ -1,7 +1,7 @@
 import { JsonRpcProvider, Log, LogDescription } from "ethers";
 import pino from "pino";
 import { workerData, MessagePort } from 'worker_threads';
-import { ListenerWorkerData, VaultConfig } from "./listener.service";
+import { ListenerWorkerData } from "./listener.service";
 import { CatalystChainInterface__factory, ICatalystV1VaultEvents__factory } from "src/contracts";
 import { CatalystChainInterfaceInterface, ExpireUnderwriteEvent, FulfillUnderwriteEvent, SwapUnderwrittenEvent } from "src/contracts/CatalystChainInterface";
 import { ICatalystV1VaultEventsInterface, SendAssetEvent } from "src/contracts/ICatalystV1VaultEvents";
@@ -28,8 +28,6 @@ class ListenerWorker {
     readonly chainId: string;
     readonly chainName: string;
 
-    readonly vaultConfigs: VaultConfig[];
-
     readonly vaultEventsInterface: ICatalystV1VaultEventsInterface;
     readonly chainInterfaceEventsInterface: CatalystChainInterfaceInterface;
     readonly addresses: string[];
@@ -46,8 +44,7 @@ class ListenerWorker {
         this.chainId = this.config.chainId;
         this.chainName = this.config.chainName;
 
-        this.vaultConfigs = this.normalizeVaultConfig(this.config.vaultConfigs);
-        this.addresses = this.getAllAddresses(this.vaultConfigs);
+        this.addresses = this.getAllAddresses(this.config.endpointConfigs);
 
         this.store = new Store();
         this.logger = this.initializeLogger(this.chainId);
@@ -84,43 +81,10 @@ class ListenerWorker {
         )
     }
 
-    private normalizeVaultConfig(vaultConfigs: VaultConfig[]): VaultConfig[] {
-
-        const normalizedConfigs: VaultConfig[] = [];
-
-        // NOTE: 'toLowerCase' transaforms are important for when comparing addresses later
-        for (const vaultConfig of vaultConfigs) {
-            const vaultAddress = vaultConfig.vaultAddress.toLowerCase();
-            const interfaceAddress = vaultConfig.interfaceAddress.toLowerCase();
-
-            // Make sure that there are no vault address duplicates
-            if (normalizedConfigs.some((config) => config.vaultAddress === vaultAddress)) {
-                throw new Error(`Vault address ${vaultAddress} is defined more than once.`);
-            }
-
-            // The following logic only works if vault addresses are unique
-            const normalizedChannels: Record<string, string> = {}
-            for (const [channelId, chainId] of Object.entries(vaultConfig.channels)) {
-                normalizedChannels[channelId.toLowerCase()] = chainId;
-            }
-
-            normalizedConfigs.push({
-                poolId: vaultConfig.poolId,
-                vaultAddress,
-                interfaceAddress,
-                channels: normalizedChannels
-            });
-        }
-
-        return normalizedConfigs;
-    }
-
-    private getAllAddresses(vaultConfigs: VaultConfig[]): string[] {
-        const allVaultAddresses = vaultConfigs.map((config) => config.vaultAddress);
-        const allInterfaceAddresses = vaultConfigs.map((config) => config.interfaceAddress);
+    private getAllAddresses(endpointConfigs: EndpointConfig[]): string[] {
+        const allInterfaceAddresses = endpointConfigs.map((config) => config.interfaceAddress);
 
         return [
-            ...new Set(allVaultAddresses),      // Filter out duplicates
             ...new Set(allInterfaceAddresses)   // Filter out duplicates
         ]
     }
@@ -336,14 +300,14 @@ class ListenerWorker {
         }
     }
 
-    private getVaultConfig(address: string): VaultConfig | undefined {
-        return this.vaultConfigs.find((config) => {
-            return config.vaultAddress == address.toLowerCase()
-        });
-    }
+    // private getVaultConfig(address: string): VaultConfig | undefined {
+    //     return this.vaultConfigs.find((config) => {
+    //         return config.vaultAddress == address.toLowerCase()
+    //     });
+    // }
 
     private isInterface(address: string): boolean {
-        return this.vaultConfigs.some((config) => {
+        return this.config.endpointConfigs.some((config) => {
             return config.interfaceAddress == address.toLowerCase()
         });
     }
@@ -357,11 +321,11 @@ class ListenerWorker {
 
         for (const log of logs) {
             try {
-                const vaultConfig = this.getVaultConfig(log.address);
-                if (vaultConfig != undefined) {
-                    await this.handleVaultEvent(log, vaultConfig);
-                    continue;
-                }
+                // const vaultConfig = this.getVaultConfig(log.address);
+                // if (vaultConfig != undefined) {
+                //     await this.handleVaultEvent(log, vaultConfig);
+                //     continue;
+                // }
 
                 const isInterface = this.isInterface(log.address);
                 if (isInterface) {
@@ -414,36 +378,36 @@ class ListenerWorker {
     // Event handlers
     // ********************************************************************************************
 
-    private async handleVaultEvent(log: Log, vaultConfig: VaultConfig): Promise<void> {
-        const parsedLog = this.vaultEventsInterface.parseLog({
-            topics: Object.assign([], log.topics),
-            data: log.data,
-        });
+    // private async handleVaultEvent(log: Log, vaultConfig: VaultConfig): Promise<void> {
+    //     const parsedLog = this.vaultEventsInterface.parseLog({
+    //         topics: Object.assign([], log.topics),
+    //         data: log.data,
+    //     });
 
-        if (parsedLog == null) {
-            this.logger.error(
-                { topics: log.topics, data: log.data },
-                `Failed to parse Catalyst vault contract event.`,
-            );
-            return;
-        }
+    //     if (parsedLog == null) {
+    //         this.logger.error(
+    //             { topics: log.topics, data: log.data },
+    //             `Failed to parse Catalyst vault contract event.`,
+    //         );
+    //         return;
+    //     }
 
-        switch (parsedLog.name) {
-            case 'SendAsset':
-                await this.handleSendAssetEvent(log, parsedLog, vaultConfig);
-                break;
+    //     switch (parsedLog.name) {
+    //         case 'SendAsset':
+    //             await this.handleSendAssetEvent(log, parsedLog, vaultConfig);
+    //             break;
 
-            case 'ReceiveAsset':
-                await this.handleReceiveAssetEvent(log, parsedLog, vaultConfig);
-                break;
+    //         case 'ReceiveAsset':
+    //             await this.handleReceiveAssetEvent(log, parsedLog, vaultConfig);
+    //             break;
 
-            default:
-                this.logger.warn(
-                    { name: parsedLog.name, topic: parsedLog.topic },
-                    `Event with unknown name/topic received.`,
-                );
-        }
-    }
+    //         default:
+    //             this.logger.warn(
+    //                 { name: parsedLog.name, topic: parsedLog.topic },
+    //                 `Event with unknown name/topic received.`,
+    //             );
+    //     }
+    // }
 
     private async handleInterfaceEvent(log: Log): Promise<void> {
         const parsedLog = this.chainInterfaceEventsInterface.parseLog({
@@ -481,11 +445,11 @@ class ListenerWorker {
 
     }
     
-    private async handleSendAssetEvent (
-        log: Log,
-        parsedLog: LogDescription,
-        vaultConfig: VaultConfig
-    ): Promise<void> {
+    // private async handleSendAssetEvent (
+    //     log: Log,
+    //     parsedLog: LogDescription,
+    //     vaultConfig: VaultConfig
+    // ): Promise<void> {
 
         // const vaultAddress = log.address;
         // const event = parsedLog.args as unknown as SendAssetEvent.OutputObject;
@@ -621,7 +585,7 @@ class ListenerWorker {
         //     await this.store.saveSwapState(swapState);
         // })
 
-    };
+    // };
 
 
     // private async queryAMBMessageData(
@@ -688,11 +652,11 @@ class ListenerWorker {
     //     return undefined;
     // }
 
-    private async handleReceiveAssetEvent(
-        log: Log,
-        parsedLog: LogDescription,
-        vaultConfig: VaultConfig
-    ): Promise<void> {
+    // private async handleReceiveAssetEvent(
+    //     log: Log,
+    //     parsedLog: LogDescription,
+    //     vaultConfig: VaultConfig
+    // ): Promise<void> {
 
         //TODO
         // const vaultAddress = log.address;
@@ -749,7 +713,7 @@ class ListenerWorker {
         // }
     
         // await this.store.saveSwapState(swapState);
-    };
+    // };
 
     
     private async handleSwapUnderwrittenEvent (
@@ -766,15 +730,6 @@ class ListenerWorker {
             { interfaceAddress: log.address, txHash: log.transactionHash, underwriteId },
             `SwapUnderwritten event captured.`
         );
-
-        const poolId = this.getVaultConfig(event.targetVault)?.poolId;
-        if (poolId == undefined) {
-            this.logger.error(
-                { interfaceAddress, vaultAddress: event.targetVault, txHash: log.transactionHash, underwriteId },
-                'Unable to determine the \'poolId\' for the given \'SwapUnderwritten\' event.'
-            );
-            return;
-        }
     
         const underwriteState: UnderwriteState = {
             toChainId: this.chainId,
@@ -782,7 +737,6 @@ class ListenerWorker {
             status: UnderwriteStatus.Underwritten,
             underwriteId,
             swapUnderwrittenEvent: {
-                poolId,
                 txHash: log.transactionHash,
                 blockHash: log.blockHash,
                 blockNumber: log.blockNumber,

@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import * as yaml from 'js-yaml';
 import dotenv from 'dotenv';
 import { getConfigValidator } from './config-schemas';
-import { GlobalConfig, ChainConfig, AMBConfig, PoolConfig, MonitorGlobalConfig, ListenerGlobalConfig, UnderwriterGlobalConfig, ExpirerGlobalConfig, WalletGlobalConfig, MonitorConfig, ListenerConfig, UnderwriterConfig, WalletConfig, ExpirerConfig, TokensConfig, EndpointConfig, VaultTemplateConfig } from './config.types';
+import { GlobalConfig, ChainConfig, AMBConfig, MonitorGlobalConfig, ListenerGlobalConfig, UnderwriterGlobalConfig, ExpirerGlobalConfig, WalletGlobalConfig, MonitorConfig, ListenerConfig, UnderwriterConfig, WalletConfig, ExpirerConfig, TokensConfig, EndpointConfig, VaultTemplateConfig } from './config.types';
 
 
 @Injectable()
@@ -15,7 +15,6 @@ export class ConfigService {
     readonly globalConfig: GlobalConfig;
     readonly chainsConfig: Map<string, ChainConfig>;
     readonly ambsConfig: Map<string, AMBConfig>;
-    readonly poolsConfig: Map<string, PoolConfig>;
     readonly endpointsConfig: Map<string, EndpointConfig[]>;
 
     constructor() {
@@ -29,8 +28,6 @@ export class ConfigService {
         this.ambsConfig = this.loadAMBsConfig();
 
         const ambNames = Array.from(this.ambsConfig.keys());
-        this.poolsConfig = this.loadPoolsConfig(ambNames);
-
         const chainIds = Array.from(this.chainsConfig.keys());
         this.endpointsConfig = this.loadEndpointsConfig(chainIds, ambNames);
     }
@@ -149,47 +146,6 @@ export class ConfigService {
         }
 
         return ambConfig;
-    }
-
-    private loadPoolsConfig(ambNames: string[]): Map<string, PoolConfig> {
-        const poolsConfig = new Map<string, PoolConfig>();
-
-        for (const rawPoolsConfig of this.rawConfig.pools) {
-
-            if (!ambNames.includes(rawPoolsConfig.amb)) {
-                throw new Error(
-                    `Invalid pool configuration for pool '${rawPoolsConfig.id}': 'amb' value invalid.`,
-                );
-            }
-
-            const vaults = rawPoolsConfig.vaults;
-            for (const vault of vaults) {
-
-                // Make sure 'chainId's are always strings
-                vault.chainId = vault.chainId.toString();
-
-                //TODO verify the 'chainId's are valid (i.e. they are defined on the 'chains' config)
-                //TODO verify the 'channels' mapping is exhaustive
-                const transformedChannels: Record<string, string> = {};
-                for (const [channelId, chainId] of Object.entries(vault.channels)) {
-                    transformedChannels[channelId] = (chainId as number).toString();
-                }
-                vault.channels = transformedChannels;
-
-                // Make sure all connected vaults have their channel mapped
-                // ! TODO make sure all channels are unique and that all channels are mapped 
-            }
-
-            poolsConfig.set(rawPoolsConfig.id.toString(), {
-                id: rawPoolsConfig.id,
-                name: rawPoolsConfig.name,
-                amb: rawPoolsConfig.amb,
-                vaults
-            });
-        }
-
-        return poolsConfig;
-
     }
 
     private loadEndpointsConfig(chainIds: string[], ambNames: string[]): Map<string, EndpointConfig[]> {

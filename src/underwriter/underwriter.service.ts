@@ -3,7 +3,7 @@ import { join } from 'path';
 import { LoggerOptions } from 'pino';
 import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService } from 'src/config/config.service';
-import { AMBConfig, ChainConfig, EndpointConfig, PoolConfig, TokensConfig } from 'src/config/config.types';
+import { AMBConfig, ChainConfig, EndpointConfig, TokensConfig } from 'src/config/config.types';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { WalletService } from 'src/wallet/wallet.service';
 import { Wallet } from 'ethers';
@@ -45,7 +45,6 @@ export interface UnderwriterWorkerData {
     chainId: string,
     chainName: string,
     tokens: TokensConfig,
-    pools: PoolConfig[],
     endpointConfigs: EndpointConfig[],
     ambs: Record<string, AMBConfig>,
     rpc: string,
@@ -95,12 +94,16 @@ export class UnderwriterService implements OnModuleInit {
     private async initializeWorkers(): Promise<void> {
         const defaultWorkerConfig = this.loadDefaultWorkerConfig();
 
-        const pools = this.loadPools();
         const ambs = Object.fromEntries(this.configService.ambsConfig.entries());
 
-        for (const [chainId, ] of this.configService.chainsConfig) {
+        for (const [chainId, chainConfig] of this.configService.chainsConfig) {
 
-            const workerData = await this.loadWorkerConfig(chainId, this.configService.endpointsConfig, pools, ambs, defaultWorkerConfig);
+            const workerData = await this.loadWorkerConfig(
+                chainId,
+                chainConfig,
+                ambs,
+                defaultWorkerConfig
+            );
 
             if (workerData == undefined) {
                 this.loggerService.warn('Skipping underwriter for chain (no endpoints found).');
@@ -174,23 +177,12 @@ export class UnderwriterService implements OnModuleInit {
 
     private async loadWorkerConfig(
         chainId: string,
-        endpointConfigs: Map<string, EndpointConfig[]>,
-        pools: PoolConfig[],
+        chainConfig: ChainConfig,
         ambs: Record<string, AMBConfig>,
         defaultConfig: DefaultUnderwriterWorkerData
     ): Promise<UnderwriterWorkerData | undefined> {
 
-        const chainConfig = this.configService.chainsConfig.get(chainId);
-        if (chainConfig == undefined) {
-            throw new Error(`Unable to load config for chain ${chainId}`);
-        }
-
-        // Only pass pools that contain a vault on the desired chainId
-        const filteredPools = pools.filter(pool => {
-            return pool.vaults.some((vault) => vault.chainId == chainId)
-        });
-
-        const chainEndpointConfigs = endpointConfigs.get(chainId);
+        const chainEndpointConfigs = this.configService.endpointsConfig.get(chainId);
         if (chainEndpointConfigs == undefined) {
             this.loggerService.warn('No endpoints specified. Skipping chain.');
             return undefined;
@@ -211,7 +203,6 @@ export class UnderwriterService implements OnModuleInit {
             chainName: chainConfig.name,
             tokens: this.loadTokensConfig(chainConfig, defaultConfig),
             endpointConfigs: chainEndpointConfigs,
-            pools: filteredPools,
             ambs,
             rpc: chainConfig.rpc,
 
@@ -275,35 +266,6 @@ export class UnderwriterService implements OnModuleInit {
         }
 
         return finalConfig;
-    }
-
-    private loadPools(): PoolConfig[] {
-
-        const pools: PoolConfig[] = [];
-
-        for (const [, poolConfig] of this.configService.poolsConfig) {
-            pools.push({
-                id: poolConfig.id,
-                name: poolConfig.name,
-                amb: poolConfig.amb,
-                vaults: poolConfig.vaults.map(vault => {
-                    const transformedChannels: Record<string, string> = {}
-                    for (const [channelId, chainId] of Object.entries(vault.channels)) {
-                        transformedChannels[channelId.toLowerCase()] = chainId; // Important for when matching vaults
-                    }
-
-                    return {
-                        name: vault.name,
-                        chainId: vault.chainId,
-                        vaultAddress: vault.vaultAddress.toLowerCase(), // Important for when matching vaults
-                        interfaceAddress: vault.interfaceAddress.toLowerCase(), // Important for when matching vaults
-                        channels: transformedChannels
-                    }
-                })
-            });
-        }
-
-        return pools;
     }
 
     private initiateIntervalStatusLog(): void {

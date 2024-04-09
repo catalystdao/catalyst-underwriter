@@ -69,9 +69,8 @@ const CONFIG_SCHEMA = {
         ambs: {$ref: "ambs-schema"},
         chains: {$ref: "chains-schema"},
         endpoints: {$ref: "endpoints-schema"},
-        pools: {$ref: "pools-schema"},
     },
-    required: ["global", "ambs", "chains", "pools"],
+    required: ["global", "ambs", "chains", "endpoints"],
     additionalProperties: false
 }
 
@@ -310,44 +309,6 @@ const ENDPOINTS_SCHEMA = {
         additionalProperties: false
     },
     minItems: 2
-}
-
-const POOLS_SCHEMA = {
-    $id: "pools-schema",
-    type: "array",
-    items: {
-        type: "object",
-        properties: {
-            id: {$ref: "positive-number-schema"},
-            name: {$ref: "non-empty-string-schema"},
-            amb: {$ref: "non-empty-string-schema"},
-            vaults: {
-                type: "array",
-                items: {
-                    type: "object",
-                    properties: {
-                        name: {$ref: "non-empty-string-schema"},
-                        chainId: {$ref: "chain-id-schema"},
-                        vaultAddress: {$ref: "address-field-schema"},
-                        interfaceAddress: {$ref: "address-field-schema"},
-                        channels: {
-                            type: "object",
-                            patternProperties: {
-                                [BYTES_32_HEX_EXPR]: {$ref: "chain-id-schema"},
-                            },
-                            additionalProperties: false
-                        }
-                    },
-                    required: ["name", "chainId", "vaultAddress", "interfaceAddress", "channels"],
-                    additionalProperties: false
-                },
-                minItems: 2
-            }
-        },
-        required: ["id", "name", "amb", "vaults"],
-        additionalProperties: false
-    },
-    minItems: 1
 }
 
 export function getConfigValidator(): AnyValidateFunction<unknown> {

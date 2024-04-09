@@ -2,7 +2,6 @@ import { JsonRpcProvider } from "ethers";
 import pino, { LoggerOptions } from "pino";
 import { workerData, MessagePort } from 'worker_threads';
 import { wait } from "src/common/utils";
-import { PoolConfig } from "src/config/config.types";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
 import { ActiveUnderwriteDescription, CompletedUnderwriteDescription } from "src/store/store.types";
@@ -25,8 +24,6 @@ class ExpirerWorker {
     readonly chainId: string;
     readonly chainName: string;
 
-    readonly pools: PoolConfig[];
-
     private currentStatus: MonitorStatus | null;
 
     readonly underwriterPublicKey: string;
@@ -43,8 +40,6 @@ class ExpirerWorker {
         this.chainId = this.config.chainId;
         this.chainName = this.config.chainName;
 
-        this.pools = this.config.pools;
-
         this.store = new Store();
         this.logger = this.initializeLogger(
             this.chainId,
@@ -56,7 +51,6 @@ class ExpirerWorker {
         this.wallet = new WalletInterface(this.config.walletPort);
 
         [this.evalQueue, this.expirerQueue] = this.initializeQueues(
-            this.pools,
             this.config.retryInterval,
             this.config.maxTries,
             this.wallet,
@@ -94,7 +88,6 @@ class ExpirerWorker {
     }
 
     private initializeQueues(
-        pools: PoolConfig[],
         retryInterval: number,
         maxTries: number,
         wallet: WalletInterface,
@@ -111,7 +104,6 @@ class ExpirerWorker {
         )
 
         const expirerQueue = new ExpireQueue(
-            pools,
             retryInterval,
             maxTries,
             wallet,
@@ -229,7 +221,6 @@ class ExpirerWorker {
             }
 
             this.addExpireOrder(
-                underwriteDescription.poolId,
                 underwriteDescription.toChainId,
                 underwriteDescription.toInterface,
                 underwriteDescription.underwriter,
@@ -246,7 +237,6 @@ class ExpirerWorker {
             }
 
             this.removeExpireOrder(
-                underwriteDescription.poolId,
                 underwriteDescription.toInterface,
                 underwriteDescription.underwriteId,
             );
@@ -285,7 +275,6 @@ class ExpirerWorker {
     }
 
     private addExpireOrder(
-        poolId: string,
         toChainId: string,
         toInterface: string,
         underwriter: string,
@@ -293,7 +282,7 @@ class ExpirerWorker {
         expiry: number,
     ) {
         this.logger.debug(
-            { poolId, toInterface, underwriteId },
+            { toInterface, underwriteId },
             `Expire underwrite order received.`
         );
 
@@ -302,7 +291,6 @@ class ExpirerWorker {
             : expiry;
 
         const newOrder: ExpireEvalOrder = {
-            poolId,
             toChainId,
             toInterface,
             underwriteId,
@@ -322,12 +310,11 @@ class ExpirerWorker {
     }
 
     private removeExpireOrder(
-        poolId: string,
         toInterface: string,
         underwriteId: string,
     ) {
         this.logger.debug(
-            { poolId, toInterface, underwriteId },
+            { toInterface, underwriteId },
             `Expire underwrite order removal received.`
         );
         

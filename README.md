@@ -27,8 +27,8 @@ The `.yaml` configuration file is divided into the following sections:
 - `chains`: Defines the configuration for each of the chains to be supported by the relayer.
     - This includes the `chainId` and the `rpc` to be used for the chain.
     - Each chain may override the global services configurations (those defined under the `global` configuration), and `amb` configurations.
-- `pools`: The Catalyst pools of which swaps to underwrite.
-    - For each vault, the `vaultAddress` and `interfaceAddress` must be specified, and also the mapping between the vault's `bytes32` channel ids to the destination `chainId`s (for all the vault's channel ids).
+- `endpoints`: The Catalyst endpoints of which swaps to underwrite.
+    - For each vault, the `factoryAddress`, `interfaceAddress`, `incentivesAddress` and `vaultTemplates`, must be specified, together with the swap channel mappings (`channelsOnDestination`).
 
 > ℹ️ For a full reference of the configuration file, see `config.example.yaml`.
 

@@ -63,7 +63,6 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
         //TODO check if already expired/makes economical sense to expire
         if (false) {
             // const result: ExpireOrder = {
-            //     poolId: order.poolId,
             //     toChainId: order.toChainId,
             //     toInterface: order.toInterface,
             //     underwriteId: order.underwriteId,
@@ -101,7 +100,6 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
     protected async handleFailedOrder(order: ExpireEvalOrder, retryCount: number, error: any): Promise<boolean> {
 
         const errorDescription = {
-            poolId: order.poolId,
             toChainId: order.toChainId,
             toInterface: order.toInterface,
             underwriteId: order.underwriteId,
@@ -127,7 +125,6 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
     ): Promise<void> {
 
         const orderDescription = {
-            poolId: order.poolId,
             toChainId: order.toChainId,
             toInterface: order.toInterface,
             underwriteId: order.underwriteId,

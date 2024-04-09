@@ -439,7 +439,7 @@ export class Store {
         const newState = overridingState ? currentState : state;
 
         if (overridingState) {
-            //TODO contrast the saved 'common' state with the incoming data? (e.g. poolId, etc...)
+            //TODO contrast the saved 'common' state with the incoming data?
             newState.swapUnderwrittenEvent = state.swapUnderwrittenEvent
                 ?? currentState.swapUnderwrittenEvent;
             newState.fulfillUnderwriteEvent = state.fulfillUnderwriteEvent
@@ -471,7 +471,6 @@ export class Store {
         if (newState.status >= UnderwriteStatus.Fulfilled) {
 
             const underwriteDescription: CompletedUnderwriteDescription = {
-                poolId: newState.swapUnderwrittenEvent!.poolId,
                 toChainId: newState.toChainId,
                 toInterface: newState.toInterface,
                 underwriter: newState.swapUnderwrittenEvent!.underwriter,
@@ -504,7 +503,6 @@ export class Store {
 
         if (state.swapUnderwrittenEvent) {
             const underwriteDescription: ActiveUnderwriteDescription = {
-                poolId: state.swapUnderwrittenEvent.poolId,
                 toChainId: state.toChainId,
                 toInterface: state.toInterface,
                 underwriter: state.swapUnderwrittenEvent.underwriter,

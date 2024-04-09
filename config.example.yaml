@@ -139,32 +139,50 @@ chains:
     monitor:
       interval: 2000
 
-# TODO specify 'endpoints' config
 
-# Pools to underwrite configuration
-pools:
-  - id: 0
-    name: 'WormholeSepoliaOptimismArbitrum'
+endpoints:
+
+  - name: 'Sepolia Tiger Testnet'
     amb: 'wormhole'
-    vaults:
-      - name: 'Sepolia Tiger Testnet Vault'
-        chainId: 11155111
-        vaultAddress: '0xbd529ff730dae029fa85b38d98d6046721215fa4'
-        interfaceAddress: '0x169e7e77e463ffe86b30afd1605a09a632bea5b0'
-        channels:
-          '0x0000000000000000000000000000000000000000000000000000000000002713': 421614
-          '0x0000000000000000000000000000000000000000000000000000000000002715': 11155420
-      - name: 'Arbitrum Sepolia Tiger Testnet Vault'
-        chainId: 421614
-        vaultAddress: '0xbd529ff730dae029fa85b38d98d6046721215fa4'
-        interfaceAddress: '0xf779d8e1b07f1e3df141a81c4f1f7d65c0a38611'
-        channels:
-          '0x0000000000000000000000000000000000000000000000000000000000002712': 11155111
-          '0x0000000000000000000000000000000000000000000000000000000000002715': 11155420
-      - name: 'Optimism Sepolia Tiger Testnet Vault'
-        chainId: 11155420
-        vaultAddress: '0xbd529ff730dae029fa85b38d98d6046721215fa4'
-        interfaceAddress: '0x2603e874d589373a0c4766808b93e3d4b63164c8'
-        channels:
-          '0x0000000000000000000000000000000000000000000000000000000000002712': 11155111
-          '0x0000000000000000000000000000000000000000000000000000000000002713': 421614
+    chainId: 11155111
+    factoryAddress: "0x343A85b1e0383A50D65adB5ed88B06cCF4187606"
+    interfaceAddress: "0x169e7e77e463ffe86b30afd1605a09a632bea5b0"
+    incentivesAddress: "0x45C140Dd2526E4bfD1c2A5Bb0Aa6aA1DB00b1744"
+    channelsOnDestination:
+      421614: '0x0000000000000000000000000000000000000000000000000000000000002712'
+      11155420: '0x0000000000000000000000000000000000000000000000000000000000002712'
+    vaultTemplates:
+      - name: "Volatile"
+        address: "0x11A13784007510006c83978D1d0C82385df3A663"
+      - name: "Amplified"
+        address: "0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d"
+
+  - name: 'Arbitrum Sepolia Tiger Testnet'
+    amb: 'wormhole'
+    chainId: 421614
+    factoryAddress: "0x343A85b1e0383A50D65adB5ed88B06cCF4187606"
+    interfaceAddress: "0xf779d8e1b07f1e3df141a81c4f1f7d65c0a38611"
+    incentivesAddress: "0xdF25f1BdE09Cee5ac1e6ef8dFA7113addBd58B28"
+    channelsOnDestination:
+      11155111: '0x0000000000000000000000000000000000000000000000000000000000002713'
+      11155420: '0x0000000000000000000000000000000000000000000000000000000000002713'
+    vaultTemplates:
+      - name: "Volatile"
+        address: "0x11A13784007510006c83978D1d0C82385df3A663"
+      - name: "Amplified"
+        address: "0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d"
+
+  - name: 'Optimism Sepolia Tiger Testnet'
+    amb: 'wormhole'
+    chainId: 11155420
+    factoryAddress: "0x343A85b1e0383A50D65adB5ed88B06cCF4187606"
+    interfaceAddress: "0x2603e874d589373a0c4766808b93e3d4b63164c8"
+    incentivesAddress: "0xbDFD9163d8Cee1368698B023369f9A5Fd319A40F"
+    channelsOnDestination:
+      11155111: '0x0000000000000000000000000000000000000000000000000000000000002715'
+      421614: '0x0000000000000000000000000000000000000000000000000000000000002715'
+    vaultTemplates:
+      - name: "Volatile"
+        address: "0x11A13784007510006c83978D1d0C82385df3A663"
+      - name: "Amplified"
+        address: "0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d"

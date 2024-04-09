@@ -6,7 +6,7 @@ import { ConfigService } from 'src/config/config.service';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { MonitorService } from 'src/monitor/monitor.service';
 import { tryErrorToString } from 'src/common/utils';
-import { EndpointConfig } from 'src/config/config.types';
+import { ChainConfig, EndpointConfig } from 'src/config/config.types';
 
 export const DEFAULT_LISTENER_MAX_BLOCKS = null;
 export const DEFAULT_LISTENER_RETRY_INTERVAL = 2000;
@@ -19,13 +19,6 @@ interface DefaultListenerWorkerData {
     maxBlocks: number | null
 }
 
-export interface VaultConfig {
-    poolId: string,
-    vaultAddress: string,
-    interfaceAddress: string,
-    channels: Record<string, string>
-}
-
 export interface ListenerWorkerData {
     chainId: string,
     chainName: string,
@@ -34,7 +27,6 @@ export interface ListenerWorkerData {
     retryInterval: number;
     processingInterval: number,
     maxBlocks: number | null,
-    vaultConfigs: VaultConfig[],
     endpointConfigs: EndpointConfig[],
     monitorPort: MessagePort;
     loggerOptions: LoggerOptions
@@ -61,11 +53,13 @@ export class ListenerService implements OnModuleInit {
     private async initializeWorkers(): Promise<void> {
         const defaultWorkerConfig = this.loadDefaultWorkerConfig();
 
-        const vaultConfigs = this.loadVaultConfigs();
+        for (const [chainId, chainConfig] of this.configService.chainsConfig) {
 
-        for (const [chainId, chainVaultConfigs] of Object.entries(vaultConfigs)) {
-
-            const workerData = await this.loadWorkerConfig(chainId, this.configService.endpointsConfig, chainVaultConfigs, defaultWorkerConfig);
+            const workerData = await this.loadWorkerConfig(
+                chainId,
+                chainConfig,
+                defaultWorkerConfig
+            );
 
             if (workerData == undefined) {
                 this.loggerService.warn('Skipping listener for chain.');
@@ -112,17 +106,11 @@ export class ListenerService implements OnModuleInit {
 
     private async loadWorkerConfig(
         chainId: string,
-        endpointConfigs: Map<string, EndpointConfig[]>,
-        vaultConfigs: VaultConfig[],
+        chainConfig: ChainConfig,
         defaultConfig: DefaultListenerWorkerData
     ): Promise<ListenerWorkerData | undefined> {
 
-        const chainConfig = this.configService.chainsConfig.get(chainId);
-        if (chainConfig == undefined) {
-            throw new Error(`Unable to load config for chain ${chainId}`);
-        }
-
-        const chainEndpointConfigs = endpointConfigs.get(chainId);
+        const chainEndpointConfigs = this.configService.endpointsConfig.get(chainId);
         if (chainEndpointConfigs == undefined) {
             this.loggerService.warn('No endpoints specified. Skipping chain.');
             return undefined;
@@ -137,40 +125,10 @@ export class ListenerService implements OnModuleInit {
             retryInterval: chainListenerConfig.retryInterval ?? defaultConfig.retryInterval,
             processingInterval: chainListenerConfig.processingInterval ?? defaultConfig.processingInterval,
             maxBlocks: chainListenerConfig.maxBlocks ?? defaultConfig.maxBlocks,
-            vaultConfigs,
             endpointConfigs: chainEndpointConfigs,
             monitorPort: await this.monitorService.attachToMonitor(chainId),
             loggerOptions: this.loggerService.loggerOptions
         };
-    }
-
-    private loadVaultConfigs(): Record<string, VaultConfig[]> {
-
-        const configs: Record<string, VaultConfig[]> = {};
-        for (const [chainId,] of this.configService.chainsConfig) {
-            configs[chainId] = [];
-        }
-
-        // Get all the vaults across all the pools
-        for (const [poolId, poolConfig] of this.configService.poolsConfig.entries()) {
-
-            for (const fullVaultConfig of poolConfig.vaults) {
-                const chainId = fullVaultConfig.chainId;
-
-                if (!(chainId in configs)) {
-                    throw new Error(`The chain id ${chainId} is required for vault '${fullVaultConfig.name}' (pool '${poolId}' ('${poolConfig.name}')), but is not configured.`)
-                }
-
-                configs[chainId].push({
-                    poolId: poolId,
-                    vaultAddress: fullVaultConfig.vaultAddress,
-                    interfaceAddress: fullVaultConfig.interfaceAddress,
-                    channels: fullVaultConfig.channels
-                });
-            }
-        }
-
-        return configs;
     }
 
     private initiateIntervalStatusLog(): void {

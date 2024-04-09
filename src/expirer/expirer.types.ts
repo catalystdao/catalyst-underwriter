@@ -1,7 +1,6 @@
 import { TransactionReceipt, TransactionResponse } from "ethers";
 
 export interface ExpireEvalOrder {
-    poolId: string;
     toChainId: string;
     toInterface: string;
     underwriteId: string;

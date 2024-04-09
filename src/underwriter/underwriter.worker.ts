@@ -3,7 +3,7 @@ import pino, { LoggerOptions } from "pino";
 import { parentPort, workerData } from 'worker_threads';
 import { UnderwriterWorkerCommand, UnderwriterWorkerCommandId, UnderwriterWorkerData } from "./underwriter.service";
 import { tryErrorToString, wait } from "src/common/utils";
-import { AMBConfig, EndpointConfig, PoolConfig, TokenConfig } from "src/config/config.types";
+import { AMBConfig, EndpointConfig, TokenConfig } from "src/config/config.types";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
 import { SwapDescription } from "src/store/store.types";
@@ -26,8 +26,8 @@ class UnderwriterWorker {
     readonly chainId: string;
     readonly chainName: string;
 
+    readonly endpoints: EndpointConfig[];
     readonly tokens: Record<string, TokenConfig>;
-    readonly pools: PoolConfig[];
     readonly ambs: Record<string, AMBConfig>;
 
     readonly wallet: WalletInterface;
@@ -45,8 +45,8 @@ class UnderwriterWorker {
         this.chainId = this.config.chainId;
         this.chainName = this.config.chainName;
 
+        this.endpoints = this.config.endpointConfigs;
         this.tokens = this.config.tokens;
-        this.pools = this.config.pools;
         this.ambs = this.config.ambs;
 
         this.store = new Store();
@@ -61,7 +61,7 @@ class UnderwriterWorker {
         this.tokenHandler = new TokenHandler(
             this.chainId,
             this.config.retryInterval,
-            this.pools,
+            this.endpoints,
             this.tokens,
             this.config.walletPublicKey,
             this.wallet,
@@ -72,9 +72,8 @@ class UnderwriterWorker {
         [this.discoverQueue, this.evalQueue, this.underwriteQueue] = this.initializeQueues(
             this.config.enabled,
             this.chainId,
-            this.config.endpointConfigs,
+            this.endpoints,
             this.tokens,
-            this.pools,
             this.ambs,
             this.config.retryInterval,
             this.config.maxTries,
@@ -122,7 +121,6 @@ class UnderwriterWorker {
         chainId: string,
         endpointConfigs: EndpointConfig[],
         tokens: Record<string, TokenConfig>,
-        pools: PoolConfig[],
         ambs: Record<string, AMBConfig>,
         retryInterval: number,
         maxTries: number,

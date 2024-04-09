@@ -81,14 +81,12 @@ export enum UnderwriteStatus {
 }
 
 export interface ExpectedUnderwriteDescription {
-    poolId: string;
     toChainId: string;
     toInterface: string;
     underwriteId: string;
 }
 
 export interface ActiveUnderwriteDescription {
-    poolId: string;
     toChainId: string;
     toInterface: string;
     underwriter: string;
@@ -97,7 +95,6 @@ export interface ActiveUnderwriteDescription {
 }
 
 export interface CompletedUnderwriteDescription {
-    poolId: string;
     toChainId: string;
     toInterface: string;
     underwriteId: string;
@@ -122,8 +119,6 @@ export interface UnderwriteState {
 }
 
 export interface SwapUnderwrittenEventDetails extends TransactionDescription {
-    poolId: string; // The 'poolId' is registered here as it is not possible to derive it from the
-                    // other events' data.
     underwriter: string;
     expiry: number;
     targetVault: string;
