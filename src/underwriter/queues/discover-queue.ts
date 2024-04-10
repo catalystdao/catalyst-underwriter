@@ -111,8 +111,6 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
             try: retryCount + 1
         };
 
-        //TODO store params for expirer
-
         if (success) {
             if (result != null) {
                 this.logger.debug(
