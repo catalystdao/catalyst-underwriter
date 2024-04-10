@@ -227,6 +227,34 @@ export class Store {
         }
     }
 
+    async saveAdditionalSwapData(
+        fromChainId: string,
+        fromVault: string,
+        swapId: string,
+        toAsset: string,
+        expectedUnderwriteId: string,
+    ): Promise<void> {
+
+        const key = Store.getSwapStateKey(
+            fromChainId,
+            fromVault,
+            swapId,
+        );
+        
+        const state = await this.getSwapStateByKey(key);
+
+        if (state == null) {
+            throw new Error(`Unable to store additional swap data: swap state not found (fromChainId: ${fromChainId}, fromVault: ${fromVault}, swapId: ${swapId}.`);
+        }
+
+        state.additionalSendAssetDetails = {
+            toAsset,
+            expectedUnderwriteId,
+        };
+
+        await this.set(key, JSON.stringify(state));
+    }
+
     async getSwapStateByExpectedUnderwrite(
         toChainId: string,
         toInterface: string,

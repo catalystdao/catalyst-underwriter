@@ -30,6 +30,7 @@ export interface SwapState {
 
     // Event-specific details
     ambMessageSendAssetDetails?: AMBMessageSendAssetDetails;
+    additionalSendAssetDetails?: AdditionalSendAssetDetails;
     sendAssetCompletionDetails?: ReceiveAssetEventDetails | FulfillUnderwriteEventDetails;
 }
 
@@ -66,6 +67,11 @@ export interface AMBMessageSendAssetDetails extends TransactionDescription {
     // Additional data
     blockTimestamp: number;
     observedAtBlockNumber: number;
+}
+
+export interface AdditionalSendAssetDetails {
+    toAsset: string;
+    expectedUnderwriteId: string;
 }
 
 export interface ReceiveAssetEventDetails extends TransactionDescription {

@@ -3,7 +3,7 @@ import { DiscoverOrder, EvalOrder } from "../underwriter.types";
 import { JsonRpcProvider } from "ethers";
 import pino from "pino";
 import { EndpointConfig, TokenConfig } from "src/config/config.types";
-import { tryErrorToString } from "src/common/utils";
+import { calcUnderwriteIdentifier, tryErrorToString } from "src/common/utils";
 import { CatalystFactory__factory, CatalystVaultCommon__factory } from "src/contracts";
 import { Store } from "src/store/store.lib";
 
@@ -99,7 +99,7 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
     protected async onOrderCompletion(
         order: DiscoverOrder,
         success: boolean,
-        _result: EvalOrder | null,
+        result: EvalOrder | null,
         retryCount: number
     ): Promise<void> {
 
@@ -114,11 +114,19 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
         //TODO store params for expirer
 
         if (success) {
-            this.logger.debug(
-                orderDescription,
-                `Successful underwrite discovery.`,
-            );
+            if (result != null) {
+                this.logger.debug(
+                    orderDescription,
+                    `Successful underwrite discovery: destination vault valid.`,
+                );
 
+                void this.registerSwapDataForTheExpirer(result);
+            } else {
+                this.logger.debug(
+                    orderDescription,
+                    `Successful underwrite discovery: destination vault invalid.`,
+                );
+            }
         } else {
             this.logger.error(
                 orderDescription,
@@ -237,5 +245,52 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
         }
     }
 
+    private async registerSwapDataForTheExpirer(result: EvalOrder): Promise<void> {
+
+        const expectedUnderwriteId = calcUnderwriteIdentifier(
+            result.toVault,
+            result.toAsset,
+            result.units,
+            result.minOut,
+            result.toAccount,
+            result.underwriteIncentiveX16,
+            result.calldata
+        );
+
+        try {
+            await this.store.saveAdditionalSwapData(
+                result.fromChainId,
+                result.fromVault,
+                result.swapIdentifier,
+                result.toAsset,
+                expectedUnderwriteId
+            );
+
+            await this.store.saveSwapDescriptionByExpectedUnderwrite(
+                {
+                    toChainId: this.chainId,
+                    toInterface: result.interfaceAddress,
+                    underwriteId: expectedUnderwriteId,
+                },
+                {
+                    fromChainId: result.fromChainId,
+                    toChainId: this.chainId,
+                    fromVault: result.fromVault,
+                    swapId: result.swapIdentifier,
+                }
+            );
+        } catch (error) {
+            this.logger.warn(
+                {
+                    toChainId: this.chainId,
+                    toInterface: result.interfaceAddress,
+                    underwriteId: expectedUnderwriteId,
+                    error: tryErrorToString(error),
+                },
+                "Failed to register additional swap data for the expirer."
+            );
+        }
+
+    }
 
 }
