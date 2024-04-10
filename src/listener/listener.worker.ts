@@ -2,20 +2,16 @@ import { JsonRpcProvider, Log, LogDescription } from "ethers";
 import pino from "pino";
 import { workerData, MessagePort } from 'worker_threads';
 import { ListenerWorkerData } from "./listener.service";
-import { CatalystChainInterface__factory, ICatalystV1VaultEvents__factory } from "src/contracts";
+import { CatalystChainInterface__factory } from "src/contracts";
 import { CatalystChainInterfaceInterface, ExpireUnderwriteEvent, FulfillUnderwriteEvent, SwapUnderwrittenEvent } from "src/contracts/CatalystChainInterface";
-import { ICatalystV1VaultEventsInterface, SendAssetEvent } from "src/contracts/ICatalystV1VaultEvents";
 import { calcAssetSwapIdentifier, tryErrorToString, wait } from "src/common/utils";
 import { Store } from "src/store/store.lib";
-import { MessageContext, SOURCE_TO_DESTINATION, decodeBytes65Address, parsePayload } from "src/common/decode.payload";
-import { ReceiveAssetEvent } from "src/contracts/CatalystVaultCommon";
+import { MessageContext, SOURCE_TO_DESTINATION, parsePayload } from "src/common/decode.payload";
 import { SwapState, SwapStatus, UnderwriteState, UnderwriteStatus } from "src/store/store.types";
 import { MonitorInterface, MonitorStatus } from "src/monitor/monitor.interface";
 import { ASSET_SWAP, CatalystContext, catalystParse } from "src/common/decode.catalyst";
 import { EndpointConfig } from "src/config/config.types";
 import WebSocket from "ws";
-
-const BYTES_4_MASK = 4294967295;
 
 class ListenerWorker {
     readonly store: Store;
@@ -28,7 +24,6 @@ class ListenerWorker {
     readonly chainId: string;
     readonly chainName: string;
 
-    readonly vaultEventsInterface: ICatalystV1VaultEventsInterface;
     readonly chainInterfaceEventsInterface: CatalystChainInterfaceInterface;
     readonly addresses: string[];
     readonly topics: string[][];
@@ -51,7 +46,6 @@ class ListenerWorker {
         this.provider = this.initializeProvider(this.config.rpc);
 
         const contractTypes = this.initializeContractTypes();
-        this.vaultEventsInterface = contractTypes.vaultInterface;
         this.chainInterfaceEventsInterface = contractTypes.chainInterfaceInterface;
         this.topics = contractTypes.topics;
 
@@ -90,17 +84,13 @@ class ListenerWorker {
     }
 
     private initializeContractTypes(): {
-        vaultInterface: ICatalystV1VaultEventsInterface,
         chainInterfaceInterface: CatalystChainInterfaceInterface,
         topics: string[][]
-        } {
+    } {
 
-        const vaultInterface = ICatalystV1VaultEvents__factory.createInterface();
         const chainInterfaceInterface = CatalystChainInterface__factory.createInterface();
         const topics = [
             [
-                // vaultInterface.getEvent('SendAsset').topicHash,
-                // vaultInterface.getEvent('ReceiveAsset').topicHash,
                 chainInterfaceInterface.getEvent('SwapUnderwritten').topicHash,
                 chainInterfaceInterface.getEvent('FulfillUnderwrite').topicHash,
                 chainInterfaceInterface.getEvent('ExpireUnderwrite').topicHash
@@ -108,7 +98,6 @@ class ListenerWorker {
         ];
 
         return {
-            vaultInterface,
             chainInterfaceInterface,
             topics
         }
@@ -300,18 +289,6 @@ class ListenerWorker {
         }
     }
 
-    // private getVaultConfig(address: string): VaultConfig | undefined {
-    //     return this.vaultConfigs.find((config) => {
-    //         return config.vaultAddress == address.toLowerCase()
-    //     });
-    // }
-
-    private isInterface(address: string): boolean {
-        return this.config.endpointConfigs.some((config) => {
-            return config.interfaceAddress == address.toLowerCase()
-        });
-    }
-
     private async queryAndProcessEvents(
         fromBlock: number,
         toBlock: number
@@ -321,22 +298,7 @@ class ListenerWorker {
 
         for (const log of logs) {
             try {
-                // const vaultConfig = this.getVaultConfig(log.address);
-                // if (vaultConfig != undefined) {
-                //     await this.handleVaultEvent(log, vaultConfig);
-                //     continue;
-                // }
-
-                const isInterface = this.isInterface(log.address);
-                if (isInterface) {
-                    await this.handleInterfaceEvent(log);
-                    continue;
-                }
-
-                this.logger.warn(
-                    { address: log.address },
-                    `No vault/interface configuration found for the contract address ${log.address}.`
-                );
+                await this.handleInterfaceEvent(log);
             } catch (error) {
                 this.logger.error(
                     { log, error },
@@ -378,37 +340,6 @@ class ListenerWorker {
     // Event handlers
     // ********************************************************************************************
 
-    // private async handleVaultEvent(log: Log, vaultConfig: VaultConfig): Promise<void> {
-    //     const parsedLog = this.vaultEventsInterface.parseLog({
-    //         topics: Object.assign([], log.topics),
-    //         data: log.data,
-    //     });
-
-    //     if (parsedLog == null) {
-    //         this.logger.error(
-    //             { topics: log.topics, data: log.data },
-    //             `Failed to parse Catalyst vault contract event.`,
-    //         );
-    //         return;
-    //     }
-
-    //     switch (parsedLog.name) {
-    //         case 'SendAsset':
-    //             await this.handleSendAssetEvent(log, parsedLog, vaultConfig);
-    //             break;
-
-    //         case 'ReceiveAsset':
-    //             await this.handleReceiveAssetEvent(log, parsedLog, vaultConfig);
-    //             break;
-
-    //         default:
-    //             this.logger.warn(
-    //                 { name: parsedLog.name, topic: parsedLog.topic },
-    //                 `Event with unknown name/topic received.`,
-    //             );
-    //     }
-    // }
-
     private async handleInterfaceEvent(log: Log): Promise<void> {
         const parsedLog = this.chainInterfaceEventsInterface.parseLog({
             topics: Object.assign([], log.topics),
@@ -444,276 +375,6 @@ class ListenerWorker {
         }
 
     }
-    
-    // private async handleSendAssetEvent (
-    //     log: Log,
-    //     parsedLog: LogDescription,
-    //     vaultConfig: VaultConfig
-    // ): Promise<void> {
-
-        // const vaultAddress = log.address;
-        // const event = parsedLog.args as unknown as SendAssetEvent.OutputObject;
-
-        // //TODO implement a better (generic) block number fix
-        // let blockNumber = log.blockNumber;
-        // if (this.chainId == '421614') { // Arbitrum sepolia
-        //     const blockData = await this.provider.send(
-        //         "eth_getBlockByNumber",
-        //         ["0x"+blockNumber.toString(16), false]
-        //     );
-        //     blockNumber = blockData.l1BlockNumber;
-        // }
-        
-        // //TODO the way in which the hash is calculated should depend on the fromVault template
-        // const swapId = calcAssetSwapIdentifier(
-        //     decodeBytes65Address(event.toAccount),
-        //     event.units,
-        //     event.fromAmount - event.fee,
-        //     event.fromAsset,
-        //     blockNumber
-        // );
-    
-        // this.logger.info(
-        //     { vaultAddress: vaultAddress, txHash: log.transactionHash, swapId },
-        //     `SendAsset event captured.`
-        // );
-
-        // const blockTimestamp = await this.getBlockTimestamp(log.blockNumber);
-        // if (blockTimestamp == null) {
-        //     this.logger.warn(
-        //         { 
-        //             blockNumber,
-        //             event
-        //         },
-        //         `Dropping SendAsset event. No timestamp for the block number found.`
-        //     );
-        //     return;
-        // }
-
-        // void this.getAMBMessageData(
-        //     log.transactionHash,
-        //     swapId,
-        //     vaultAddress,
-        //     blockNumber
-        // ).then(async (ambMessageData) => {
-        //     if (ambMessageData == undefined) {
-        //         this.logger.info(
-        //             {
-        //                 txHash: log.transactionHash,
-        //                 sourceVault: vaultAddress,
-        //                 swapId,
-        //             },
-        //             `Failed to get the AMB message data for the given asset swap. Swap will not be underwritten.`
-        //         );
-        //         return;
-        //     }
-            
-        //     const {ambMessageMetadata, incentivesMessage, assetSwapPayload} = ambMessageData;
-
-        //     const originEndpoint = this.getSwapOriginEndpoint(
-        //         incentivesMessage.sourceApplicationAddress,
-        //         "" // TODO
-        //     );
-
-        //     if (originEndpoint == undefined) {
-        //         this.logger.info(
-        //             {
-        //                 txHash: log.transactionHash,
-        //                 sourceVault: vaultAddress,
-        //                 swapId,
-        //             },
-        //             'Swap source endpoint not found. Skipping.'
-        //         );
-        //         return;
-        //     }
-
-        //     const fromChannelId = originEndpoint.channelsOnDestination[ambMessageMetadata.destinationChain];
-        //     if (fromChannelId == undefined) {
-        //         this.logger.info(
-        //             {
-        //                 txHash: log.transactionHash,
-        //                 sourceVault: vaultAddress,
-        //                 swapId,
-        //                 fromInterfaceAddress: incentivesMessage.sourceApplicationAddress,
-        //                 fromIncentivesAddress: "", // TODO,
-        //                 toChainId: ambMessageMetadata.destinationChain
-        //             },
-        //             `'fromChannelId' for the given swap not found. Skipping.`
-        //         );
-        //         return;
-        //     }
-
-        //     // TODO validate the sourceEscrow
-
-        //     const swapState: SwapState = {
-        //         fromChainId: this.chainId,
-        //         fromVault: vaultAddress,
-        //         swapId,
-        //         status: SwapStatus.Pending,
-        //         ambMessageSendAssetDetails: {
-        //             txHash: log.transactionHash,
-        //             blockHash: log.blockHash,
-        //             blockNumber,
-            
-        //             amb: ambMessageMetadata.amb,
-        //             toChainId: ambMessageMetadata.destinationChain,
-        //             fromChannelId,
-
-        //             toIncentivesAddress: "", // ! TODO
-        //             toApplication: incentivesMessage.toApplication,
-        //             messageIdentifier: ambMessageMetadata.messageIdentifier,
-        //             deadline: incentivesMessage.deadline,
-        //             maxGasDelivery: incentivesMessage.maxGasLimit,
-            
-        //             fromVault: assetSwapPayload.fromVault,
-        //             toVault: assetSwapPayload.toVault,
-        //             toAccount: assetSwapPayload.toAccount,
-        //             units: assetSwapPayload.units,
-        //             toAssetIndex: BigInt(assetSwapPayload.toAssetIndex),
-        //             minOut: assetSwapPayload.minOut,
-        //             swapAmount: assetSwapPayload.fromAmount,
-        //             fromAsset: assetSwapPayload.fromAsset,
-        //             blockNumberMod: BigInt(assetSwapPayload.blockNumber),
-        //             underwriteIncentiveX16: BigInt(assetSwapPayload.underwritingIncentive),
-        //             calldata: assetSwapPayload.cdata,
-
-        //             blockTimestamp,
-        //             observedAtBlockNumber: this.currentStatus!.blockNumber,
-        //         },
-        //     }
-        
-        //     await this.store.saveSwapState(swapState);
-        // })
-
-    // };
-
-
-    // private async queryAMBMessageData(
-    //     txHash: string,
-    //     swapId: string,
-    //     sourceVault: string,
-    //     blockNumber: number,
-    // ): Promise<{
-    //     ambMessageMetadata: any, // TODO type
-    //     incentivesMessage: SOURCE_TO_DESTINATION,
-    //     assetSwapPayload: ASSET_SWAP
-    // } | undefined> {
-        
-    //     const relayerEndpoint = `http://${process.env.RELAYER_HOST}:${process.env.RELAYER_PORT}/getAMBMessages?`;
-
-    //     const res = await fetch(relayerEndpoint + new URLSearchParams({chainId: this.chainId, txHash}));
-    //     const ambs = (await res.json());    //TODO type
-
-    //     // Find the AMB that matches the SendAsset event
-    //     for (const amb of ambs) {
-    //         try {
-    //             if (amb.sourceChain != this.chainId) continue;
-
-    //             const giPayload = parsePayload(amb.payload);
-
-    //             if (giPayload.context != MessageContext.CTX_SOURCE_TO_DESTINATION) continue;
-
-    //             // TODO validate 'sourceApplicationAddress' (i.e. is it an approved 'sourceInterface'?)
-    //             // if (giPayload.sourceApplicationAddress.toLowerCase() != sourceInterface.toLowerCase()) continue;
-
-    //             const catalystPayload = catalystParse(giPayload.message);
-
-    //             if (catalystPayload.context != CatalystContext.ASSET_SWAP) continue;
-
-    //             // ! It is very important to validate that the 'fromVault' encoded within the swap
-    //             // ! message is the same as the address of the contract which emitted the SendAsset
-    //             // ! event. (Technically, the address of the vault is irrelevant if the destination
-    //             // ! vault accepts the message, but other parts of this underwriter implementation
-    //             // ! may rely on this fact.)
-    //             if (catalystPayload.fromVault.toLowerCase() != sourceVault.toLowerCase()) continue;
-    //             if (catalystPayload.blockNumber != (blockNumber & BYTES_4_MASK)) continue;
-
-    //             const ambSwapId = calcAssetSwapIdentifier(
-    //                 catalystPayload.toAccount,
-    //                 catalystPayload.units,
-    //                 catalystPayload.fromAmount,
-    //                 catalystPayload.fromAsset,
-    //                 catalystPayload.blockNumber
-    //             )
-
-    //             if (ambSwapId.toLowerCase() != swapId.toLowerCase()) continue;
-
-    //             return {
-    //                 ambMessageMetadata: amb,
-    //                 incentivesMessage: giPayload,
-    //                 assetSwapPayload: catalystPayload,
-    //             };
-
-    //         } catch {
-    //             // Continue
-    //         }
-    //     }
-
-    //     return undefined;
-    // }
-
-    // private async handleReceiveAssetEvent(
-    //     log: Log,
-    //     parsedLog: LogDescription,
-    //     vaultConfig: VaultConfig
-    // ): Promise<void> {
-
-        //TODO
-        // const vaultAddress = log.address;
-        // const event = parsedLog.args as unknown as ReceiveAssetEvent.OutputObject;
-
-        // //TODO the way in which the hash is calculated should depend on the fromVault template
-        // const fromVault = decodeBytes65Address(event.fromVault);
-        // const fromAsset = decodeBytes65Address(event.fromAsset);
-
-        // const swapId = calcAssetSwapIdentifier(
-        //     event.toAccount,
-        //     event.units,
-        //     event.fromAmount,
-        //     fromAsset,
-        //     Number(event.sourceBlockNumberMod)
-        // );
-    
-        // this.logger.info(
-        //     { vaultAddress: vaultAddress, txHash: log.transactionHash, swapId },
-        //     `ReceiveAsset event captured.`
-        // );
-
-        // const fromChainId = vaultConfig.channels[event.channelId.toLowerCase()];
-
-        // if (fromChainId == undefined) {
-        //     this.logger.warn(
-        //         { channelId: event.channelId },
-        //         `Dropping ReceiveAsset event. No mapping for the event's channelId found.`
-        //     );
-        //     return;
-        // }
-
-        // const swapState: SwapState = {
-        //     poolId: vaultConfig.poolId,
-        //     fromChainId,
-        //     fromVault,
-        //     status: SwapStatus.Completed,
-        //     toChainId: this.chainId,
-        //     swapId,
-        //     toVault: vaultAddress,
-        //     toAccount: event.toAccount,
-        //     fromAsset,
-        //     swapAmount: event.fromAmount,
-        //     units: event.units,
-        //     receiveAssetEvent: {
-        //         txHash: log.transactionHash,
-        //         blockHash: log.blockHash,
-        //         blockNumber: log.blockNumber,
-        //         toChannelId: event.channelId,
-        //         toAsset: event.toAsset,
-        //         toAmount: event.toAmount,
-        //         sourceBlockNumberMod: Number(event.sourceBlockNumberMod),
-        //     },
-        // }
-    
-        // await this.store.saveSwapState(swapState);
-    // };
 
     
     private async handleSwapUnderwrittenEvent (
