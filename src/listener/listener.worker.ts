@@ -494,7 +494,6 @@ class ListenerWorker {
         // Verify the sending Catalyst interface and GI escrow are trusted
         const sourceApplication = giPayload.sourceApplicationAddress;   // ! NOTE: this address cannot be trusted until the source escrow implementation is verified
 
-        // TODO implement the following NOTE
         // NOTE: the 'interfaceAddress' fields within the 'endpointConfigs' array are unique (verified on config service)
         const endpointConfig = this.config.endpointConfigs.find((endpointConfig) => {
             return endpointConfig.interfaceAddress == sourceApplication.toLowerCase();
