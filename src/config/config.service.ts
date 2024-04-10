@@ -136,7 +136,9 @@ export class ConfigService {
 
             const globalProperties = rawAMBConfig;
 
-            //TODO check the defined 'name's are unique.
+            if (ambConfig.has(ambName)) {
+                throw new Error(`Provided 'ambs' configuration is invalid: amb is specified multiple times. ('${ambName}')`);
+            }
 
             ambConfig.set(ambName, {
                 name: ambName,
@@ -167,6 +169,11 @@ export class ConfigService {
                 );
             }
 
+            
+            const factoryAddress = rawEndpointConfig.factoryAddress.toLowerCase();
+            const interfaceAddress = rawEndpointConfig.interfaceAddress.toLowerCase();
+            const incentivesAddress = rawEndpointConfig.incentivesAddress.toLowerCase();
+
             const channelsOnDestination: Record<string, string> = {};
             for (const [channelChainId, channelId] of Object.entries(rawEndpointConfig.channelsOnDestination)) {
                 channelsOnDestination[channelChainId] = (channelId as string).toLowerCase();
@@ -180,16 +187,25 @@ export class ConfigService {
                 });
             }
 
+
             const currentEndpoints = endpointConfig.get(chainId) ?? [];
 
-            //TODO verify that there are no duplicates (interfaceAddress)
+            const conflictingEndpointExists = currentEndpoints.some((endpoint) => {
+                return endpoint.interfaceAddress == interfaceAddress;
+            });
+            if (conflictingEndpointExists) {
+                throw new Error(
+                    `Invalid endpoint configuration: interface defined multiple times on the same chain (interface: ${interfaceAddress}, chain: ${chainId}).`,
+                );
+            }
+
             currentEndpoints.push({
                 name: rawEndpointConfig.name,
                 amb: rawEndpointConfig.amb,
                 chainId,
-                factoryAddress: rawEndpointConfig.factoryAddress.toLowerCase(),
-                interfaceAddress: rawEndpointConfig.interfaceAddress.toLowerCase(),
-                incentivesAddress: rawEndpointConfig.incentivesAddress.toLowerCase(),
+                factoryAddress,
+                interfaceAddress,
+                incentivesAddress,
                 channelsOnDestination,
                 vaultTemplates,
             });
