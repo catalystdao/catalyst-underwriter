@@ -88,6 +88,22 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
             try: retryCount + 1
         };
 
+        if (typeof error.message == "string") {
+            if (
+                /^Failed to get the vault asset at the requested index.$/.test(error.message)
+            ) {
+                this.logger.warn(
+                    {
+                        ...errorDescription,
+                        toVault: order.toVault,
+                        toAssetIndex: order.toAssetIndex
+                    },
+                    `Failed to get the vault asset at the requested index.`,
+                )
+                return true;    // Retry discovery (in case of an rpc query error)
+            }
+        }
+
         this.logger.warn(
             errorDescription,
             `Error on underwrite parameters discovery.`,

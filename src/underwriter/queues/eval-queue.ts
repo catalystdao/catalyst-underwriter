@@ -220,23 +220,6 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             try: retryCount + 1
         };
 
-        if (typeof error.message == "string") {
-            //TODO move this to the 'discover' queue
-            if (
-                /^Failed to get the vault asset at the requested index.$/.test(error.message)
-            ) {
-                this.logger.warn(
-                    {
-                        ...errorDescription,
-                        toVault: order.toVault,
-                        toAssetIndex: order.toAssetIndex
-                    },
-                    `Failed to get the vault asset at the requested index.`,
-                )
-                return true;    // Retry eval (in case of an rpc query error)
-            }
-        }
-
         //TODO improve error filtering?
         if (error.code === 'CALL_EXCEPTION') {
             this.logger.error(
