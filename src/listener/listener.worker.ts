@@ -944,13 +944,14 @@ class ListenerWorker {
         
                 amb: ambMessageMetadata.amb,
                 toChainId: ambMessageMetadata.destinationChain,
-                fromChannelId,
+                messageIdentifier: ambMessageMetadata.messageIdentifier,
 
                 toIncentivesAddress: "", // TODO: is this wanted/needed?
                 toApplication: incentivesMessage.toApplication,
-                messageIdentifier: ambMessageMetadata.messageIdentifier,
                 deadline: incentivesMessage.deadline,
                 maxGasDelivery: incentivesMessage.maxGasLimit,
+
+                fromChannelId,
         
                 fromVault: assetSwapPayload.fromVault,
                 toVault: assetSwapPayload.toVault,

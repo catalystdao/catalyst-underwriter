@@ -39,14 +39,16 @@ export interface AMBMessageSendAssetDetails extends TransactionDescription {
     // Relayer AMB message data
     amb: string;
     toChainId: string;
-    fromChannelId: string;
+    messageIdentifier: string;
 
     // Decoded GeneralisedIncentives data
     toIncentivesAddress: string;
     toApplication: string;
-    messageIdentifier: string;
     deadline: bigint;
     maxGasDelivery: bigint;
+
+    // Derived swap data
+    fromChannelId: string;
 
     // Decoded swap data (from AMB message)
     fromVault: string; // ! It must be verified that this field matches the 'fromVault' of the 'SwapState'.
