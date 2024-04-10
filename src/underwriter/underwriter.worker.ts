@@ -216,6 +216,7 @@ class UnderwriterWorker {
             await this.evalQueue.processOrders();
             const [underwriteOrders] = this.evalQueue.getFinishedOrders();
 
+            //TODO if the following fails, does it get retried at an 'processingInterval' interval? (that is too quick and will cause rpc errors)
             // ! The following call blocks the pipeline until the submitted approvals are
             // ! confirmed! Approvals should be configured to not be issued at a high frequency
             // ! (see the 'allowanceBuffer' configuration).
