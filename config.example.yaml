@@ -2,14 +2,11 @@
 global:
   privateKey: ""      # The privateKey of the account that will be submitting the underwrites
   logLevel: "debug"
-  blockDelay: 5       # Delay with which to process the chain blocks. Use this to prevent handling
-                      # blocks that eventually reorg.
-                      # TODO If the 'monitor' service is moved to the Relayer, this config must
-                      # TODO be implemented on the 'listener' directly.
 
-  # TODO the monitor should be moved to the 'Relayer'
   monitor:
-    interval: 5000    # Interval at which to update the chains status fromt the RPCs
+    blockDelay: 5               # Delay with which to process the chain blocks (on top of the relayer's
+                                # blockDelay). Use this to prevent handling blocks that eventually reorg.
+    retryInterval: 5000         # Time to wait before retrying connection with the relayer's monitor
 
   listener:
     processingInterval: 100     # Throttle for the Listener main 'run' loop
@@ -111,13 +108,13 @@ chains:
         tokenBalanceUpdateInterval: 50
 
     # Overrides
-    blockDelay: 2
+    monitor:
+      blockDelay: 2
   
 
   - chainId: 421614
     name: 'Arbitrum Sepolia'
     rpc: 'https://sepolia-rollup.arbitrum.io/rpc' # NOTE: This rpc errors easily with a 'requests rate too high' error
-    blockDelay: 12
     underwriter:
       minMaxGasDelivery: 100000 #TODO set value
     tokens:
@@ -125,7 +122,7 @@ chains:
         address: '0xC8bF2D5c0D6bEC807c21EF4cef2f1fd3bf16947e'
         allowanceBuffer: '10000000000000000000'
     monitor:
-      interval: 2000
+      blockDelay: 12
 
   - chainId: 11155420
     name: 'OP Sepolia'
@@ -136,8 +133,6 @@ chains:
       - name: 'WETH'
         address: '0x1BDD24840e119DC2602dCC587Dd182812427A5Cc'
         allowanceBuffer: '10000000000000000000'
-    monitor:
-      interval: 2000
 
 
 endpoints:

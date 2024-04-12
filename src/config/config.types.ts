@@ -13,10 +13,12 @@ export interface GlobalConfig {
 
 
 export interface MonitorGlobalConfig {
-    interval?: number;
+    blockDelay?: number;
+    retryInterval?: number;
 }
 
-export interface MonitorConfig extends MonitorGlobalConfig {}
+export interface MonitorConfig extends MonitorGlobalConfig {
+}
 
 
 export interface ListenerGlobalConfig {

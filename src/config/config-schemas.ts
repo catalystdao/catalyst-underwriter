@@ -83,7 +83,6 @@ const GLOBAL_SCHEMA = {
             pattern: BYTES_32_HEX_EXPR,
         },
         logLevel: {$ref: "non-empty-string-schema"},
-        blockDelay: {$ref: "positive-number-schema"},
 
         monitor: {$ref: "monitor-schema"},
         listener: {$ref: "listener-schema"},
@@ -99,11 +98,8 @@ const MONITOR_SCHEMA = {
     $id: "monitor-schema",
     type: "object",
     properties: {
-        interval: {
-            type: "number",
-            minimum: 0,
-            maximum: 120_000,   // 2 minutes
-        }
+        blockDelay: {$ref: "positive-number-schema"},
+        retryInterval: {$ref: "positive-number-schema"},
     },
     additionalProperties: false
 }
