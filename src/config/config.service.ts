@@ -106,8 +106,9 @@ export class ConfigService {
         const chainConfig = new Map<string, ChainConfig>();
 
         for (const rawChainConfig of this.rawConfig.chains) {
-            chainConfig.set(rawChainConfig.chainId.toString(), {
-                chainId: rawChainConfig.chainId.toString(),
+            const chainId = rawChainConfig.chainId.toString();
+            chainConfig.set(chainId, {
+                chainId,
                 name: rawChainConfig.name,
                 rpc: rawChainConfig.rpc,
                 blockDelay: rawChainConfig.blockDelay,
@@ -219,7 +220,7 @@ export class ConfigService {
     // Find if there is a chain-specific override for the AMB property.
         if (chainId != undefined) {
             const chainOverride = this.rawConfig.chains.find(
-                (rawChainConfig: any) => rawChainConfig.chainId == chainId,
+                (rawChainConfig: any) => rawChainConfig.chainId.toString() == chainId,
             )?.[amb]?.[key];
 
             if (chainOverride != undefined) return chainOverride;
