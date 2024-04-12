@@ -283,6 +283,7 @@ class ListenerWorker {
             }
             catch (error) {
                 this.logger.error(error, `Failed on listener.worker`);
+                //TODO add delay
             }
 
             await wait(this.config.processingInterval);

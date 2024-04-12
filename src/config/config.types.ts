@@ -23,7 +23,7 @@ export interface ListenerGlobalConfig {
     retryInterval?: number;
     processingInterval?: number;
     maxBlocks?: number;
-    startingBlock?: number;
+    startingBlock?: number; //TODO should this be here? (i.e. it shouldn't be in 'global')
 }
 
 export interface ListenerConfig extends ListenerGlobalConfig {}
