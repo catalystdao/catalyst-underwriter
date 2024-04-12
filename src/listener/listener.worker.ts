@@ -401,7 +401,7 @@ class ListenerWorker {
             swapUnderwrittenEvent: {
                 txHash: log.transactionHash,
                 blockHash: log.blockHash,
-                blockNumber: log.blockNumber,
+                blockNumber: log.blockNumber, // ! TODO what block number to use for arbitrum?
                 underwriter: event.underwriter,
                 expiry: Number(event.expiry),
                 targetVault: event.targetVault,
@@ -439,7 +439,7 @@ class ListenerWorker {
             fulfillUnderwriteEvent: {
                 txHash: log.transactionHash,
                 blockHash: log.blockHash,
-                blockNumber: log.blockNumber,
+                blockNumber: log.blockNumber, // ! TODO what block number to use for arbitrum?
             }
         }
 
@@ -470,7 +470,7 @@ class ListenerWorker {
             expireUnderwriteEvent: {
                 txHash: log.transactionHash,
                 blockHash: log.blockHash,
-                blockNumber: log.blockNumber,
+                blockNumber: log.blockNumber, // ! TODO what block number to use for arbitrum?
                 expirer: event.expirer,
                 reward: event.reward,
 
