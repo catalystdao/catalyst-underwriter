@@ -519,24 +519,14 @@ class ListenerWorker {
 
         const catalystPayload = catalystParse(giPayload.message);
         if (catalystPayload.context != CatalystContext.ASSET_SWAP) return;
-        
-        let blockNumber = ambMessage.blockNumber;
-        if (blockNumber == undefined) {
+
+        if (ambMessage.blockNumber == undefined) {
             // NOTE: this may happen for AMBs which are 'recovered' by the relayer (i.e. old AMBs).
             this.logger.info(
                 { messageIdentifier: giPayload.messageIdentifier },
                 "Unable to process AMB message. Block number missing"
             );
             return;
-        }
-
-        //TODO implement a better (generic) block number fix (should this be implemented on the relayer?)
-        if (this.chainId == '421614') { // Arbitrum sepolia
-            const blockData = await this.provider.send(
-                "eth_getBlockByNumber",
-                ["0x"+blockNumber.toString(16), false]
-            );
-            blockNumber = blockData.l1BlockNumber;
         }
 
         await this.processCatalystSwap(
@@ -557,12 +547,23 @@ class ListenerWorker {
 
         const fromVault = assetSwapPayload.fromVault;
 
+        //TODO implement a better (generic) block number fix (should this be implemented on the relayer?)
+        const blockNumber = ambMessageMetadata.blockNumber;
+        let effectiveBlockNumber = blockNumber;
+        if (this.chainId == '421614') { // Arbitrum sepolia
+            const blockData = await this.provider.send(
+                "eth_getBlockByNumber",
+                ["0x"+blockNumber.toString(16), false]
+            );
+            effectiveBlockNumber = blockData.l1BlockNumber;
+        }
+
         const swapId = calcAssetSwapIdentifier(
             assetSwapPayload.toAccount,
             assetSwapPayload.units,
             assetSwapPayload.fromAmount,
             assetSwapPayload.fromAsset,
-            assetSwapPayload.blockNumber
+            effectiveBlockNumber
         );
 
         const fromChannelId = originEndpoint.channelsOnDestination[ambMessageMetadata.destinationChain];
@@ -581,7 +582,6 @@ class ListenerWorker {
             return;
         }
 
-        const blockNumber = ambMessageMetadata.blockNumber;
         const blockTimestamp = await this.getBlockTimestamp(blockNumber);
         if (blockTimestamp == null) {
             this.logger.warn(
@@ -601,7 +601,7 @@ class ListenerWorker {
             ambMessageSendAssetDetails: {
                 txHash: ambMessageMetadata.transactionHash,
                 blockHash: ambMessageMetadata.blockHash,
-                blockNumber,
+                blockNumber: effectiveBlockNumber,
         
                 amb: ambMessageMetadata.amb,
                 toChainId: ambMessageMetadata.destinationChain,
