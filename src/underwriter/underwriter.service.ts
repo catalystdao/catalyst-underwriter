@@ -19,6 +19,8 @@ export const DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN = 50;
 export const DEFAULT_UNDERWRITER_MIN_RELAY_DEADLINE_DURATION = 24n * 60n * 60n * 1000n; // 1 day
 export const DEFAULT_UNDERWRITER_UNDERWRITE_DELAY = 500;
 export const DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY = 300000;
+export const DEFAULT_UNDERWRITER_UNDERWRITING_COLLATERAL = 0.035;
+export const DEFAULT_UNDERWRITER_ALLOWANCE_BUFFER = 0.05;
 export const DEFAULT_UNDERWRITER_TOKEN_BALANCE_UPDATE_INTERVAL = 50;
 
 const MIN_ALLOWED_MIN_RELAY_DEADLINE_DURATION = 1n * 60n * 60n * 1000n; // 1 hour
@@ -33,6 +35,8 @@ interface DefaultUnderwriterWorkerData {
     minRelayDeadlineDuration: bigint;
     underwriteDelay: number;
     maxSubmissionDelay: number;
+    underwritingCollateral: number;
+    allowanceBuffer: number;
     maxUnderwriteAllowed: bigint | undefined;
     minUnderwriteReward: bigint | undefined;
     lowTokenBalanceWarning: bigint | undefined;
@@ -57,6 +61,8 @@ export interface UnderwriterWorkerData {
     minMaxGasDelivery: bigint;
     underwriteDelay: number;
     maxSubmissionDelay: number;
+    underwritingCollateral: number;
+    allowanceBuffer: number;
     walletPublicKey: string;
     walletPort: MessagePort;
     loggerOptions: LoggerOptions;
@@ -145,6 +151,8 @@ export class UnderwriterService implements OnModuleInit {
         const minRelayDeadlineDuration = globalUnderwriterConfig.minRelayDeadlineDuration ?? DEFAULT_UNDERWRITER_MIN_RELAY_DEADLINE_DURATION;
         const underwriteDelay = globalUnderwriterConfig.underwriteDelay ?? DEFAULT_UNDERWRITER_UNDERWRITE_DELAY;
         const maxSubmissionDelay = globalUnderwriterConfig.maxSubmissionDelay ?? DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY;
+        const underwritingCollateral = globalUnderwriterConfig.underwritingCollateral ?? DEFAULT_UNDERWRITER_UNDERWRITING_COLLATERAL;
+        const allowanceBuffer = globalUnderwriterConfig.allowanceBuffer ?? DEFAULT_UNDERWRITER_ALLOWANCE_BUFFER;
         const maxUnderwriteAllowed = globalUnderwriterConfig.maxUnderwriteAllowed;
         const minUnderwriteReward = globalUnderwriterConfig.minUnderwriteReward;
         const lowTokenBalanceWarning = globalUnderwriterConfig.lowTokenBalanceWarning;
@@ -167,6 +175,8 @@ export class UnderwriterService implements OnModuleInit {
             minRelayDeadlineDuration,
             underwriteDelay,
             maxSubmissionDelay,
+            underwritingCollateral,
+            allowanceBuffer,
             maxUnderwriteAllowed,
             minUnderwriteReward,
             lowTokenBalanceWarning,
@@ -225,6 +235,12 @@ export class UnderwriterService implements OnModuleInit {
             maxSubmissionDelay:
                 chainUnderwriterConfig.maxSubmissionDelay
                 ?? defaultConfig.maxSubmissionDelay,
+            underwritingCollateral:
+                chainUnderwriterConfig.underwritingCollateral
+                ?? defaultConfig.underwritingCollateral,
+            allowanceBuffer:
+                chainUnderwriterConfig.allowanceBuffer
+                ?? defaultConfig.allowanceBuffer,
 
             walletPublicKey: defaultConfig.walletPublicKey,
             walletPort: await this.walletService.attachToWallet(chainId),

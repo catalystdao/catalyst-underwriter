@@ -7,7 +7,12 @@ import { CatalystVaultCommon__factory } from "src/contracts";
 import { JsonRpcProvider } from 'ethers';
 import { TokenHandler } from '../token-handler/token-handler';
 
+const DECIMAL_RESOLUTION = 1_000_000;
+const DECIMAL_RESOLUTION_BIGINT = BigInt(DECIMAL_RESOLUTION);
+
 export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
+
+    private readonly effectiveAllowanceBuffer: bigint;    // NOTE: this includes the underwriting collateral
 
     constructor(
         private enabled: boolean,
@@ -15,6 +20,8 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         readonly tokens: Record<string, TokenConfig>,
         readonly retryInterval: number,
         readonly maxTries: number,
+        underwritingCollateral: number,
+        allowanceBuffer: number,
         private readonly underwriteBlocksMargin: number,
         private readonly minRelayDeadlineDuration: bigint,
         private readonly minMaxGasDelivery: bigint,
@@ -23,6 +30,20 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         private readonly logger: pino.Logger
     ) {
         super(retryInterval, maxTries);
+
+        this.effectiveAllowanceBuffer = this.calcEffectiveAllowanceBuffer(
+            underwritingCollateral,
+            allowanceBuffer,
+        );
+    }
+
+    private calcEffectiveAllowanceBuffer(
+        underwritingCollateral: number,
+        allowanceBuffer: number
+    ): bigint {
+        return BigInt(
+            Math.floor((1 + underwritingCollateral) * (1 + allowanceBuffer) * DECIMAL_RESOLUTION)
+        );
     }
 
     //TODO also implement on the 'underwrite' queue
@@ -111,7 +132,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             this.provider
         );
         const expectedReturn = await toVaultContract.calcReceiveAsset(order.toAsset, order.units);
-        const toAssetAllowance = expectedReturn * 11n / 10n;    //TODO set customizable allowance margin
+        const toAssetAllowance = expectedReturn * this.effectiveAllowanceBuffer / DECIMAL_RESOLUTION_BIGINT;
 
         // Verify the token balances involed are acceptable
         if (

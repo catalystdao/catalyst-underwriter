@@ -135,6 +135,16 @@ const UNDERWRITER_GLOBAL_SCHEMA = {
         minRelayDeadlineDuration: {$ref: "positive-number-schema"},
         underwriteDelay: {$ref: "positive-number-schema"},
         maxSubmissionDelay: {$ref: "positive-number-schema"},
+        underwritingCollateral: {
+            type: "number",
+            exclusiveMinimum: 0,
+            maximum: 0.1
+        },
+        allowanceBuffer: {
+            type: "number",
+            exclusiveMinimum: 0,
+            maximum: 0.3
+        },
         maxUnderwriteAllowed: {$ref: "uint256-field-schema"},
         minUnderwriteReward: {$ref: "uint256-field-schema"},
         lowTokenBalanceWarning: {$ref: "uint256-field-schema"},

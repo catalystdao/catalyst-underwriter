@@ -27,6 +27,9 @@ global:
                                 # the relayer to process any relevant related data).
     maxSubmissionDelay: 300000  # Maximum time for the wallet to submit the 'underwrite' transaction.
 
+    allowanceBuffer: 1.05       # Extra buffer allowed on top of the calculated required funds for
+                                # performing an underwrite.
+
     maxUnderwriteAllowed: "10000000000000000000"  # Maximum tokens to risk on a single underwrite
     minUnderwriteReward: "10000000000"           # Minimum acceptable token reward for an underwrite
     lowTokenBalanceWarning: "1000000000000000000" # Token balance below which a 'low balance' warning is emitted.

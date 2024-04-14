@@ -41,6 +41,8 @@ export interface UnderwriterGlobalConfig {
     minRelayDeadlineDuration?: bigint;
     underwriteDelay?: number;
     maxSubmissionDelay?: number;
+    underwritingCollateral?: number;
+    allowanceBuffer?: number;
     maxUnderwriteAllowed?: bigint;
     minUnderwriteReward?: bigint;
     lowTokenBalanceWarning?: bigint;
