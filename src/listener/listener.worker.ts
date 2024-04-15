@@ -174,7 +174,7 @@ class ListenerWorker {
                 );
 
                 try {
-                    this.processAMBMessage(ambMessage);
+                    void this.processAMBMessage(ambMessage);
                 } catch {
                     this.logger.warn(
                         { ambMessage },
