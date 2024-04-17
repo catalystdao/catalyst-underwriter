@@ -278,7 +278,7 @@ class ListenerWorker {
                 await this.handleInterfaceEvent(log);
             } catch (error) {
                 this.logger.error(
-                    { log, error },
+                    { log, error: tryErrorToString(error) },
                     `Failed to process event on listener worker.`
                 );
             }
