@@ -15,6 +15,4 @@ export interface MonitorGetPortResponse {
 
 export interface MonitorStatusMessage {
     blockNumber: number;
-    blockHash: string | null;
-    timestamp: number;
 }

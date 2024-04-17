@@ -237,9 +237,7 @@ export class MonitorService implements OnModuleInit {
         );
 
         const status: MonitorStatusMessage = {
-            blockNumber: Math.max(0, event.blockNumber - chainConfig.blockDelay),
-            blockHash: event.blockHash,
-            timestamp: event.timestamp
+            blockNumber: Math.max(0, event.blockNumber - chainConfig.blockDelay)
         };
 
         for (const port of chainConfig.ports) {
