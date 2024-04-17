@@ -1,4 +1,4 @@
-import { JsonRpcProvider, Log, LogDescription } from "ethers";
+import { Block, JsonRpcProvider, Log, LogDescription } from "ethers";
 import pino from "pino";
 import { workerData, MessagePort } from 'worker_threads';
 import { ListenerWorkerData } from "./listener.service";
@@ -12,6 +12,14 @@ import { MonitorInterface, MonitorStatus } from "src/monitor/monitor.interface";
 import { ASSET_SWAP, CatalystContext, catalystParse } from "src/common/decode.catalyst";
 import { EndpointConfig } from "src/config/config.types";
 import WebSocket from "ws";
+
+
+interface CatalystSwapAMBMessageData {
+    ambMessageMetadata: any,    //TODO type
+    incentivesMessage: SOURCE_TO_DESTINATION,
+    assetSwapPayload: ASSET_SWAP,
+    originEndpoint: EndpointConfig
+}
 
 class ListenerWorker {
     readonly store: Store;
@@ -27,6 +35,9 @@ class ListenerWorker {
     readonly chainInterfaceEventsInterface: CatalystChainInterfaceInterface;
     readonly addresses: string[];
     readonly topics: string[][];
+
+    readonly blockQuerier: BlockQuerier;
+    readonly catalystSwapMessagesQueue: CatalystSwapAMBMessageData[] = [];
 
     private blockTimestamps: Map<number, number>; // Map block number => timestamp
 
@@ -48,6 +59,11 @@ class ListenerWorker {
         const contractTypes = this.initializeContractTypes();
         this.chainInterfaceEventsInterface = contractTypes.chainInterfaceInterface;
         this.topics = contractTypes.topics;
+
+        this.blockQuerier = this.initializeBlockQuerier(
+            this.provider,
+            this.config.retryInterval,
+        );
 
         this.blockTimestamps = new Map();
 
@@ -101,6 +117,17 @@ class ListenerWorker {
             chainInterfaceInterface,
             topics
         }
+    }
+
+    private initializeBlockQuerier(
+        provider: JsonRpcProvider,
+        queryRetryInterval: number
+    ): BlockQuerier {
+        return new BlockQuerier(
+            provider,
+            this.logger,
+            queryRetryInterval
+        );
     }
 
     private startListeningToMonitor(port: MessagePort): MonitorInterface {
@@ -285,6 +312,8 @@ class ListenerWorker {
                 this.logger.error(error, `Failed on listener.worker`);
                 //TODO add delay
             }
+
+            await this.processCatalystSwapMessagesQueue();
 
             await wait(this.config.processingInterval);
         }
@@ -520,22 +549,50 @@ class ListenerWorker {
         const catalystPayload = catalystParse(giPayload.message);
         if (catalystPayload.context != CatalystContext.ASSET_SWAP) return;
 
-        if (ambMessage.blockNumber == undefined) {
+        if (ambMessage.blockNumber == undefined || ambMessage.blockHash == undefined) {
             // NOTE: this may happen for AMBs which are 'recovered' by the relayer (i.e. old AMBs).
             this.logger.info(
                 { messageIdentifier: giPayload.messageIdentifier },
-                "Unable to process AMB message. Block number missing"
+                "Unable to process AMB message. Block number/hash missing"
             );
             return;
         }
 
-        await this.processCatalystSwap(
-            ambMessage,
-            giPayload,
-            catalystPayload,
-            endpointConfig
-        );
+        this.catalystSwapMessagesQueue.push({
+            ambMessageMetadata: ambMessage,
+            incentivesMessage: giPayload,
+            assetSwapPayload: catalystPayload,
+            originEndpoint: endpointConfig,
+        });
 
+    }
+
+    private async processCatalystSwapMessagesQueue(): Promise<void> {
+        
+        const currentBlockNumber = this.currentStatus?.blockNumber;
+        if (currentBlockNumber == undefined) {
+            return;
+        }
+
+        // Only process swaps whose block numbers are within the underwriter's delayed block
+        // number value (the relayer may run ahead of the underwriter).
+        let i;
+        for (i = 0; i < this.catalystSwapMessagesQueue.length; i++) {
+            const swapData = this.catalystSwapMessagesQueue[i];
+
+            if (swapData.ambMessageMetadata.blockNumber > currentBlockNumber) {
+                return;
+            }
+
+            await this.processCatalystSwap(
+                swapData.ambMessageMetadata,
+                swapData.incentivesMessage,
+                swapData.assetSwapPayload,
+                swapData.originEndpoint
+            );
+        }
+        
+        this.catalystSwapMessagesQueue.splice(0, i);
     }
 
     private async processCatalystSwap(
@@ -544,11 +601,29 @@ class ListenerWorker {
         assetSwapPayload: ASSET_SWAP,
         originEndpoint: EndpointConfig
     ) {
+        // ! Verify the block did not reorg
+        const blockNumber = ambMessageMetadata.blockNumber;
+        const blockHash = ambMessageMetadata.blockHash;
+        const latestBlockData = await this.blockQuerier.getBlock(blockNumber);
+        if (
+            !latestBlockData ||
+            latestBlockData.hash?.toLowerCase() !== blockHash.toLowerCase()
+        ) {
+            this.logger.info(
+                {
+                    blockNumber,
+                    blockHash,
+                    ambMessageMetadata
+                },
+                `Dropping swap data: block hash does not match (possible block reorg).`
+            )
+            return;
+        }
 
         const fromVault = assetSwapPayload.fromVault;
 
         //TODO implement a better (generic) block number fix (should this be implemented on the relayer?)
-        const blockNumber = ambMessageMetadata.blockNumber;
+        
         let effectiveBlockNumber = blockNumber;
         if (this.chainId == '421614') { // Arbitrum sepolia
             const blockData = await this.provider.send(
@@ -633,6 +708,71 @@ class ListenerWorker {
     
         await this.store.saveSwapState(swapState);
     }
+}
+
+
+// Simple class to cache a limited number of blockNumber->Block mappings. New entries override
+// the oldest entries.
+class BlockQuerier {
+
+    private blocksCache: [number, Block][];   // Tuples of type [blockNumber, Block]
+    private nextEntryIndex = 0;
+
+    constructor(
+        private readonly provider: JsonRpcProvider,
+        private readonly logger: pino.Logger,
+        private readonly queryRetryInterval = 2000,
+        private readonly cacheSize = 100,
+    ) {
+        this.blocksCache = new Array(this.cacheSize);
+    }
+
+
+    private getCachedBlock(blockNumber: number): Block | null {
+        return this.blocksCache.find((entry) => blockNumber === entry[0])?.[1] ?? null;
+    }
+
+    private cacheBlock(blockNumber: number, block: Block): void {
+        this.blocksCache[this.nextEntryIndex] = [blockNumber, block];
+        this.nextEntryIndex = (this.nextEntryIndex + 1) % this.cacheSize;
+    }
+
+
+    async getBlock(blockNumber: number): Promise<Block | null> {
+        const cachedBlock = this.getCachedBlock(blockNumber);
+
+        if (cachedBlock != null) {
+            return cachedBlock;
+        }
+
+        const queriedBlock = await this.queryBlock(blockNumber);
+        if (queriedBlock != null) {
+            this.cacheBlock(blockNumber, queriedBlock);
+        }
+
+        return queriedBlock;
+    }
+
+    private async queryBlock(blockNumber: number): Promise<Block | null> {
+        let i = 0;
+        let block: Block | null | undefined;
+        while (block === undefined) {
+            try {
+                block = await this.provider.getBlock(blockNumber);
+            } catch {
+                i++;
+                this.logger.warn(
+                    { blockNumber, try: i },
+                    'Failed to query block data. Worker locked until successful update.',
+                );
+                await wait(this.queryRetryInterval);
+                // Continue trying
+            }
+        }
+
+        return block;
+    }
+
 }
 
 void new ListenerWorker().run();
