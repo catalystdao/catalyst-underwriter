@@ -39,8 +39,6 @@ class ListenerWorker {
     readonly blockQuerier: BlockQuerier;
     readonly catalystSwapMessagesQueue: CatalystSwapAMBMessageData[] = [];
 
-    private blockTimestamps: Map<number, number>; // Map block number => timestamp
-
     private currentStatus: MonitorStatus | null;
 
 
@@ -64,8 +62,6 @@ class ListenerWorker {
             this.provider,
             this.config.retryInterval,
         );
-
-        this.blockTimestamps = new Map();
 
         this.startListeningToMonitor(this.config.monitorPort);
         this.startListeningToRelayer();
@@ -135,7 +131,6 @@ class ListenerWorker {
 
         monitor.addListener((status) => {
             this.currentStatus = status;
-            this.registerBlockTimestamp(status.blockNumber, status.timestamp);
         });
 
         return monitor;
@@ -215,54 +210,6 @@ class ListenerWorker {
                 )
             }
         });
-    }
-
-
-
-    // Block helpers
-    // ********************************************************************************************
-    private registerBlockTimestamp(blockNumber: number, timestamp: number): void {
-        this.blockTimestamps.set(blockNumber, timestamp);
-    }
-
-    // NOTE: This function will stall the worker until a successful block query is made.
-    private async queryBlockTimestamp(blockNumber: number): Promise<number | null> {
-        let tryCount = 0;
-        let timestamp: number | null | undefined = undefined;
-        while (timestamp === undefined) {
-            try {
-                const block = await this.provider.getBlock(blockNumber);
-                timestamp = block?.timestamp ?? null; // ! 'block' may ben null if the 'blockNumber' is invalid. In such case, set the timestamp to 'null'.
-            } catch {
-                this.logger.warn(
-                    {
-                        blockNumber,
-                        try: tryCount,
-                    },
-                    'Failed to query the block timestamp'
-                );
-
-                tryCount++;
-                await wait(this.config.retryInterval); 
-            }
-        }
-        
-        return timestamp;
-    }
-
-    private async getBlockTimestamp(blockNumber: number): Promise<number | null> {
-        const cachedTimestamp = this.blockTimestamps.get(blockNumber);
-        if (cachedTimestamp != null) {
-            return cachedTimestamp;
-        }
-
-        const queriedTimestamp = await this.queryBlockTimestamp(blockNumber);
-        if (queriedTimestamp != null) {
-            this.registerBlockTimestamp(blockNumber, queriedTimestamp);
-            return queriedTimestamp;
-        }
-
-        return null;
     }
 
 
@@ -657,17 +604,6 @@ class ListenerWorker {
             return;
         }
 
-        const blockTimestamp = await this.getBlockTimestamp(blockNumber);
-        if (blockTimestamp == null) {
-            this.logger.warn(
-                { 
-                    blockNumber,
-                },
-                `Dropping swap. No timestamp for the block number found.`
-            );
-            return;
-        }
-
         const swapState: SwapState = {
             fromChainId: this.chainId,
             fromVault: assetSwapPayload.fromVault,
@@ -701,7 +637,7 @@ class ListenerWorker {
                 underwriteIncentiveX16: BigInt(assetSwapPayload.underwritingIncentive),
                 calldata: assetSwapPayload.cdata,
 
-                blockTimestamp,
+                blockTimestamp: latestBlockData.timestamp,  // ! TODO is this wrong for arbitrum?
                 observedAtBlockNumber: this.currentStatus!.blockNumber,
             },
         }
