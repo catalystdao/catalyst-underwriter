@@ -222,12 +222,12 @@ class ListenerWorker {
             `Listener worker started.`
         );
 
-        let startBlock = null;
-        while (startBlock == null) {
-            // Do not initialize 'startBlock' whilst 'currentStatus' is null, even if
+        let fromBlock = null;
+        while (fromBlock == null) {
+            // Do not initialize 'fromBlock' whilst 'currentStatus' is null, even if
             // 'startingBlock' is specified.
             if (this.currentStatus != null) {
-                startBlock = (
+                fromBlock = (
                     this.config.startingBlock ?? this.currentStatus.blockNumber
                 );
             }
@@ -237,23 +237,23 @@ class ListenerWorker {
 
         while (true) {
             try {
-                let endBlock = this.currentStatus?.blockNumber;
-                if (!endBlock || startBlock > endBlock) {
+                let toBlock = this.currentStatus?.blockNumber;
+                if (!toBlock || fromBlock > toBlock) {
                     await wait(this.config.processingInterval);
                     continue;
                 }
 
-                const blocksToProcess = endBlock - startBlock;
+                const blocksToProcess = toBlock - fromBlock;
                 if (this.config.maxBlocks != null && blocksToProcess > this.config.maxBlocks) {
-                    endBlock = startBlock + this.config.maxBlocks;
+                    toBlock = fromBlock + this.config.maxBlocks;
                 }
 
                 this.logger.info(
-                    `Scanning swaps from block ${startBlock} to ${endBlock}.`,
+                    `Scanning swaps from block ${fromBlock} to ${toBlock}.`,
                 );
-                await this.queryAndProcessEvents(startBlock, endBlock);
+                await this.queryAndProcessEvents(fromBlock, toBlock);
 
-                startBlock = endBlock + 1;
+                fromBlock = toBlock + 1;
             }
             catch (error) {
                 this.logger.error(error, `Failed on listener.worker`);
