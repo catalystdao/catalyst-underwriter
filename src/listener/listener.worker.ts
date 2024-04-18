@@ -569,23 +569,12 @@ class ListenerWorker {
 
         const fromVault = assetSwapPayload.fromVault;
 
-        //TODO implement a better (generic) block number fix (should this be implemented on the relayer?)
-        
-        let effectiveBlockNumber = blockNumber;
-        if (this.chainId == '421614') { // Arbitrum sepolia
-            const blockData = await this.provider.send(
-                "eth_getBlockByNumber",
-                ["0x"+blockNumber.toString(16), false]
-            );
-            effectiveBlockNumber = blockData.l1BlockNumber;
-        }
-
         const swapId = calcAssetSwapIdentifier(
             assetSwapPayload.toAccount,
             assetSwapPayload.units,
             assetSwapPayload.fromAmount,
             assetSwapPayload.fromAsset,
-            effectiveBlockNumber
+            ambMessageMetadata.transactionBlockNumber
         );
 
         const fromChannelId = originEndpoint.channelsOnDestination[ambMessageMetadata.destinationChain];
@@ -612,7 +601,8 @@ class ListenerWorker {
             ambMessageSendAssetDetails: {
                 txHash: ambMessageMetadata.transactionHash,
                 blockHash: ambMessageMetadata.blockHash,
-                blockNumber: effectiveBlockNumber,
+                blockNumber: ambMessageMetadata.blockNumber,
+                transactionBlockNumber: ambMessageMetadata.transactionBlockNumber,
         
                 amb: ambMessageMetadata.amb,
                 toChainId: ambMessageMetadata.destinationChain,

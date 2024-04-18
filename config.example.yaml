@@ -118,6 +118,7 @@ chains:
   - chainId: 421614
     name: 'Arbitrum Sepolia'
     rpc: 'https://sepolia-rollup.arbitrum.io/rpc' # NOTE: This rpc errors easily with a 'requests rate too high' error
+    resolver: 'arbitrum'                          # Special logic is required for Arbitrum because of how it handles block numbers
     underwriter:
       minMaxGasDelivery: 100000 #TODO set value
     tokens:

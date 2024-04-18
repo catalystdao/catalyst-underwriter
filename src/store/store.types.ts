@@ -41,6 +41,7 @@ export interface AMBMessageSendAssetDetails extends TransactionDescription {
     amb: string;
     toChainId: string;
     messageIdentifier: string;
+    transactionBlockNumber: number; // Might be different from the 'blockNumber' (e.g. arbitrum)
 
     // Decoded GeneralisedIncentives data
     toIncentivesAddress: string;

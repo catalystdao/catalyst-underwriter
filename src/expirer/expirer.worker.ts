@@ -1,7 +1,7 @@
 import { JsonRpcProvider } from "ethers";
 import pino, { LoggerOptions } from "pino";
 import { workerData, MessagePort } from 'worker_threads';
-import { wait } from "src/common/utils";
+import { tryErrorToString, wait } from "src/common/utils";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
 import { ActiveUnderwriteDescription, CompletedUnderwriteDescription } from "src/store/store.types";
@@ -11,6 +11,7 @@ import { ExpirerWorkerData } from "./expirer.service";
 import { ExpireOrder, ExpireOrderResult, ExpireEvalOrder } from "./expirer.types";
 import { EvalQueue } from "./queues/eval-queue";
 import { MonitorInterface, MonitorStatus } from "src/monitor/monitor.interface";
+import { Resolver, loadResolver } from "src/resolvers/resolver";
 
 
 class ExpirerWorker {
@@ -24,8 +25,10 @@ class ExpirerWorker {
     readonly chainId: string;
     readonly chainName: string;
 
+    readonly resolver: Resolver;
+
     private currentStatus: MonitorStatus | null;
-    private effectiveBlockNumber: number | undefined;   // Patch for arbitrum //TODO implement a better fix
+    private transactionBlockNumber: number | undefined;   // For chains like Arbitrum which use l1 and l2 block numbers
 
     readonly underwriterPublicKey: string;
     readonly wallet: WalletInterface;
@@ -33,7 +36,6 @@ class ExpirerWorker {
     readonly newOrdersQueue: ExpireEvalOrder[] = [];
     readonly evalQueue: EvalQueue;
     readonly expirerQueue: ExpireQueue;
-
 
     constructor() {
         this.config = workerData as ExpirerWorkerData;
@@ -47,6 +49,12 @@ class ExpirerWorker {
             this.config.loggerOptions,
         );
         this.provider = this.initializeProvider(this.config.rpc);
+
+        this.resolver = this.loadResolver(
+            this.config.resolver,
+            this.provider,
+            this.logger
+        );
 
         this.underwriterPublicKey = this.config.underwriterPublicKey.toLowerCase();
         this.wallet = new WalletInterface(this.config.walletPort);
@@ -88,6 +96,14 @@ class ExpirerWorker {
         )
     }
 
+    private loadResolver(
+        resolver: string | null,
+        provider: JsonRpcProvider,
+        logger: pino.Logger
+    ): Resolver {
+        return loadResolver(resolver, provider, logger);
+    }
+
     private initializeQueues(
         retryInterval: number,
         maxTries: number,
@@ -119,7 +135,7 @@ class ExpirerWorker {
         const monitor = new MonitorInterface(port);
 
         monitor.addListener((status) => {
-            this.effectiveBlockNumber = undefined;   // Patch for arbitrum //TODO implement a better fix
+            this.transactionBlockNumber = undefined;
             this.currentStatus = status;
         });
 
@@ -149,6 +165,11 @@ class ExpirerWorker {
         this.logger.info(
             `Expirer worker started.`
         );
+
+        // Wait for the 'monitor' to get initialized
+        while (this.currentStatus == undefined) {
+            await wait(this.config.retryInterval);
+        }
 
         await this.expirerQueue.init();
 
@@ -247,35 +268,40 @@ class ExpirerWorker {
 
     }
 
-    private async getCurrentBlockNumber(): Promise<number> {
-        let blockNumber = this.currentStatus?.blockNumber;
+    private async getCurrentTransactionBlockNumber(): Promise<number> {
+        if (this.transactionBlockNumber != undefined) {
+            return this.transactionBlockNumber;
+        }
 
+        const blockNumber = this.currentStatus?.blockNumber;
         if (blockNumber == undefined) {
-            return -1;
+            throw new Error('Unable to query transaction block number: monitor block number is undefined.')
         }
 
-        //TODO implement a better (generic) block number fix
-        if (this.chainId == '421614') { // Arbitrum sepolia
-            if (this.effectiveBlockNumber == undefined) {
-                try {
-                    const blockData = await this.provider.send(
-                        "eth_getBlockByNumber",
-                        ["0x"+blockNumber.toString(16), false]
-                    );
-                    this.effectiveBlockNumber = parseInt(blockData.l1BlockNumber, 16);
-                } catch (error) {
-                    //TODO how to handle the failure? Add retry?
-                }
+        let transactionBlockNumber: number | undefined;
+        while (transactionBlockNumber == undefined) {
+            try {
+                transactionBlockNumber = await this.resolver.getTransactionBlockNumber(blockNumber);
             }
-            
-            blockNumber = this.effectiveBlockNumber;
+            catch (error) {
+                this.logger.warn(
+                    {
+                        blockNumber,
+                        error: tryErrorToString(error),
+                    },
+                    `Failed to query the transaction block number. Worker stalled until succesful query.`
+                );
+                await wait(this.config.retryInterval);
+            }
         }
-        return blockNumber ?? -1;
+
+        this.transactionBlockNumber = transactionBlockNumber;
+        return this.transactionBlockNumber;
     }
 
     private async processNewOrdersQueue(): Promise<ExpireEvalOrder[]> {
         const capacity = this.getExpirerCapacity();
-        const currentBlockNumber = await this.getCurrentBlockNumber();
+        const currentBlockNumber = await this.getCurrentTransactionBlockNumber();
 
         let i;
         for (i = 0; i < this.newOrdersQueue.length; i++) {

@@ -111,6 +111,7 @@ export class ConfigService {
                 chainId,
                 name: rawChainConfig.name,
                 rpc: rawChainConfig.rpc,
+                resolver: rawChainConfig.resolver ?? null,
                 blockDelay: rawChainConfig.blockDelay,
                 tokens: this.formatTokensConfig(rawChainConfig.tokens),
                 monitor: this.formatMonitorConfig(rawChainConfig.monitor),

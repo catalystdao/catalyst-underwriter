@@ -29,6 +29,7 @@ export interface ExpirerWorkerData {
     chainId: string;
     chainName: string;
     rpc: string;
+    resolver: string | null;
     retryInterval: number;
     processingInterval: number;
     maxTries: number;
@@ -148,6 +149,7 @@ export class ExpirerService implements OnModuleInit {
             chainId,
             chainName: chainConfig.name,
             rpc: chainConfig.rpc,
+            resolver: chainConfig.resolver,
 
             retryInterval: chainExpirerConfig.retryInterval
                 ?? chainUnderwriterConfig.retryInterval

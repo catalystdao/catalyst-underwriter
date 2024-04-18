@@ -99,6 +99,7 @@ export interface ChainConfig {
     chainId: string;
     name: string;
     rpc: string;
+    resolver: string | null;
     blockDelay?: number;
     tokens: TokensConfig,
     monitor: MonitorConfig;
