@@ -377,7 +377,7 @@ class ListenerWorker {
             swapUnderwrittenEvent: {
                 txHash: log.transactionHash,
                 blockHash: log.blockHash,
-                blockNumber: log.blockNumber, // ! TODO what block number to use for arbitrum?
+                blockNumber: log.blockNumber,   // ! This 'blockNumber' may not be able to be compared with the 'expiry' block number (on chains like Arbitrum a custom 'resolver' has to be used.)
                 underwriter: event.underwriter,
                 expiry: Number(event.expiry),
                 targetVault: event.targetVault,
@@ -415,7 +415,7 @@ class ListenerWorker {
             fulfillUnderwriteEvent: {
                 txHash: log.transactionHash,
                 blockHash: log.blockHash,
-                blockNumber: log.blockNumber, // ! TODO what block number to use for arbitrum?
+                blockNumber: log.blockNumber,
             }
         }
 
@@ -446,7 +446,7 @@ class ListenerWorker {
             expireUnderwriteEvent: {
                 txHash: log.transactionHash,
                 blockHash: log.blockHash,
-                blockNumber: log.blockNumber, // ! TODO what block number to use for arbitrum?
+                blockNumber: log.blockNumber,
                 expirer: event.expirer,
                 reward: event.reward,
 
@@ -496,7 +496,11 @@ class ListenerWorker {
         const catalystPayload = catalystParse(giPayload.message);
         if (catalystPayload.context != CatalystContext.ASSET_SWAP) return;
 
-        if (ambMessage.blockNumber == undefined || ambMessage.blockHash == undefined) {
+        if (
+            ambMessage.blockNumber == undefined
+            || ambMessage.transactionBlockNumber == undefined
+            || ambMessage.blockHash == undefined
+        ) {
             // NOTE: this may happen for AMBs which are 'recovered' by the relayer (i.e. old AMBs).
             this.logger.info(
                 { messageIdentifier: giPayload.messageIdentifier },
@@ -623,7 +627,7 @@ class ListenerWorker {
                 minOut: assetSwapPayload.minOut,
                 swapAmount: assetSwapPayload.fromAmount,
                 fromAsset: assetSwapPayload.fromAsset,
-                blockNumberMod: BigInt(assetSwapPayload.blockNumber),
+                blockNumberMod: BigInt(assetSwapPayload.blockNumber),   // This should be the same as `ambMessageMetadata.transactionBlockNumber % 2**32`
                 underwriteIncentiveX16: BigInt(assetSwapPayload.underwritingIncentive),
                 calldata: assetSwapPayload.cdata,
 

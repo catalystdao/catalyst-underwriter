@@ -58,7 +58,6 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
                 {
                     swapId: order.swapIdentifier,
                     swapTxHash: order.swapTxHash,
-                    swapBlockNumber: order.swapBlockNumber,
                 },
                 "Skipping underwrite: underwriter disabled."
             )
@@ -90,6 +89,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
                         swapId: order.swapIdentifier,
                         swapTxHash: order.swapTxHash,
                         swapBlockNumber: order.swapBlockNumber,
+                        swapBlockTimestamp: order.swapBlockTimestamp,
                         deadline: order.deadline
                     },
                     "Skipping underwrite: incentivised message deadline is too short"
@@ -104,7 +104,6 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
                 {
                     swapId: order.swapIdentifier,
                     swapTxHash: order.swapTxHash,
-                    swapBlockNumber: order.swapBlockNumber,
                     maxGasDelivery: order.maxGasDelivery,
                     minMaxGasDelivery: this.minMaxGasDelivery
                 },
@@ -120,7 +119,6 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
                 {
                     swapId: order.swapIdentifier,
                     swapTxHash: order.swapTxHash,
-                    swapBlockNumber: order.swapBlockNumber,
                     toAsset: order.toAsset
                 },
                 "Skipping underwrite: token to underwrite not supported."
@@ -145,7 +143,6 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
                 {
                     swapId: order.swapIdentifier,
                     swapTxHash: order.swapTxHash,
-                    swapBlockNumber: order.swapBlockNumber,
                     toAsset: order.toAsset,
                     toAssetAllowance,
                     maxUnderwriteAllowed: tokenConfig.maxUnderwriteAllowed
@@ -164,7 +161,6 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
                 {
                     swapId: order.swapIdentifier,
                     swapTxHash: order.swapTxHash,
-                    swapBlockNumber: order.swapBlockNumber,
                     toAsset: order.toAsset,
                     underwriteIncentiveX16: order.underwriteIncentiveX16,
                     expectedReward,
@@ -185,7 +181,6 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
                 {
                     swapId: order.swapIdentifier,
                     swapTxHash: order.swapTxHash,
-                    swapBlockNumber: order.swapBlockNumber,
                     toAsset: order.toAsset,
                     requiredAllowance: toAssetAllowance,
                 },

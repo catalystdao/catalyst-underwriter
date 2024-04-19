@@ -19,7 +19,7 @@ export interface DiscoverOrder {
     calldata: string;
 
     swapTxHash: string;
-    swapBlockNumber: number;
+    swapBlockNumber: number;    // This is the *observed* block number (not necessarily the *transaction* block number)
     swapBlockTimestamp: number;
 
     // AMB/Incentive Parameters
