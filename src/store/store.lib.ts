@@ -7,8 +7,7 @@ import { SwapState, SwapDescription, SwapStatus, UnderwriteState, UnderwriteStat
 };
 
 const DEFAULT_REDIS_PORT = 6379;
-const REDIS_PORT = process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : DEFAULT_REDIS_PORT;
-const DB_INDEX = 5; //TODO make customizable via config
+const DEFAULT_REDIS_DB_INDEX = 5;
 
 //---------- STORE LAYOUT ----------//
 // The redis store is used for 2 things:
@@ -29,13 +28,15 @@ const DB_INDEX = 5; //TODO make customizable via config
 
 export class Store {
     readonly redis: Redis;
+    readonly redisHost: string | undefined;
+    readonly redisPort: number;
+    readonly redisDBIndex: number;
+
     // When a redis connection is used to listen for subscriptions, it cannot be
     // used for anything except to modify the subscription set which is being listened
     // to. As a result, we need a dedicated connection if we ever decide to listen to
     // subscriptions.
     redisSubscriptions: Redis | undefined;
-
-    readonly host: string | undefined;
 
     static readonly swapPrefix: string = 'swap';
     static readonly expectedUnderwriteToSwapDescriptionPrefix: string = 'expectedUnderwriteToSwap';
@@ -49,11 +50,26 @@ export class Store {
     static readonly onSwapUnderwriteCompleteChannel: string = 'onSwapUnderwriteComplete';
 
     constructor() {
-        this.host = process.env.USE_DOCKER ? 'redis' : undefined;
-        this.redis = new Redis(REDIS_PORT, {
-            db: DB_INDEX,
-            host: this.host,
+        this.redisHost = this.loadRedisHost();
+        this.redisPort = this.loadRedisPort();
+        this.redisDBIndex = this.loadRedisDBIndex();
+
+        this.redis = new Redis(this.redisPort, {
+            db: this.redisDBIndex,
+            host: this.redisHost,
         });
+    }
+
+    private loadRedisHost(): string | undefined {
+        return process.env.REDIS_HOST;
+    }
+
+    private loadRedisPort(): number {
+        return process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : DEFAULT_REDIS_PORT;
+    }
+
+    private loadRedisDBIndex(): number {
+        return process.env.REDIS_DB_INDEX ? parseInt(process.env.REDIS_DB_INDEX) : DEFAULT_REDIS_DB_INDEX;
     }
 
     async quit(): Promise<void> {
@@ -89,9 +105,9 @@ export class Store {
      */
     getOrOpenSubscription(): Redis {
         if (!this.redisSubscriptions) {
-            this.redisSubscriptions = new Redis(REDIS_PORT, {
-                db: DB_INDEX,
-                host: this.host,
+            this.redisSubscriptions = new Redis(this.redisPort, {
+                db: this.redisDBIndex,
+                host: this.redisHost,
             }); 
         }
         return this.redisSubscriptions;
