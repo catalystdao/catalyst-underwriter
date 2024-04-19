@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import * as yaml from 'js-yaml';
 import dotenv from 'dotenv';
-import { getConfigValidator } from './config-schemas';
+import { getConfigValidator } from './config.schema';
 import { GlobalConfig, ChainConfig, AMBConfig, MonitorGlobalConfig, ListenerGlobalConfig, UnderwriterGlobalConfig, ExpirerGlobalConfig, WalletGlobalConfig, MonitorConfig, ListenerConfig, UnderwriterConfig, WalletConfig, ExpirerConfig, TokensConfig, EndpointConfig, VaultTemplateConfig } from './config.types';
 
 
