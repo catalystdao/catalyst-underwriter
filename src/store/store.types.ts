@@ -134,6 +134,7 @@ export interface SwapUnderwrittenEventDetails extends TransactionDescription {
     units: bigint;
     toAccount: string;
     outAmount: bigint;
+    blockTimestamp: number;
 };
 
 export interface FulfillUnderwriteEventDetails extends TransactionDescription {};

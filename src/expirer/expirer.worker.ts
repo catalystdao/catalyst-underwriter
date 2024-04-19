@@ -60,6 +60,7 @@ class ExpirerWorker {
         this.wallet = new WalletInterface(this.config.walletPort);
 
         [this.evalQueue, this.expirerQueue] = this.initializeQueues(
+            this.config.minUnderwriteDuration,
             this.config.retryInterval,
             this.config.maxTries,
             this.wallet,
@@ -105,6 +106,7 @@ class ExpirerWorker {
     }
 
     private initializeQueues(
+        minUnderwriteDuration: number,
         retryInterval: number,
         maxTries: number,
         wallet: WalletInterface,
@@ -114,6 +116,7 @@ class ExpirerWorker {
     ): [EvalQueue, ExpireQueue] {
 
         const evalQueue = new EvalQueue(
+            minUnderwriteDuration,
             retryInterval,
             maxTries,
             store,

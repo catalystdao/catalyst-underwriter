@@ -8,6 +8,7 @@ import { tryErrorToString } from "src/common/utils";
 export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
 
     constructor(
+        private readonly minUnderwriteDuration: number,
         readonly retryInterval: number,
         readonly maxTries: number,
         private readonly store: Store,
@@ -48,6 +49,27 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
         if (swapState.additionalSendAssetDetails?.toAsset == undefined) {
             throw new Error(`Expire evaluation fail: swap's toAsset not found (toChainId: ${order.toChainId}, toInterface: ${order.toInterface}, underwriteId: ${order.underwriteId})`)
         }
+
+        
+        // Verify the time that has passed since the underwrite was committed (safety net to
+        // prevent expirying recent self-underwritten transactions).
+        const underwriteTimestamp = activeUnderwriteState.swapUnderwrittenEvent!.blockTimestamp;
+        const timeElapsedSinceUnderwrite = Date.now() - underwriteTimestamp*1000;   //NOTE 'underwriteTimestamp' is in seconds.
+        if (
+            timeElapsedSinceUnderwrite < this.minUnderwriteDuration
+        ) {
+            this.logger.warn(
+                {
+                    toInterface: order.toInterface,
+                    underwriteId: order.underwriteId,
+                    underwriteTimestamp,
+                    minUnderwriteDuration: this.minUnderwriteDuration
+                },
+                `Not enough time elapsed since underwrite to execute expiry. (POSSIBLE UNDERWRITER MISCONFIGURATION).`
+            );
+            return null;
+        }
+
 
         // //TODO simulate expiry?
 

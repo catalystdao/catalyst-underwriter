@@ -175,7 +175,8 @@ const EXPIRER_SCHEMA = {
         processingInterval: {$ref: "processing-interval-schema"},
         maxTries: {$ref: "positive-number-schema"},
         maxPendingTransactions: {$ref: "positive-number-schema"},
-        expireBlocksMargin: {$ref: "positive-number-schema"}
+        expireBlocksMargin: {$ref: "positive-number-schema"},
+        minUnderwriteDuration: {$ref: "positive-number-schema"}
     },
     additionalProperties: false
 }

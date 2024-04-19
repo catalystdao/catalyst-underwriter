@@ -368,7 +368,16 @@ class ListenerWorker {
             { interfaceAddress: log.address, txHash: log.transactionHash, underwriteId },
             `SwapUnderwritten event captured.`
         );
-    
+
+        const blockData = await this.blockQuerier.getBlock(log.blockNumber);
+        if (blockData == undefined) {
+            this.logger.warn(
+                { blockNumber: log.blockNumber },
+                `Unable to query block data: dropping SwapUnderwritten event.`
+            );
+            return;
+        }
+
         const underwriteState: UnderwriteState = {
             toChainId: this.chainId,
             toInterface: interfaceAddress,
@@ -378,6 +387,7 @@ class ListenerWorker {
                 txHash: log.transactionHash,
                 blockHash: log.blockHash,
                 blockNumber: log.blockNumber,   // ! This 'blockNumber' may not be able to be compared with the 'expiry' block number (on chains like Arbitrum a custom 'resolver' has to be used.)
+                blockTimestamp: blockData.timestamp,
                 underwriter: event.underwriter,
                 expiry: Number(event.expiry),
                 targetVault: event.targetVault,
