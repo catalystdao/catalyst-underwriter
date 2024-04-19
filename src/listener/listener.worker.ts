@@ -628,7 +628,6 @@ class ListenerWorker {
                 calldata: assetSwapPayload.cdata,
 
                 blockTimestamp: latestBlockData.timestamp,  // ! TODO is this wrong for arbitrum?
-                observedAtBlockNumber: this.currentStatus!.blockNumber,
             },
         }
     
@@ -655,7 +654,7 @@ class BlockQuerier {
 
 
     private getCachedBlock(blockNumber: number): Block | null {
-        return this.blocksCache.find((entry) => blockNumber === entry[0])?.[1] ?? null;
+        return this.blocksCache.find((entry) => blockNumber === entry?.[0])?.[1] ?? null;
     }
 
     private cacheBlock(blockNumber: number, block: Block): void {

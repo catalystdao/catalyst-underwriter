@@ -22,7 +22,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         readonly maxTries: number,
         underwritingCollateral: number,
         allowanceBuffer: number,
-        private readonly underwriteBlocksMargin: number,
+        private readonly maxUnderwriteDelay: number,
         private readonly minRelayDeadlineDuration: bigint,
         private readonly minMaxGasDelivery: bigint,
         private readonly tokenHandler: TokenHandler,
@@ -66,12 +66,14 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         }
 
         // Never underwrite if too much time has passed since the original swap transaction
-        if (order.swapObservedAtBlockNumber > order.swapBlockNumber + this.underwriteBlocksMargin) {
+        // NOTE: 'swapBlockTimestamp' is in seconds, whereas 'maxUnderwriteDelay' is in milliseconds
+        if (Date.now() > order.swapBlockTimestamp*1000 + this.maxUnderwriteDelay) {
             this.logger.warn(
                 {
                     swapId: order.swapIdentifier,
                     swapTxHash: order.swapTxHash,
-                    swapBlockNumber: order.swapBlockNumber,
+                    swapBlockTimestamp: order.swapBlockTimestamp,
+                    maxUnderwriteDelay: this.maxUnderwriteDelay
                 },
                 "Skipping underwrite: too many blocks have passed since the swap transaction."
             );
