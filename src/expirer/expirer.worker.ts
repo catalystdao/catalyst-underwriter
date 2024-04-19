@@ -303,6 +303,10 @@ class ExpirerWorker {
     }
 
     private async processNewOrdersQueue(): Promise<ExpireEvalOrder[]> {
+        if (this.newOrdersQueue.length == 0) {
+            return [];
+        }
+
         const capacity = this.getExpirerCapacity();
         const currentBlockNumber = await this.getCurrentTransactionBlockNumber();
 
