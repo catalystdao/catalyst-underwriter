@@ -21,7 +21,6 @@ export interface DiscoverOrder {
     swapTxHash: string;
     swapBlockNumber: number;
     swapBlockTimestamp: number;
-    swapObservedAtBlockNumber: number;
 
     // AMB/Incentive Parameters
     amb: string;

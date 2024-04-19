@@ -15,9 +15,9 @@ export const DEFAULT_UNDERWRITER_RETRY_INTERVAL = 30000;
 export const DEFAULT_UNDERWRITER_PROCESSING_INTERVAL = 100;
 export const DEFAULT_UNDERWRITER_MAX_TRIES = 3;
 export const DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS = 50;
-export const DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN = 50;
 export const DEFAULT_UNDERWRITER_MIN_RELAY_DEADLINE_DURATION = 24n * 60n * 60n * 1000n; // 1 day
 export const DEFAULT_UNDERWRITER_UNDERWRITE_DELAY = 500;
+export const DEFAULT_UNDERWRITER_MAX_UNDERWRITE_DELAY = 300000;
 export const DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY = 300000;
 export const DEFAULT_UNDERWRITER_UNDERWRITING_COLLATERAL = 0.035;
 export const DEFAULT_UNDERWRITER_ALLOWANCE_BUFFER = 0.05;
@@ -31,9 +31,9 @@ interface DefaultUnderwriterWorkerData {
     processingInterval: number;
     maxTries: number;
     maxPendingTransactions: number;
-    underwriteBlocksMargin: number;
     minRelayDeadlineDuration: bigint;
     underwriteDelay: number;
+    maxUnderwriteDelay: number;
     maxSubmissionDelay: number;
     underwritingCollateral: number;
     allowanceBuffer: number;
@@ -56,10 +56,10 @@ export interface UnderwriterWorkerData {
     processingInterval: number;
     maxTries: number;
     maxPendingTransactions: number;
-    underwriteBlocksMargin: number;
     minRelayDeadlineDuration: bigint;
     minMaxGasDelivery: bigint;
     underwriteDelay: number;
+    maxUnderwriteDelay: number;
     maxSubmissionDelay: number;
     underwritingCollateral: number;
     allowanceBuffer: number;
@@ -147,9 +147,9 @@ export class UnderwriterService implements OnModuleInit {
         const processingInterval = globalUnderwriterConfig.processingInterval ?? DEFAULT_UNDERWRITER_PROCESSING_INTERVAL;
         const maxTries = globalUnderwriterConfig.maxTries ?? DEFAULT_UNDERWRITER_MAX_TRIES;
         const maxPendingTransactions = globalUnderwriterConfig.maxPendingTransactions ?? DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS;
-        const underwriteBlocksMargin = globalUnderwriterConfig.underwriteBlocksMargin ?? DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN;
         const minRelayDeadlineDuration = globalUnderwriterConfig.minRelayDeadlineDuration ?? DEFAULT_UNDERWRITER_MIN_RELAY_DEADLINE_DURATION;
         const underwriteDelay = globalUnderwriterConfig.underwriteDelay ?? DEFAULT_UNDERWRITER_UNDERWRITE_DELAY;
+        const maxUnderwriteDelay = globalUnderwriterConfig.maxUnderwriteDelay ?? DEFAULT_UNDERWRITER_MAX_UNDERWRITE_DELAY;
         const maxSubmissionDelay = globalUnderwriterConfig.maxSubmissionDelay ?? DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY;
         const underwritingCollateral = globalUnderwriterConfig.underwritingCollateral ?? DEFAULT_UNDERWRITER_UNDERWRITING_COLLATERAL;
         const allowanceBuffer = globalUnderwriterConfig.allowanceBuffer ?? DEFAULT_UNDERWRITER_ALLOWANCE_BUFFER;
@@ -171,9 +171,9 @@ export class UnderwriterService implements OnModuleInit {
             processingInterval,
             maxTries,
             maxPendingTransactions,
-            underwriteBlocksMargin,
             minRelayDeadlineDuration,
             underwriteDelay,
+            maxUnderwriteDelay,
             maxSubmissionDelay,
             underwritingCollateral,
             allowanceBuffer,
@@ -224,14 +224,14 @@ export class UnderwriterService implements OnModuleInit {
             maxPendingTransactions:
                 chainUnderwriterConfig.maxPendingTransactions
                 ?? defaultConfig.maxPendingTransactions,
-            underwriteBlocksMargin:
-                chainUnderwriterConfig.underwriteBlocksMargin
-                ?? defaultConfig.underwriteBlocksMargin,
             minRelayDeadlineDuration,
             minMaxGasDelivery: chainUnderwriterConfig.minMaxGasDelivery,
             underwriteDelay:
                 chainUnderwriterConfig.underwriteDelay
                 ?? defaultConfig.underwriteDelay,
+            maxUnderwriteDelay:
+                chainUnderwriterConfig.maxUnderwriteDelay
+                ?? defaultConfig.maxUnderwriteDelay,
             maxSubmissionDelay:
                 chainUnderwriterConfig.maxSubmissionDelay
                 ?? defaultConfig.maxSubmissionDelay,

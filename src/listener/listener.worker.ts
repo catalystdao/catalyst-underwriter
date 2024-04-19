@@ -638,7 +638,6 @@ class ListenerWorker {
                 calldata: assetSwapPayload.cdata,
 
                 blockTimestamp: latestBlockData.timestamp,  // ! TODO is this wrong for arbitrum?
-                observedAtBlockNumber: this.currentStatus!.blockNumber,
             },
         }
     

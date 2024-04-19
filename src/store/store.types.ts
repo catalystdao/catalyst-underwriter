@@ -66,7 +66,6 @@ export interface AMBMessageSendAssetDetails extends TransactionDescription {
 
     // Additional data
     blockTimestamp: number;
-    observedAtBlockNumber: number;
 }
 
 export interface AdditionalSendAssetDetails {
