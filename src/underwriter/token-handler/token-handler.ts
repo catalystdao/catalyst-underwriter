@@ -52,9 +52,8 @@ export class TokenHandler {
 
         const tokenConfig = this.tokens[normalizedTokenAddress];
         if (tokenConfig == undefined) {
-            this.logger.error(
-                { tokenAddress: normalizedTokenAddress },
-                'Unable to register token balance use: token configuration not found.'
+            throw new Error(
+                `Unable to register token balance use: token configuration not found (token ${normalizedTokenAddress}).`
             );
         }
 
