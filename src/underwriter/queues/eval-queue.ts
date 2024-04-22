@@ -18,8 +18,8 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         private enabled: boolean,
         private readonly chainId: string,
         private readonly tokens: Record<string, TokenConfig>,
-        readonly retryInterval: number,
-        readonly maxTries: number,
+        retryInterval: number,
+        maxTries: number,
         underwritingCollateral: number,
         allowanceBuffer: number,
         private readonly maxUnderwriteDelay: number,
@@ -255,7 +255,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         return true;
     }
 
-    protected async onOrderCompletion(
+    protected override async onOrderCompletion(
         order: EvalOrder,
         success: boolean,
         _result: UnderwriteOrder | null,

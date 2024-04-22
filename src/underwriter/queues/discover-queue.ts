@@ -17,8 +17,8 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
         private readonly chainId: string,
         private readonly endpointConfigs: EndpointConfig[],
         private readonly tokens: Record<string, TokenConfig>,
-        readonly retryInterval: number,
-        readonly maxTries: number,
+        retryInterval: number,
+        maxTries: number,
         private readonly store: Store,
         private readonly provider: JsonRpcProvider,
         private readonly logger: pino.Logger
@@ -112,7 +112,7 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
         return true;
     }
 
-    protected async onOrderCompletion(
+    protected override async onOrderCompletion(
         order: DiscoverOrder,
         success: boolean,
         result: EvalOrder | null,

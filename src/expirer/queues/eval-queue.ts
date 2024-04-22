@@ -9,8 +9,8 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
 
     constructor(
         private readonly minUnderwriteDuration: number,
-        readonly retryInterval: number,
-        readonly maxTries: number,
+        retryInterval: number,
+        maxTries: number,
         private readonly store: Store,
         private readonly logger: pino.Logger
     ) {
@@ -125,7 +125,7 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
         return true;
     }
 
-    protected async onOrderCompletion(
+    protected override async onOrderCompletion(
         order: ExpireEvalOrder,
         success: boolean,
         _result: ExpireOrder | null,

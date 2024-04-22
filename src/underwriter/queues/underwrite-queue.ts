@@ -14,8 +14,8 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
     constructor(
         private readonly chainId: string,
         private readonly ambs: Record<string, AMBConfig>,
-        readonly retryInterval: number,
-        readonly maxTries: number,
+        retryInterval: number,
+        maxTries: number,
         private readonly walletPublicKey: string,
         private readonly wallet: WalletInterface,
         private readonly provider: JsonRpcProvider,
@@ -136,7 +136,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
         return false;
     }
 
-    protected async onOrderCompletion(
+    protected override async onOrderCompletion(
         order: UnderwriteOrder,
         success: boolean,
         result: UnderwriteOrderResult | null,

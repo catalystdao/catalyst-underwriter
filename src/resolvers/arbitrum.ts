@@ -6,7 +6,7 @@ import { tryErrorToString, wait } from "src/common/utils";
 export const RESOLVER_TYPE_ARBITRUM = 'arbitrum';
 
 export class ArbitrumResolver extends Resolver {
-    readonly resolverType;
+    override readonly resolverType;
 
     constructor(
         config: ResolverConfig,
@@ -22,7 +22,7 @@ export class ArbitrumResolver extends Resolver {
         this.resolverType = RESOLVER_TYPE_ARBITRUM;
     }
 
-    async getTransactionBlockNumber(
+    override async getTransactionBlockNumber(
         observedBlockNumber: number
     ): Promise<number> {
 

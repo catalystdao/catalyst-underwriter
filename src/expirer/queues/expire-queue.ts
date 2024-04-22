@@ -8,8 +8,8 @@ import { tryErrorToString } from "src/common/utils";
 export class ExpireQueue extends ProcessingQueue<ExpireOrder, ExpireOrderResult> {
 
     constructor(
-        readonly retryInterval: number,
-        readonly maxTries: number,
+        retryInterval: number,
+        maxTries: number,
         private readonly wallet: WalletInterface,
         private readonly provider: JsonRpcProvider,
         private readonly logger: pino.Logger
@@ -95,7 +95,7 @@ export class ExpireQueue extends ProcessingQueue<ExpireOrder, ExpireOrderResult>
         return false;
     }
 
-    protected async onOrderCompletion(
+    protected override async onOrderCompletion(
         order: ExpireOrder,
         success: boolean,
         result: ExpireOrderResult | null,
