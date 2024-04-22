@@ -27,7 +27,7 @@ class ExpirerWorker {
 
     private readonly resolver: Resolver;
 
-    private currentStatus: MonitorStatus | null;
+    private currentStatus: MonitorStatus | null = null;
     private transactionBlockNumber: number | undefined;   // For chains like Arbitrum which use l1 and l2 block numbers
 
     private readonly underwriterPublicKey: string;
@@ -240,7 +240,10 @@ class ExpirerWorker {
     private async listenForOrders(): Promise<void> {
         this.logger.info(`Listening for SwapUnderwritten events`);
 
-        await this.store.on(Store.onSwapUnderwrittenChannel, (underwriteDescription: ActiveUnderwriteDescription) => {
+        await this.store.on(Store.onSwapUnderwrittenChannel, (event: any) => {
+
+            //TODO verify event format
+            const underwriteDescription = event as ActiveUnderwriteDescription;
 
             if (underwriteDescription.toChainId != this.chainId) {
                 return;
@@ -256,7 +259,10 @@ class ExpirerWorker {
 
         });
 
-        await this.store.on(Store.onSwapUnderwriteCompleteChannel, (underwriteDescription: CompletedUnderwriteDescription) => {
+        await this.store.on(Store.onSwapUnderwriteCompleteChannel, (event: any) => {
+
+            //TODO verify event format
+            const underwriteDescription = event as CompletedUnderwriteDescription;
 
             if (underwriteDescription.toChainId != this.chainId) {
                 return;

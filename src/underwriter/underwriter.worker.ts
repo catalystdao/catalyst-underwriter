@@ -303,7 +303,10 @@ class UnderwriterWorker {
     private async listenForOrders(): Promise<void> {
         this.logger.info(`Listening for SendAsset events`); //TODO the current store architecture will cause the following to trigger on all 'SendAsset' object changes
     
-        await this.store.on(Store.onSendAssetChannel, (swapDescription: SwapDescription) => {
+        await this.store.on(Store.onSendAssetChannel, (event: any) => {
+
+            //TODO verify event format
+            const swapDescription = event as SwapDescription;
 
             if (swapDescription.toChainId != this.chainId) {
                 return;

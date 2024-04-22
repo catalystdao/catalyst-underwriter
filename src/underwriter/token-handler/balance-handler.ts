@@ -4,12 +4,12 @@ import { Token, Token__factory } from "src/contracts";
 import { BalanceConfig } from "src/wallet/wallet.types";
 
 export class BalanceHandler {
-    private walletBalance: bigint;
+    private walletBalance: bigint = 0n;
     private transactionsSinceLastBalanceUpdate: number = 0;
     private isBalanceLow: boolean = false;
 
     private lowBalanceWarning: bigint | undefined;
-    private balanceUpdateInterval: number;
+    private balanceUpdateInterval: number = 1;
 
     private tokenContract: Token;
 

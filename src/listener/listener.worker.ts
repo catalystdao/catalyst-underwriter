@@ -39,7 +39,7 @@ class ListenerWorker {
     private readonly blockQuerier: BlockQuerier;
     private readonly catalystSwapMessagesQueue: CatalystSwapAMBMessageData[] = [];
 
-    private currentStatus: MonitorStatus | null;
+    private currentStatus: MonitorStatus | null = null;
 
 
     constructor() {
