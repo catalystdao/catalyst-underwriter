@@ -148,7 +148,7 @@ export class MonitorService implements OnModuleInit {
     private startListeningToRelayerMonitor(): void {
         this.logger.info(`Start listening to the relayer for new monitor events.`);
 
-        const wsUrl = `http://${process.env.RELAYER_HOST}:${process.env.RELAYER_PORT}/`;
+        const wsUrl = `http://${process.env['RELAYER_HOST']}:${process.env['RELAYER_PORT']}/`;
         const ws = new WebSocket(wsUrl);
     
         ws.on("open", () => {

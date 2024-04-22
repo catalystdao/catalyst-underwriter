@@ -139,7 +139,7 @@ class ListenerWorker {
     private startListeningToRelayer(): void {
         this.logger.info(`Start listening to the relayer for new AMB messages.`);
 
-        const wsUrl = `http://${process.env.RELAYER_HOST}:${process.env.RELAYER_PORT}/`;
+        const wsUrl = `http://${process.env['RELAYER_HOST']}:${process.env['RELAYER_PORT']}/`;
         const ws = new WebSocket(wsUrl);
     
         ws.on("open", () => {

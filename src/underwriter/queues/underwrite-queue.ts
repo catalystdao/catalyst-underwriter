@@ -187,7 +187,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
             return;
         }
 
-        const relayerEndpoint = `http://${process.env.RELAYER_HOST}:${process.env.RELAYER_PORT}/prioritiseAMBMessage`;
+        const relayerEndpoint = `http://${process.env['RELAYER_HOST']}:${process.env['RELAYER_PORT']}/prioritiseAMBMessage`;
 
         const ambMessageData = {
             messageIdentifier: order.messageIdentifier,

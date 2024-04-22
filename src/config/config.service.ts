@@ -33,7 +33,7 @@ export class ConfigService {
     }
 
     private loadNodeEnv(): string {
-        const nodeEnv = process.env.NODE_ENV;
+        const nodeEnv = process.env['NODE_ENV'];
 
         if (nodeEnv == undefined) {
             throw new Error(
@@ -81,16 +81,16 @@ export class ConfigService {
     }
 
     private loadGlobalConfig(): GlobalConfig {
-        const rawGlobalConfig = this.rawConfig.global;
+        const rawGlobalConfig = this.rawConfig['global'];
 
-        if (process.env.UNDERWRITER_PORT == undefined) {
+        if (process.env['UNDERWRITER_PORT'] == undefined) {
             throw new Error(
                 "Invalid configuration: environment variable 'UNDERWRITER_PORT' missing",
             );
         }
 
         return {
-            port: parseInt(process.env.UNDERWRITER_PORT),
+            port: parseInt(process.env['UNDERWRITER_PORT']),
             privateKey: rawGlobalConfig.privateKey,
             logLevel: rawGlobalConfig.logLevel,
             blockDelay: rawGlobalConfig.blockDelay,
@@ -105,7 +105,7 @@ export class ConfigService {
     private loadChainsConfig(): Map<string, ChainConfig> {
         const chainConfig = new Map<string, ChainConfig>();
 
-        for (const rawChainConfig of this.rawConfig.chains) {
+        for (const rawChainConfig of this.rawConfig['chains']) {
             const chainId = rawChainConfig.chainId.toString();
             chainConfig.set(chainId, {
                 chainId,
@@ -128,7 +128,7 @@ export class ConfigService {
     private loadAMBsConfig(): Map<string, AMBConfig> {
         const ambConfig = new Map<string, AMBConfig>();
 
-        for (const rawAMBConfig of this.rawConfig.ambs) {
+        for (const rawAMBConfig of this.rawConfig['ambs']) {
 
             const ambName = rawAMBConfig.name;
 
@@ -155,7 +155,7 @@ export class ConfigService {
     private loadEndpointsConfig(chainIds: string[], ambNames: string[]): Map<string, EndpointConfig[]> {
         const endpointConfig: Map<string, EndpointConfig[]> = new Map();
 
-        for (const rawEndpointConfig of this.rawConfig.endpoints) {
+        for (const rawEndpointConfig of this.rawConfig['endpoints']) {
 
             const chainId = rawEndpointConfig.chainId.toString();
 
@@ -220,7 +220,7 @@ export class ConfigService {
     getAMBConfig<T = unknown>(amb: string, key: string, chainId?: string): T {
     // Find if there is a chain-specific override for the AMB property.
         if (chainId != undefined) {
-            const chainOverride = this.rawConfig.chains.find(
+            const chainOverride = this.rawConfig['chains'].find(
                 (rawChainConfig: any) => rawChainConfig.chainId.toString() == chainId,
             )?.[amb]?.[key];
 
