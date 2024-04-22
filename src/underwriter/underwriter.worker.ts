@@ -249,9 +249,9 @@ class UnderwriterWorker {
     ): Promise<void> {
 
         for (const confirmedOrder of confirmedSubmitOrders) {
-        // Registering the 'use' of 'toAssetAllowance is an approximation, as the allowance is an
-        // overestimate. Thus, in practice a small allowance will be left for the interface. This
-        // leftover will be removed once a new allowance for other orders is set. 
+            // Registering the 'use' of 'toAssetAllowance is an approximation, as the allowance is an
+            // overestimate. Thus, in practice a small allowance will be left for the interface. This
+            // leftover will be removed once a new allowance for other orders is set. 
             this.tokenHandler.registerAllowanceUse(
                 confirmedOrder.interfaceAddress,
                 confirmedOrder.toAsset,
@@ -302,7 +302,7 @@ class UnderwriterWorker {
 
     private async listenForOrders(): Promise<void> {
         this.logger.info(`Listening for SendAsset events`); //TODO the current store architecture will cause the following to trigger on all 'SendAsset' object changes
-    
+
         await this.store.on(Store.onSendAssetChannel, (event: any) => {
 
             //TODO verify event format
@@ -352,7 +352,7 @@ class UnderwriterWorker {
                     `Failed to retrieve the 'SwapStatus'.`
                 );
             })
-            
+
         });
     }
 

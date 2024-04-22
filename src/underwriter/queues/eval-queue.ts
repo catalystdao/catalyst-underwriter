@@ -66,7 +66,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
         // Never underwrite if too much time has passed since the original swap transaction
         // NOTE: 'swapBlockTimestamp' is in seconds, whereas 'maxUnderwriteDelay' is in milliseconds
-        if (Date.now() > order.swapBlockTimestamp*1000 + this.maxUnderwriteDelay) {
+        if (Date.now() > order.swapBlockTimestamp * 1000 + this.maxUnderwriteDelay) {
             this.logger.warn(
                 {
                     swapId: order.swapIdentifier,
@@ -196,7 +196,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         // ! underwriting is set **after** the evaluation step, as the allowance amount is not
         // ! known until the evaluation step completes.
         const maxGasLimit = null;  //TODO
-        
+
         //TODO add economical evaluation
 
         if (true) {

@@ -116,14 +116,14 @@ export class MonitorService implements OnModuleInit {
     }
 
     private loadMonitorEventValidator(): AnyValidateFunction<unknown> {
-        const ajv = new Ajv({strict: true});
+        const ajv = new Ajv({ strict: true });
         ajv.addSchema(MONITOR_EVENT_SCHEMA);
 
         const verifier = ajv.getSchema('monitor-event-schema');
         if (verifier == undefined) {
             throw new Error('Unable to load the \'monitor-event\' schema.');
         }
-    
+
         return verifier;
     }
 
@@ -150,10 +150,10 @@ export class MonitorService implements OnModuleInit {
 
         const wsUrl = `http://${process.env['RELAYER_HOST']}:${process.env['RELAYER_PORT']}/`;
         const ws = new WebSocket(wsUrl);
-    
+
         ws.on("open", () => {
             ws.send(
-                JSON.stringify({event: "monitor"}),
+                JSON.stringify({ event: "monitor" }),
                 (error) => {
                     if (error != null) {
                         this.logger.error("Failed to subscribe to 'monitor' events.");
@@ -184,7 +184,7 @@ export class MonitorService implements OnModuleInit {
 
             setTimeout(() => this.startListeningToRelayerMonitor(), this.config.retryInterval);
         });
-    
+
         ws.on("message", (data) => {
             const parsedMessage = JSON.parse(data.toString());
 
@@ -243,6 +243,6 @@ export class MonitorService implements OnModuleInit {
         for (const port of chainConfig.ports) {
             port.postMessage(status);
         }
-        
+
     }
 }

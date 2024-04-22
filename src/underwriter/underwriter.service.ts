@@ -164,7 +164,7 @@ export class UnderwriterService implements OnModuleInit {
                 `Invalid 'minRelayDeadlineDuration' global configuration. Value set is less than allowed (set: ${minRelayDeadlineDuration}, minimum: ${MIN_ALLOWED_MIN_RELAY_DEADLINE_DURATION}).`
             );
         }
-    
+
         return {
             enabled,
             retryInterval,

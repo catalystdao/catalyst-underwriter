@@ -28,9 +28,9 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
 
     // NOTE: The discover queue must not be disabled when the underwriter gets disabled, as it is
     // used to store the underwrite parameters for later use by the expirer service.
-    
+
     protected async handleOrder(order: DiscoverOrder, _retryCount: number): Promise<HandleOrderResult<EvalOrder> | null> {
-        
+
         //TODO validate destination escrow?
 
         const endpoint = this.endpointConfigs.find((endpointConfig) => {
@@ -78,7 +78,7 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
     }
 
     protected async handleFailedOrder(order: DiscoverOrder, retryCount: number, error: any): Promise<boolean> {
-        
+
         const errorDescription = {
             fromVault: order.fromVault,
             fromChainId: order.fromChainId,
@@ -182,7 +182,7 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
         this.validatedVaults.set(vaultAddress, isTemplateValid);
 
         return isTemplateValid;
-        
+
     }
 
     private async queryIsVaultCreatedByFactory(
@@ -241,7 +241,7 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
         if (cachedAsset != undefined) {
             return cachedAsset;
         }
-        
+
         return this.queryVaultAsset(vault, assetIndex);
     }
 

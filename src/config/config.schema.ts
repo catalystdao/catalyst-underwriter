@@ -65,10 +65,10 @@ const CONFIG_SCHEMA = {
     $id: "config-schema",
     type: "object",
     properties: {
-        global: {$ref: "global-schema"},
-        ambs: {$ref: "ambs-schema"},
-        chains: {$ref: "chains-schema"},
-        endpoints: {$ref: "endpoints-schema"},
+        global: { $ref: "global-schema" },
+        ambs: { $ref: "ambs-schema" },
+        chains: { $ref: "chains-schema" },
+        endpoints: { $ref: "endpoints-schema" },
     },
     required: ["global", "ambs", "chains", "endpoints"],
     additionalProperties: false
@@ -82,13 +82,13 @@ const GLOBAL_SCHEMA = {
             type: "string",
             pattern: BYTES_32_HEX_EXPR,
         },
-        logLevel: {$ref: "non-empty-string-schema"},
+        logLevel: { $ref: "non-empty-string-schema" },
 
-        monitor: {$ref: "monitor-schema"},
-        listener: {$ref: "listener-schema"},
-        underwriter: {$ref: "underwriter-global-schema"},
-        expirer: {$ref: "expirer-schema"},
-        wallet: {$ref: "wallet-schema"},
+        monitor: { $ref: "monitor-schema" },
+        listener: { $ref: "listener-schema" },
+        underwriter: { $ref: "underwriter-global-schema" },
+        expirer: { $ref: "expirer-schema" },
+        wallet: { $ref: "wallet-schema" },
     },
     required: ["privateKey"],
     additionalProperties: false
@@ -98,8 +98,8 @@ const MONITOR_SCHEMA = {
     $id: "monitor-schema",
     type: "object",
     properties: {
-        blockDelay: {$ref: "positive-number-schema"},
-        retryInterval: {$ref: "positive-number-schema"},
+        blockDelay: { $ref: "positive-number-schema" },
+        retryInterval: { $ref: "positive-number-schema" },
     },
     additionalProperties: false
 }
@@ -108,14 +108,14 @@ const LISTENER_SCHEMA = {
     $id: "listener-schema",
     type: "object",
     properties: {
-        retryInterval: {$ref: "positive-number-schema"},
-        processingInterval: {$ref: "processing-interval-schema"},
+        retryInterval: { $ref: "positive-number-schema" },
+        processingInterval: { $ref: "processing-interval-schema" },
         maxBlocks: {
             type: "number",
             minimum: 0,
             maximum: 1_000_000,
         },
-        startingBlock: {$ref: "positive-number-schema"},
+        startingBlock: { $ref: "positive-number-schema" },
     },
     additionalProperties: false
 }
@@ -127,14 +127,14 @@ const UNDERWRITER_GLOBAL_SCHEMA = {
         enabled: {
             type: "boolean"
         },
-        retryInterval: {$ref: "positive-number-schema"},
-        processingInterval: {$ref: "processing-interval-schema"},
-        maxTries: {$ref: "positive-number-schema"},
-        maxPendingTransactions: {$ref: "positive-number-schema"},
-        minRelayDeadlineDuration: {$ref: "positive-number-schema"},
-        underwriteDelay: {$ref: "positive-number-schema"},
-        maxUnderwriteDelay: {$ref: "positive-number-schema"},
-        maxSubmissionDelay: {$ref: "positive-number-schema"},
+        retryInterval: { $ref: "positive-number-schema" },
+        processingInterval: { $ref: "processing-interval-schema" },
+        maxTries: { $ref: "positive-number-schema" },
+        maxPendingTransactions: { $ref: "positive-number-schema" },
+        minRelayDeadlineDuration: { $ref: "positive-number-schema" },
+        underwriteDelay: { $ref: "positive-number-schema" },
+        maxUnderwriteDelay: { $ref: "positive-number-schema" },
+        maxSubmissionDelay: { $ref: "positive-number-schema" },
         underwritingCollateral: {
             type: "number",
             exclusiveMinimum: 0,
@@ -145,10 +145,10 @@ const UNDERWRITER_GLOBAL_SCHEMA = {
             exclusiveMinimum: 0,
             maximum: 0.3
         },
-        maxUnderwriteAllowed: {$ref: "uint256-field-schema"},
-        minUnderwriteReward: {$ref: "uint256-field-schema"},
-        lowTokenBalanceWarning: {$ref: "uint256-field-schema"},
-        tokenBalanceUpdateInterval: {$ref: "positive-number-schema"},
+        maxUnderwriteAllowed: { $ref: "uint256-field-schema" },
+        minUnderwriteReward: { $ref: "uint256-field-schema" },
+        lowTokenBalanceWarning: { $ref: "uint256-field-schema" },
+        tokenBalanceUpdateInterval: { $ref: "positive-number-schema" },
     },
     additionalProperties: false
 }
@@ -158,7 +158,7 @@ const UNDERWRITER_SCHEMA = {
     type: "object",
     properties: {
         ...UNDERWRITER_GLOBAL_SCHEMA.properties,
-        minMaxGasDelivery: {$ref: "positive-number-schema"},
+        minMaxGasDelivery: { $ref: "positive-number-schema" },
     },
     required: ["minMaxGasDelivery"],
     additionalProperties: false
@@ -171,12 +171,12 @@ const EXPIRER_SCHEMA = {
         enabled: {
             type: "boolean"
         },
-        retryInterval: {$ref: "positive-number-schema"},
-        processingInterval: {$ref: "processing-interval-schema"},
-        maxTries: {$ref: "positive-number-schema"},
-        maxPendingTransactions: {$ref: "positive-number-schema"},
-        expireBlocksMargin: {$ref: "positive-number-schema"},
-        minUnderwriteDuration: {$ref: "positive-number-schema"}
+        retryInterval: { $ref: "positive-number-schema" },
+        processingInterval: { $ref: "processing-interval-schema" },
+        maxTries: { $ref: "positive-number-schema" },
+        maxPendingTransactions: { $ref: "positive-number-schema" },
+        expireBlocksMargin: { $ref: "positive-number-schema" },
+        minUnderwriteDuration: { $ref: "positive-number-schema" }
     },
     additionalProperties: false
 }
@@ -185,22 +185,22 @@ const WALLET_SCHEMA = {
     $id: "wallet-schema",
     type: "object",
     properties: {
-        retryInterval: {$ref: "positive-number-schema"},
-        processingInterval: {$ref: "processing-interval-schema"},
-        maxTries: {$ref: "positive-number-schema"},
-        maxPendingTransactions: {$ref: "positive-number-schema"},
-        confirmations: {$ref: "positive-non-zero-integer-schema"},
-        confirmationTimeout: {$ref: "positive-number-schema"},
-        lowGasBalanceWarning: {$ref: "gas-field-schema"},
-        gasBalanceUpdateInterval: {$ref: "positive-number-schema"},
-        maxFeePerGas: {$ref: "gas-field-schema"},
-        maxAllowedPriorityFeePerGas: {$ref: "gas-field-schema"},
+        retryInterval: { $ref: "positive-number-schema" },
+        processingInterval: { $ref: "processing-interval-schema" },
+        maxTries: { $ref: "positive-number-schema" },
+        maxPendingTransactions: { $ref: "positive-number-schema" },
+        confirmations: { $ref: "positive-non-zero-integer-schema" },
+        confirmationTimeout: { $ref: "positive-number-schema" },
+        lowGasBalanceWarning: { $ref: "gas-field-schema" },
+        gasBalanceUpdateInterval: { $ref: "positive-number-schema" },
+        maxFeePerGas: { $ref: "gas-field-schema" },
+        maxAllowedPriorityFeePerGas: { $ref: "gas-field-schema" },
         maxPriorityFeeAdjustmentFactor: {
             type: "number",
             minimum: 0,
             maximum: 100
         },
-        maxAllowedGasPrice: {$ref: "gas-field-schema"},
+        maxAllowedGasPrice: { $ref: "gas-field-schema" },
         gasPriceAdjustmentFactor: {
             type: "number",
             minimum: 0,
@@ -221,7 +221,7 @@ const AMBS_SCHEMA = {
     items: {
         type: "object",
         properties: {
-            name: {$ref: "non-empty-string-schema"},
+            name: { $ref: "non-empty-string-schema" },
             enabled: {
                 type: "boolean"
             },
@@ -241,13 +241,13 @@ const TOKENS_SCHEMA = {
     items: {
         type: "object",
         properties: {
-            name: {$ref: "non-empty-string-schema"},
-            address: {$ref: "address-field-schema"},
-            maxUnderwriteAllowed: {$ref: "uint256-field-schema"},
-            minUnderwriteReward: {$ref: "uint256-field-schema"},
-            lowTokenBalanceWarning: {$ref: "uint256-field-schema"},
-            tokenBalanceUpdateInterval: {$ref: "positive-number-schema"},
-            allowanceBuffer: {$ref: "gas-field-schema"}
+            name: { $ref: "non-empty-string-schema" },
+            address: { $ref: "address-field-schema" },
+            maxUnderwriteAllowed: { $ref: "uint256-field-schema" },
+            minUnderwriteReward: { $ref: "uint256-field-schema" },
+            lowTokenBalanceWarning: { $ref: "uint256-field-schema" },
+            tokenBalanceUpdateInterval: { $ref: "positive-number-schema" },
+            allowanceBuffer: { $ref: "gas-field-schema" }
         },
         required: ["name", "address"],
         additionalProperties: false
@@ -261,18 +261,18 @@ const CHAINS_SCHEMA = {
     items: {
         type: "object",
         properties: {
-            chainId: {$ref: "chain-id-schema"},
-            name:  {$ref: "non-empty-string-schema"},
-            rpc:  {$ref: "non-empty-string-schema"},
-            resolver: {$ref: "non-empty-string-schema"},
-            tokens: {$ref: "tokens-schema"},
+            chainId: { $ref: "chain-id-schema" },
+            name: { $ref: "non-empty-string-schema" },
+            rpc: { $ref: "non-empty-string-schema" },
+            resolver: { $ref: "non-empty-string-schema" },
+            tokens: { $ref: "tokens-schema" },
 
-            blockDelay: {$ref: "positive-number-schema"},
-            monitor: {$ref: "monitor-schema"},
-            listener: {$ref: "listener-schema"},
-            underwriter: {$ref: "underwriter-schema"},
-            expirer: {$ref: "expirer-schema"},
-            wallet: {$ref: "wallet-schema"},
+            blockDelay: { $ref: "positive-number-schema" },
+            monitor: { $ref: "monitor-schema" },
+            listener: { $ref: "listener-schema" },
+            underwriter: { $ref: "underwriter-schema" },
+            expirer: { $ref: "expirer-schema" },
+            wallet: { $ref: "wallet-schema" },
         },
         required: ["chainId", "name", "rpc", "tokens", "underwriter"],
         additionalProperties: false
@@ -286,16 +286,16 @@ const ENDPOINTS_SCHEMA = {
     items: {
         type: "object",
         properties: {
-            name: {$ref: "non-empty-string-schema"},
-            amb: {$ref: "non-empty-string-schema"},
-            chainId: {$ref: "chain-id-schema"},
-            factoryAddress: {$ref: "address-field-schema"},
-            interfaceAddress: {$ref: "address-field-schema"},
-            incentivesAddress: {$ref: "address-field-schema"},
+            name: { $ref: "non-empty-string-schema" },
+            amb: { $ref: "non-empty-string-schema" },
+            chainId: { $ref: "chain-id-schema" },
+            factoryAddress: { $ref: "address-field-schema" },
+            interfaceAddress: { $ref: "address-field-schema" },
+            incentivesAddress: { $ref: "address-field-schema" },
             channelsOnDestination: {
                 type: "object",
                 patternProperties: {
-                    ['^[0-9]{1,64}$']: {$ref: "bytes32-field-schema"}, //TODO specify a better match for the key (i.e. the chain id)
+                    ['^[0-9]{1,64}$']: { $ref: "bytes32-field-schema" }, //TODO specify a better match for the key (i.e. the chain id)
                 },
                 additionalProperties: false
             },
@@ -304,8 +304,8 @@ const ENDPOINTS_SCHEMA = {
                 items: {
                     type: "object",
                     properties: {
-                        name: {$ref: "non-empty-string-schema"},
-                        address: {$ref: "address-field-schema"},
+                        name: { $ref: "non-empty-string-schema" },
+                        address: { $ref: "address-field-schema" },
                     },
                     required: ["name", "address"],
                     additionalProperties: false
@@ -320,7 +320,7 @@ const ENDPOINTS_SCHEMA = {
 }
 
 export function getConfigValidator(): AnyValidateFunction<unknown> {
-    const ajv = new Ajv({strict: true});
+    const ajv = new Ajv({ strict: true });
     ajv.addSchema(POSITIVE_NUMBER_SCHEMA);
     ajv.addSchema(POSITIVE_NON_ZERO_INTEGER_SCHEMA);
     ajv.addSchema(NON_EMPTY_STRING_SCHEMA);

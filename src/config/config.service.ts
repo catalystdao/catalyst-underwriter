@@ -171,7 +171,7 @@ export class ConfigService {
                 );
             }
 
-            
+
             const factoryAddress = rawEndpointConfig.factoryAddress.toLowerCase();
             const interfaceAddress = rawEndpointConfig.interfaceAddress.toLowerCase();
             const incentivesAddress = rawEndpointConfig.incentivesAddress.toLowerCase();
@@ -218,7 +218,7 @@ export class ConfigService {
     }
 
     getAMBConfig<T = unknown>(amb: string, key: string, chainId?: string): T {
-    // Find if there is a chain-specific override for the AMB property.
+        // Find if there is a chain-specific override for the AMB property.
         if (chainId != undefined) {
             const chainOverride = this.rawConfig['chains'].find(
                 (rawChainConfig: any) => rawChainConfig.chainId.toString() == chainId,
@@ -236,15 +236,15 @@ export class ConfigService {
     // ********************************************************************************************
 
     private formatMonitorGlobalConfig(rawConfig: any): MonitorGlobalConfig {
-        return {...rawConfig} as MonitorGlobalConfig;
+        return { ...rawConfig } as MonitorGlobalConfig;
     }
 
     private formatListenerGlobalConfig(rawConfig: any): ListenerGlobalConfig {
-        return {...rawConfig} as ListenerGlobalConfig;
+        return { ...rawConfig } as ListenerGlobalConfig;
     }
 
     private formatUnderwriterGlobalConfig(rawConfig: any): UnderwriterGlobalConfig {
-        const config = {...rawConfig};
+        const config = { ...rawConfig };
         if (config.minRelayDeadlineDuration != undefined) {
             config.minRelayDeadlineDuration = BigInt(config.minRelayDeadlineDuration);
         }
@@ -261,11 +261,11 @@ export class ConfigService {
     }
 
     private formatExpirerGlobalConfig(rawConfig: any): ExpirerGlobalConfig {
-        return {...rawConfig} as ExpirerGlobalConfig;
+        return { ...rawConfig } as ExpirerGlobalConfig;
     }
 
     private formatWalletGlobalConfig(rawConfig: any): WalletGlobalConfig {
-        const config = {...rawConfig};
+        const config = { ...rawConfig };
         if (config.lowGasBalanceWarning != undefined) {
             config.lowGasBalanceWarning = BigInt(config.lowGasBalanceWarning);
         }
@@ -308,7 +308,7 @@ export class ConfigService {
         const config: TokensConfig = {};
         for (const rawTokenConfig of rawConfig) {
 
-            const tokenConfig = {...rawTokenConfig};
+            const tokenConfig = { ...rawTokenConfig };
             if (tokenConfig.allowanceBuffer != undefined) {
                 tokenConfig.allowanceBuffer = BigInt(tokenConfig.allowanceBuffer);
             }

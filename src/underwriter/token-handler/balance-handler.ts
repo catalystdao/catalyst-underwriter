@@ -49,7 +49,7 @@ export class BalanceHandler {
     async init(): Promise<void> {
         await this.updateWalletBalance();
     }
-  
+
     async updateWalletBalance(): Promise<void> {
         let i = 0;
         let walletBalance;
@@ -58,7 +58,7 @@ export class BalanceHandler {
                 walletBalance = await this.tokenContract.balanceOf(
                     this.walletAddress,
                     { blockTag: 'pending' } // ! Important: take into account the pending transactions
-                                            // TODO is 'pending' widely supported?
+                    // TODO is 'pending' widely supported?
                 );
             } catch {
                 i++;
@@ -70,10 +70,10 @@ export class BalanceHandler {
                 // Continue trying
             }
         }
-  
+
         this.walletBalance = walletBalance;
         this.transactionsSinceLastBalanceUpdate = 0;
-  
+
         if (this.lowBalanceWarning != undefined) {
             const isBalanceLow = this.walletBalance < this.lowBalanceWarning;
             if (isBalanceLow != this.isBalanceLow) {
@@ -102,7 +102,7 @@ export class BalanceHandler {
         }
         return this.walletBalance >= amount;
     }
-  
+
     async runBalanceCheck(): Promise<boolean> {
         if (
             this.isBalanceLow ||
@@ -116,14 +116,14 @@ export class BalanceHandler {
 
     async registerBalanceUse(amount: bigint): Promise<void> {
         this.transactionsSinceLastBalanceUpdate++;
-  
+
         const newWalletBalance = this.walletBalance - amount;
         if (newWalletBalance < 0n) {
             this.walletBalance = 0n;
         } else {
             this.walletBalance = newWalletBalance;
         }
-  
+
         if (
             this.lowBalanceWarning != undefined &&
             !this.isBalanceLow && // Only trigger update if the current saved state is 'balance not low' (i.e. crossing the boundary)
@@ -132,7 +132,7 @@ export class BalanceHandler {
             await this.updateWalletBalance();
         }
     }
-  
+
     async registerBalanceRefund(amount: bigint): Promise<void> {
         this.walletBalance = this.walletBalance + amount;
     }

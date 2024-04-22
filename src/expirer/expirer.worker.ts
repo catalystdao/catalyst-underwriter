@@ -380,7 +380,7 @@ class ExpirerWorker {
             { toInterface, underwriteId },
             `Expire underwrite order removal received.`
         );
-        
+
         const removalIndex = this.newOrdersQueue.findIndex(order => {
             return order.toInterface == toInterface && order.underwriteId == underwriteId;
         });

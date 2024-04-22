@@ -181,7 +181,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
         const ambConfig = this.ambs[order.amb];
         if (!ambConfig.relayPrioritisation) {
             this.logger.debug(
-                { amb: order.amb, swapTxHash: order.swapTxHash, swapIdentifier: order.swapIdentifier},
+                { amb: order.amb, swapTxHash: order.swapTxHash, swapIdentifier: order.swapIdentifier },
                 'Skipping packet relay prioritisation: prioritisation disabled.'
             );
             return;
@@ -197,17 +197,17 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
         };
         try {
             this.logger.debug(
-                { ambMessageData, swapTxHash: order.swapTxHash, swapIdentifier: order.swapIdentifier},
-                'Requesting AMB message relay prioritisation.'  
+                { ambMessageData, swapTxHash: order.swapTxHash, swapIdentifier: order.swapIdentifier },
+                'Requesting AMB message relay prioritisation.'
             );
             await fetch(relayerEndpoint, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(ambMessageData),
             });
         } catch (error) {
             this.logger.error(
-                { ambMessageData, swapTxHash: order.swapTxHash, swapIdentifier: order.swapIdentifier},
+                { ambMessageData, swapTxHash: order.swapTxHash, swapIdentifier: order.swapIdentifier },
                 'Failed to request amb message relay prioritisation.'
             );
         }

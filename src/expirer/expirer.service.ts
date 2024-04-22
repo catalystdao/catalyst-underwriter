@@ -68,7 +68,7 @@ export class ExpirerService implements OnModuleInit {
     private async initializeWorkers(): Promise<void> {
         const defaultWorkerConfig = this.loadDefaultWorkerConfig();
 
-        for (const [chainId, ] of this.configService.chainsConfig) {
+        for (const [chainId,] of this.configService.chainsConfig) {
 
             const workerData = await this.loadWorkerConfig(chainId, defaultWorkerConfig);
 
@@ -134,7 +134,7 @@ export class ExpirerService implements OnModuleInit {
             ?? DEFAULT_EXPIRER_EXPIRE_BLOCK_MARGIN;
         const minUnderwriteDuration = globalExpirerConfig.minUnderwriteDuration
             ?? DEFAULT_EXPIRER_MIN_UNDERWRITE_DURATION;
-    
+
         return {
             enabled,
             retryInterval,

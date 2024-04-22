@@ -204,5 +204,5 @@ export class TokenHandler {
 
         await Promise.allSettled(promises);
     }
-    
+
 }

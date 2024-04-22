@@ -16,7 +16,7 @@ export const calcAssetSwapIdentifier = (
         + units.toString(16).padStart(64, '0')
         + swapAmount.toString(16).padStart(64, '0')
         + fromAsset.slice(2)
-        + (blockNumber % (2**32)).toString(16).padStart(8, '0');
+        + (blockNumber % (2 ** 32)).toString(16).padStart(8, '0');
 
     return keccak256(encodedBytes);
 };

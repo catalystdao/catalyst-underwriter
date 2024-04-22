@@ -16,7 +16,7 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
     ) {
         super(retryInterval, maxTries);
     }
-    
+
     protected async handleOrder(order: ExpireEvalOrder, retryCount: number): Promise<HandleOrderResult<ExpireOrder> | null> {
         // NOTE: the 'activeUnderwriteState' is not unique. After an underwrite fulfills, a new
         // underwrite with the same 'state' can be created. Expiry cancellation of `fulfilled`
@@ -50,11 +50,11 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
             throw new Error(`Expire evaluation fail: swap's toAsset not found (toChainId: ${order.toChainId}, toInterface: ${order.toInterface}, underwriteId: ${order.underwriteId})`)
         }
 
-        
+
         // Verify the time that has passed since the underwrite was committed (safety net to
         // prevent expirying recent self-underwritten transactions).
         const underwriteTimestamp = activeUnderwriteState.swapUnderwrittenEvent!.blockTimestamp;
-        const timeElapsedSinceUnderwrite = Date.now() - underwriteTimestamp*1000;   //NOTE 'underwriteTimestamp' is in seconds.
+        const timeElapsedSinceUnderwrite = Date.now() - underwriteTimestamp * 1000;   //NOTE 'underwriteTimestamp' is in seconds.
         if (
             timeElapsedSinceUnderwrite < this.minUnderwriteDuration
         ) {

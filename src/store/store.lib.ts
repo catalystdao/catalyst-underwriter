@@ -44,7 +44,7 @@ export class Store {
     static readonly activeUnderwritePrefix: string = 'activeUnderwrite';
     static readonly completedUnderwritePrefix: string = 'completedUnderwrite';
 
-    static readonly underwriterChannelPrefix: string = 'underwriter'; 
+    static readonly underwriterChannelPrefix: string = 'underwriter';
     static readonly onSendAssetChannel: string = 'onSendAsset';
     static readonly onSwapUnderwrittenChannel: string = 'onSwapUnderwritten';
     static readonly onSwapUnderwriteCompleteChannel: string = 'onSwapUnderwriteComplete';
@@ -108,7 +108,7 @@ export class Store {
             this.redisSubscriptions = new Redis(this.redisPort, {
                 db: this.redisDBIndex,
                 host: this.redisHost,
-            }); 
+            });
         }
         return this.redisSubscriptions;
     }
@@ -192,12 +192,12 @@ export class Store {
             details.blockNumberMod = BigInt(details.blockNumberMod);
             details.underwriteIncentiveX16 = BigInt(details.underwriteIncentiveX16);
         }
-        
+
         if (swapState.sendAssetCompletionDetails) {
             // TODO
             // const event = swapState.receiveAssetEvent;
             // event.toAmount = BigInt(event.toAmount);
-            
+
         }
 
         return swapState as SwapState;
@@ -210,7 +210,7 @@ export class Store {
             state.fromVault,
             state.swapId,
         );
-        
+
         const currentState = await this.getSwapStateByKey(key);
         const overridingState = currentState != null;
         const newState = overridingState ? currentState : state;
@@ -256,7 +256,7 @@ export class Store {
             fromVault,
             swapId,
         );
-        
+
         const state = await this.getSwapStateByKey(key);
 
         if (state == null) {
@@ -565,7 +565,7 @@ export class Store {
             state.underwriteId,
             state.swapUnderwrittenEvent!.txHash
         );
-        
+
         //TODO log warning if key already used? (could happen on some edge cases)
         // const savedState = await this.getUnderwriteStateByKey(key);
 

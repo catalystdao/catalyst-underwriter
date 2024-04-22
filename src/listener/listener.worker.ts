@@ -141,11 +141,11 @@ class ListenerWorker {
 
         const wsUrl = `http://${process.env['RELAYER_HOST']}:${process.env['RELAYER_PORT']}/`;
         const ws = new WebSocket(wsUrl);
-    
+
         ws.on("open", () => {
             // Subscribe to new AMB messages
             ws.send(
-                JSON.stringify({event: "ambMessage"}),
+                JSON.stringify({ event: "ambMessage" }),
                 (error) => {
                     if (error != null) {
                         this.logger.error("Failed to subscribe to 'ambMessage' events.");
@@ -176,7 +176,7 @@ class ListenerWorker {
 
             setTimeout(() => this.startListeningToRelayer(), this.config.retryInterval);
         });
-    
+
         ws.on("message", (data) => {
             const parsedMessage = JSON.parse(data.toString());
 
@@ -231,7 +231,7 @@ class ListenerWorker {
                     this.config.startingBlock ?? this.currentStatus.blockNumber
                 );
             }
-            
+
             await wait(this.config.processingInterval);
         }
 
@@ -353,17 +353,17 @@ class ListenerWorker {
 
     }
 
-    
-    private async handleSwapUnderwrittenEvent (
+
+    private async handleSwapUnderwrittenEvent(
         log: Log,
         parsedLog: LogDescription
     ): Promise<void> {
 
         const interfaceAddress = log.address;
         const event = parsedLog.args as unknown as SwapUnderwrittenEvent.OutputObject;
-        
+
         const underwriteId = event.identifier;
-    
+
         this.logger.info(
             { interfaceAddress: log.address, txHash: log.transactionHash, underwriteId },
             `SwapUnderwritten event captured.`
@@ -401,22 +401,22 @@ class ListenerWorker {
         await this.store.saveActiveUnderwriteState(underwriteState);
     };
 
-    
-    private async handleFulfillUnderwriteEvent (
+
+    private async handleFulfillUnderwriteEvent(
         log: Log,
         parsedLog: LogDescription
     ): Promise<void> {
 
         const interfaceAddress = log.address;
         const event = parsedLog.args as unknown as FulfillUnderwriteEvent.OutputObject;
-        
+
         const underwriteId = event.identifier;
-    
+
         this.logger.info(
             { interfaceAddress: log.address, txHash: log.transactionHash, underwriteId },
             `FulfillUnderwrite event captured.`
         );
-    
+
         const underwriteState: UnderwriteState = {
             toChainId: this.chainId,
             toInterface: interfaceAddress,
@@ -432,22 +432,22 @@ class ListenerWorker {
         await this.store.saveActiveUnderwriteState(underwriteState);
     };
 
-    
-    private async handleExpireUnderwriteEvent (
+
+    private async handleExpireUnderwriteEvent(
         log: Log,
         parsedLog: LogDescription
     ): Promise<void> {
 
         const interfaceAddress = log.address;
         const event = parsedLog.args as unknown as ExpireUnderwriteEvent.OutputObject;
-        
+
         const underwriteId = event.identifier;
-    
+
         this.logger.info(
             { interfaceAddress: log.address, txHash: log.transactionHash, underwriteId },
             `ExpireUnderwrite event captured.`
         );
-    
+
         const underwriteState: UnderwriteState = {
             toChainId: this.chainId,
             toInterface: interfaceAddress,
@@ -474,7 +474,7 @@ class ListenerWorker {
     private async processAMBMessage(
         ambMessage: any,    //TODO type
     ): Promise<void> {
-        
+
         const giPayload = parsePayload(ambMessage.payload);
         if (giPayload.context != MessageContext.CTX_SOURCE_TO_DESTINATION) return;
 
@@ -529,7 +529,7 @@ class ListenerWorker {
     }
 
     private async processCatalystSwapMessagesQueue(): Promise<void> {
-        
+
         const currentBlockNumber = this.currentStatus?.blockNumber;
         if (currentBlockNumber == undefined) {
             return;
@@ -552,7 +552,7 @@ class ListenerWorker {
                 swapData.originEndpoint
             );
         }
-        
+
         this.catalystSwapMessagesQueue.splice(0, i);
     }
 
@@ -617,7 +617,7 @@ class ListenerWorker {
                 blockHash: ambMessageMetadata.blockHash,
                 blockNumber: ambMessageMetadata.blockNumber,
                 transactionBlockNumber: ambMessageMetadata.transactionBlockNumber,
-        
+
                 amb: ambMessageMetadata.amb,
                 toChainId: ambMessageMetadata.destinationChain,
                 messageIdentifier: ambMessageMetadata.messageIdentifier,
@@ -628,7 +628,7 @@ class ListenerWorker {
                 maxGasDelivery: incentivesMessage.maxGasLimit,
 
                 fromChannelId,
-        
+
                 fromVault: assetSwapPayload.fromVault,
                 toVault: assetSwapPayload.toVault,
                 toAccount: assetSwapPayload.toAccount,
@@ -644,7 +644,7 @@ class ListenerWorker {
                 blockTimestamp: latestBlockData.timestamp,  // ! TODO is this wrong for arbitrum?
             },
         }
-    
+
         await this.store.saveSwapState(swapState);
     }
 }
