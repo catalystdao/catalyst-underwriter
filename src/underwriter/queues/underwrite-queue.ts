@@ -179,6 +179,14 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
     ): Promise<void> {
 
         const ambConfig = this.ambs[order.amb];
+        if (ambConfig == undefined) {
+            this.logger.warn(
+                { amb: order.amb },
+                'Skipping packet relay prioritisation: amb configuration not found.'
+            );
+            return;
+        }
+
         if (!ambConfig.relayPrioritisation) {
             this.logger.debug(
                 { amb: order.amb, swapTxHash: order.swapTxHash, swapIdentifier: order.swapIdentifier },
