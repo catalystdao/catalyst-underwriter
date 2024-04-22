@@ -14,9 +14,9 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
     private vaultAssets = new Map<string, string>();        // Maps a key formed by the vault+assetIndex to the asset address.
 
     constructor(
-        readonly chainId: string,
-        readonly endpointConfigs: EndpointConfig[],
-        readonly tokens: Record<string, TokenConfig>,
+        private readonly chainId: string,
+        private readonly endpointConfigs: EndpointConfig[],
+        private readonly tokens: Record<string, TokenConfig>,
         readonly retryInterval: number,
         readonly maxTries: number,
         private readonly store: Store,

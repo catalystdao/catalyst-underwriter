@@ -16,8 +16,8 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
     constructor(
         private enabled: boolean,
-        readonly chainId: string,
-        readonly tokens: Record<string, TokenConfig>,
+        private readonly chainId: string,
+        private readonly tokens: Record<string, TokenConfig>,
         readonly retryInterval: number,
         readonly maxTries: number,
         underwritingCollateral: number,

@@ -12,8 +12,8 @@ import { tryErrorToString } from "src/common/utils";
 export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, UnderwriteOrderResult> {
 
     constructor(
-        readonly chainId: string,
-        readonly ambs: Record<string, AMBConfig>,
+        private readonly chainId: string,
+        private readonly ambs: Record<string, AMBConfig>,
         readonly retryInterval: number,
         readonly maxTries: number,
         private readonly walletPublicKey: string,
