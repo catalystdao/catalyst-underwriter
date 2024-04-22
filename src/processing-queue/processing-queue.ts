@@ -102,7 +102,7 @@ export abstract class ProcessingQueue<OrderType, ReturnType = OrderType> {
             if (this.concurrentOrders >= this.maxConcurrentOrders) break;
 
             const newOrder: ProcessOrder<OrderType> = {
-                order: this.newQueue[i],
+                order: this.newQueue[i]!,
                 retryCount: 0,
                 retryAtTimestamp: 0,
             };
@@ -152,7 +152,7 @@ export abstract class ProcessingQueue<OrderType, ReturnType = OrderType> {
 
         let i;
         for (i = 0; i < this.retryQueue.length; i++) {
-            const retryOrder = this.retryQueue[i];
+            const retryOrder = this.retryQueue[i]!;
             if (retryOrder.retryAtTimestamp <= nowTimestamp) {
                 retryOrder.retryCount++;
             } else {

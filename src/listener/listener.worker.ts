@@ -539,7 +539,7 @@ class ListenerWorker {
         // number value (the relayer may run ahead of the underwriter).
         let i;
         for (i = 0; i < this.catalystSwapMessagesQueue.length; i++) {
-            const swapData = this.catalystSwapMessagesQueue[i];
+            const swapData = this.catalystSwapMessagesQueue[i]!;
 
             if (swapData.ambMessageMetadata.blockNumber > currentBlockNumber) {
                 return;

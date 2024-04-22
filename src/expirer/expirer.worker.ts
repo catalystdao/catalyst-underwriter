@@ -318,7 +318,7 @@ class ExpirerWorker {
 
         let i;
         for (i = 0; i < this.newOrdersQueue.length; i++) {
-            const nextNewOrder = this.newOrdersQueue[i];
+            const nextNewOrder = this.newOrdersQueue[i]!;
 
             if (nextNewOrder.expireAt > currentBlockNumber || i + 1 > capacity) {
                 break;

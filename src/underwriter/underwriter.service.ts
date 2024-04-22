@@ -264,19 +264,19 @@ export class UnderwriterService implements OnModuleInit {
         for (const [tokenAddress, chainTokenConfig] of Object.entries(chainConfig.tokens)) {
             finalConfig[tokenAddress] = { ...chainTokenConfig };
 
-            finalConfig[tokenAddress].maxUnderwriteAllowed ??=
+            finalConfig[tokenAddress]!.maxUnderwriteAllowed ??=
                 chainUnderwriterConfig.maxUnderwriteAllowed
                 ?? defaultConfig.maxUnderwriteAllowed;
 
-            finalConfig[tokenAddress].minUnderwriteReward ??=
+            finalConfig[tokenAddress]!.minUnderwriteReward ??=
                 chainUnderwriterConfig.minUnderwriteReward
                 ?? defaultConfig.minUnderwriteReward;
 
-            finalConfig[tokenAddress].lowTokenBalanceWarning ??=
+            finalConfig[tokenAddress]!.lowTokenBalanceWarning ??=
                 chainUnderwriterConfig.lowTokenBalanceWarning
                 ?? defaultConfig.lowTokenBalanceWarning;
 
-            finalConfig[tokenAddress].tokenBalanceUpdateInterval ??=
+            finalConfig[tokenAddress]!.tokenBalanceUpdateInterval ??=
                 chainUnderwriterConfig.tokenBalanceUpdateInterval
                 ?? defaultConfig.tokenBalanceUpdateInterval;
         }
