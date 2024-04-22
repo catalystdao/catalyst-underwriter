@@ -15,27 +15,27 @@ import { Resolver, loadResolver } from "src/resolvers/resolver";
 
 
 class ExpirerWorker {
-    readonly store: Store;
-    readonly logger: pino.Logger;
+    private readonly store: Store;
+    private readonly logger: pino.Logger;
 
-    readonly config: ExpirerWorkerData;
+    private readonly config: ExpirerWorkerData;
 
-    readonly provider: JsonRpcProvider;
+    private readonly provider: JsonRpcProvider;
 
-    readonly chainId: string;
-    readonly chainName: string;
+    private readonly chainId: string;
+    private readonly chainName: string;
 
-    readonly resolver: Resolver;
+    private readonly resolver: Resolver;
 
     private currentStatus: MonitorStatus | null;
     private transactionBlockNumber: number | undefined;   // For chains like Arbitrum which use l1 and l2 block numbers
 
-    readonly underwriterPublicKey: string;
-    readonly wallet: WalletInterface;
+    private readonly underwriterPublicKey: string;
+    private readonly wallet: WalletInterface;
 
-    readonly newOrdersQueue: ExpireEvalOrder[] = [];
-    readonly evalQueue: EvalQueue;
-    readonly expirerQueue: ExpireQueue;
+    private readonly newOrdersQueue: ExpireEvalOrder[] = [];
+    private readonly evalQueue: EvalQueue;
+    private readonly expirerQueue: ExpireQueue;
 
     constructor() {
         this.config = workerData as ExpirerWorkerData;

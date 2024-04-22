@@ -22,22 +22,22 @@ interface CatalystSwapAMBMessageData {
 }
 
 class ListenerWorker {
-    readonly store: Store;
-    readonly logger: pino.Logger;
+    private readonly store: Store;
+    private readonly logger: pino.Logger;
 
-    readonly config: ListenerWorkerData;
+    private readonly config: ListenerWorkerData;
 
-    readonly provider: JsonRpcProvider;
+    private readonly provider: JsonRpcProvider;
 
-    readonly chainId: string;
-    readonly chainName: string;
+    private readonly chainId: string;
+    private readonly chainName: string;
 
-    readonly chainInterfaceEventsInterface: CatalystChainInterfaceInterface;
-    readonly addresses: string[];
-    readonly topics: string[][];
+    private readonly chainInterfaceEventsInterface: CatalystChainInterfaceInterface;
+    private readonly addresses: string[];
+    private readonly topics: string[][];
 
-    readonly blockQuerier: BlockQuerier;
-    readonly catalystSwapMessagesQueue: CatalystSwapAMBMessageData[] = [];
+    private readonly blockQuerier: BlockQuerier;
+    private readonly catalystSwapMessagesQueue: CatalystSwapAMBMessageData[] = [];
 
     private currentStatus: MonitorStatus | null;
 

@@ -16,27 +16,27 @@ import { DiscoverQueue } from "./queues/discover-queue";
 
 
 class UnderwriterWorker {
-    readonly store: Store;
-    readonly logger: pino.Logger;
+    private readonly store: Store;
+    private readonly logger: pino.Logger;
 
-    readonly config: UnderwriterWorkerData;
+    private readonly config: UnderwriterWorkerData;
 
-    readonly provider: JsonRpcProvider;
+    private readonly provider: JsonRpcProvider;
 
-    readonly chainId: string;
-    readonly chainName: string;
+    private readonly chainId: string;
+    private readonly chainName: string;
 
-    readonly endpoints: EndpointConfig[];
-    readonly tokens: Record<string, TokenConfig>;
-    readonly ambs: Record<string, AMBConfig>;
+    private readonly endpoints: EndpointConfig[];
+    private readonly tokens: Record<string, TokenConfig>;
+    private readonly ambs: Record<string, AMBConfig>;
 
-    readonly wallet: WalletInterface;
-    readonly tokenHandler: TokenHandler;
+    private readonly wallet: WalletInterface;
+    private readonly tokenHandler: TokenHandler;
 
-    readonly newOrdersQueue: NewOrder<DiscoverOrder>[] = [];
-    readonly discoverQueue: DiscoverQueue;
-    readonly evalQueue: EvalQueue;
-    readonly underwriteQueue: UnderwriteQueue;
+    private readonly newOrdersQueue: NewOrder<DiscoverOrder>[] = [];
+    private readonly discoverQueue: DiscoverQueue;
+    private readonly evalQueue: EvalQueue;
+    private readonly underwriteQueue: UnderwriteQueue;
 
 
     constructor() {
