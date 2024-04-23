@@ -4,7 +4,7 @@ global:
   logLevel: "info"
 
   monitor:
-    blockDelay: 5               # Delay with which to process the chain blocks (on top of the relayer's
+    blockDelay: 2               # Delay with which to process the chain blocks (on top of the relayer's
                                 # blockDelay). Use this to prevent handling blocks that eventually reorg.
     retryInterval: 5000         # Time to wait before retrying connection with the relayer's monitor
 
@@ -105,11 +105,6 @@ chains:
         minUnderwriteReward: "100000000000"
         lowTokenBalanceWarning: "1000000000000000000"
         tokenBalanceUpdateInterval: 50
-
-    # Overrides
-    monitor:
-      blockDelay: 2
-  
 
   - chainId: 421614
     name: 'Arbitrum Sepolia'
