@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import * as yaml from 'js-yaml';
 import dotenv from 'dotenv';
-import { getConfigValidator } from './config-schemas';
-import { GlobalConfig, ChainConfig, AMBConfig, PoolConfig, MonitorGlobalConfig, ListenerGlobalConfig, UnderwriterGlobalConfig, ExpirerGlobalConfig, WalletGlobalConfig, MonitorConfig, ListenerConfig, UnderwriterConfig, WalletConfig, ExpirerConfig, TokensConfig } from './config.types';
+import { getConfigValidator } from './config.schema';
+import { GlobalConfig, ChainConfig, AMBConfig, MonitorGlobalConfig, ListenerGlobalConfig, UnderwriterGlobalConfig, ExpirerGlobalConfig, WalletGlobalConfig, MonitorConfig, ListenerConfig, UnderwriterConfig, WalletConfig, ExpirerConfig, TokensConfig, EndpointConfig, VaultTemplateConfig } from './config.types';
 
 
 @Injectable()
@@ -15,7 +15,7 @@ export class ConfigService {
     readonly globalConfig: GlobalConfig;
     readonly chainsConfig: Map<string, ChainConfig>;
     readonly ambsConfig: Map<string, AMBConfig>;
-    readonly poolsConfig: Map<string, PoolConfig>;
+    readonly endpointsConfig: Map<string, EndpointConfig[]>;
 
     constructor() {
         this.nodeEnv = this.loadNodeEnv();
@@ -28,11 +28,12 @@ export class ConfigService {
         this.ambsConfig = this.loadAMBsConfig();
 
         const ambNames = Array.from(this.ambsConfig.keys());
-        this.poolsConfig = this.loadPoolsConfig(ambNames);
+        const chainIds = Array.from(this.chainsConfig.keys());
+        this.endpointsConfig = this.loadEndpointsConfig(chainIds, ambNames);
     }
 
     private loadNodeEnv(): string {
-        const nodeEnv = process.env.NODE_ENV;
+        const nodeEnv = process.env['NODE_ENV'];
 
         if (nodeEnv == undefined) {
             throw new Error(
@@ -53,10 +54,10 @@ export class ConfigService {
         let rawConfig;
         try {
             rawConfig = readFileSync(configFileName, 'utf-8');
-        } catch (error) {
+        } catch (error: any) {
             throw new Error(
                 'Unable to load the underwriter configuration file ${configFileName}. Cause: ' +
-          error.message,
+                error.message,
             );
         }
 
@@ -80,16 +81,16 @@ export class ConfigService {
     }
 
     private loadGlobalConfig(): GlobalConfig {
-        const rawGlobalConfig = this.rawConfig.global;
+        const rawGlobalConfig = this.rawConfig['global'];
 
-        if (process.env.UNDERWRITER_PORT == undefined) {
+        if (process.env['UNDERWRITER_PORT'] == undefined) {
             throw new Error(
                 "Invalid configuration: environment variable 'UNDERWRITER_PORT' missing",
             );
         }
 
         return {
-            port: parseInt(process.env.UNDERWRITER_PORT),
+            port: parseInt(process.env['UNDERWRITER_PORT']),
             privateKey: rawGlobalConfig.privateKey,
             logLevel: rawGlobalConfig.logLevel,
             blockDelay: rawGlobalConfig.blockDelay,
@@ -104,13 +105,13 @@ export class ConfigService {
     private loadChainsConfig(): Map<string, ChainConfig> {
         const chainConfig = new Map<string, ChainConfig>();
 
-        for (const rawChainConfig of this.rawConfig.chains) {
-
-
-            chainConfig.set(rawChainConfig.chainId.toString(), {
-                chainId: rawChainConfig.chainId.toString(),
+        for (const rawChainConfig of this.rawConfig['chains']) {
+            const chainId = rawChainConfig.chainId.toString();
+            chainConfig.set(chainId, {
+                chainId,
                 name: rawChainConfig.name,
                 rpc: rawChainConfig.rpc,
+                resolver: rawChainConfig.resolver ?? null,
                 blockDelay: rawChainConfig.blockDelay,
                 tokens: this.formatTokensConfig(rawChainConfig.tokens),
                 monitor: this.formatMonitorConfig(rawChainConfig.monitor),
@@ -127,7 +128,7 @@ export class ConfigService {
     private loadAMBsConfig(): Map<string, AMBConfig> {
         const ambConfig = new Map<string, AMBConfig>();
 
-        for (const rawAMBConfig of this.rawConfig.ambs) {
+        for (const rawAMBConfig of this.rawConfig['ambs']) {
 
             const ambName = rawAMBConfig.name;
 
@@ -137,7 +138,9 @@ export class ConfigService {
 
             const globalProperties = rawAMBConfig;
 
-            //TODO check the defined 'name's are unique.
+            if (ambConfig.has(ambName)) {
+                throw new Error(`Provided 'ambs' configuration is invalid: amb is specified multiple times. ('${ambName}')`);
+            }
 
             ambConfig.set(ambName, {
                 name: ambName,
@@ -149,52 +152,76 @@ export class ConfigService {
         return ambConfig;
     }
 
-    private loadPoolsConfig(ambNames: string[]): Map<string, PoolConfig> {
-        const poolsConfig = new Map<string, PoolConfig>();
+    private loadEndpointsConfig(chainIds: string[], ambNames: string[]): Map<string, EndpointConfig[]> {
+        const endpointConfig: Map<string, EndpointConfig[]> = new Map();
 
-        for (const rawPoolsConfig of this.rawConfig.pools) {
+        for (const rawEndpointConfig of this.rawConfig['endpoints']) {
 
-            if (!ambNames.includes(rawPoolsConfig.amb)) {
+            const chainId = rawEndpointConfig.chainId.toString();
+
+            if (!chainIds.includes(chainId)) {
                 throw new Error(
-                    `Invalid pool configuration for pool '${rawPoolsConfig.id}': 'amb' value invalid.`,
+                    `Invalid endpoint configuration: invalid 'chainId' value (chain configuration does not exist for ${chainId}).`,
                 );
             }
 
-            const vaults = rawPoolsConfig.vaults;
-            for (const vault of vaults) {
-
-                // Make sure 'chainId's are always strings
-                vault.chainId = vault.chainId.toString();
-
-                //TODO verify the 'chainId's are valid (i.e. they are defined on the 'chains' config)
-                //TODO verify the 'channels' mapping is exhaustive
-                const transformedChannels: Record<string, string> = {};
-                for (const [channelId, chainId] of Object.entries(vault.channels)) {
-                    transformedChannels[channelId] = (chainId as number).toString();
-                }
-                vault.channels = transformedChannels;
-
-                // Make sure all connected vaults have their channel mapped
-                // ! TODO make sure all channels are unique and that all channels are mapped 
+            if (!ambNames.includes(rawEndpointConfig.amb)) {
+                throw new Error(
+                    `Invalid endpoint configuration: invalid 'amb' value (${rawEndpointConfig.amb}).`,
+                );
             }
 
-            poolsConfig.set(rawPoolsConfig.id.toString(), {
-                id: rawPoolsConfig.id,
-                name: rawPoolsConfig.name,
-                amb: rawPoolsConfig.amb,
-                vaults
+
+            const factoryAddress = rawEndpointConfig.factoryAddress.toLowerCase();
+            const interfaceAddress = rawEndpointConfig.interfaceAddress.toLowerCase();
+            const incentivesAddress = rawEndpointConfig.incentivesAddress.toLowerCase();
+
+            const channelsOnDestination: Record<string, string> = {};
+            for (const [channelChainId, channelId] of Object.entries(rawEndpointConfig.channelsOnDestination)) {
+                channelsOnDestination[channelChainId] = (channelId as string).toLowerCase();
+            }
+
+            const vaultTemplates: VaultTemplateConfig[] = [];
+            for (const rawVaultTemplateConfig of rawEndpointConfig.vaultTemplates) {
+                vaultTemplates.push({
+                    name: rawVaultTemplateConfig.name,
+                    address: rawVaultTemplateConfig.address.toLowerCase()
+                });
+            }
+
+
+            const currentEndpoints = endpointConfig.get(chainId) ?? [];
+
+            const conflictingEndpointExists = currentEndpoints.some((endpoint) => {
+                return endpoint.interfaceAddress == interfaceAddress;
             });
+            if (conflictingEndpointExists) {
+                throw new Error(
+                    `Invalid endpoint configuration: interface defined multiple times on the same chain (interface: ${interfaceAddress}, chain: ${chainId}).`,
+                );
+            }
+
+            currentEndpoints.push({
+                name: rawEndpointConfig.name,
+                amb: rawEndpointConfig.amb,
+                chainId,
+                factoryAddress,
+                interfaceAddress,
+                incentivesAddress,
+                channelsOnDestination,
+                vaultTemplates,
+            });
+            endpointConfig.set(chainId, currentEndpoints);
         }
 
-        return poolsConfig;
-
+        return endpointConfig;
     }
 
     getAMBConfig<T = unknown>(amb: string, key: string, chainId?: string): T {
-    // Find if there is a chain-specific override for the AMB property.
+        // Find if there is a chain-specific override for the AMB property.
         if (chainId != undefined) {
-            const chainOverride = this.rawConfig.chains.find(
-                (rawChainConfig: any) => rawChainConfig.chainId == chainId,
+            const chainOverride = this.rawConfig['chains'].find(
+                (rawChainConfig: any) => rawChainConfig.chainId.toString() == chainId,
             )?.[amb]?.[key];
 
             if (chainOverride != undefined) return chainOverride;
@@ -209,15 +236,18 @@ export class ConfigService {
     // ********************************************************************************************
 
     private formatMonitorGlobalConfig(rawConfig: any): MonitorGlobalConfig {
-        return {...rawConfig} as MonitorGlobalConfig;
+        return { ...rawConfig } as MonitorGlobalConfig;
     }
 
     private formatListenerGlobalConfig(rawConfig: any): ListenerGlobalConfig {
-        return {...rawConfig} as ListenerGlobalConfig;
+        return { ...rawConfig } as ListenerGlobalConfig;
     }
 
     private formatUnderwriterGlobalConfig(rawConfig: any): UnderwriterGlobalConfig {
-        const config = {...rawConfig};
+        const config = { ...rawConfig };
+        if (config.minRelayDeadlineDuration != undefined) {
+            config.minRelayDeadlineDuration = BigInt(config.minRelayDeadlineDuration);
+        }
         if (config.maxUnderwriteAllowed != undefined) {
             config.maxUnderwriteAllowed = BigInt(config.maxUnderwriteAllowed);
         }
@@ -231,13 +261,22 @@ export class ConfigService {
     }
 
     private formatExpirerGlobalConfig(rawConfig: any): ExpirerGlobalConfig {
-        return {...rawConfig} as ExpirerGlobalConfig;
+        return { ...rawConfig } as ExpirerGlobalConfig;
     }
 
     private formatWalletGlobalConfig(rawConfig: any): WalletGlobalConfig {
-        const config = {...rawConfig};
+        const config = { ...rawConfig };
         if (config.lowGasBalanceWarning != undefined) {
             config.lowGasBalanceWarning = BigInt(config.lowGasBalanceWarning);
+        }
+        if (config.maxFeePerGas != undefined) {
+            config.maxFeePerGas = BigInt(config.maxFeePerGas);
+        }
+        if (config.maxAllowedPriorityFeePerGas != undefined) {
+            config.maxAllowedPriorityFeePerGas = BigInt(config.maxAllowedPriorityFeePerGas);
+        }
+        if (config.maxAllowedGasPrice != undefined) {
+            config.maxAllowedGasPrice = BigInt(config.maxAllowedGasPrice);
         }
         return config as WalletGlobalConfig;
     }
@@ -252,7 +291,9 @@ export class ConfigService {
     }
 
     private formatUnderwriterConfig(rawConfig: any): UnderwriterConfig {
-        return this.formatUnderwriterGlobalConfig(rawConfig);
+        const config = this.formatUnderwriterGlobalConfig(rawConfig) as UnderwriterConfig;
+        config.minMaxGasDelivery = BigInt(config.minMaxGasDelivery);
+        return config;
     }
 
     private formatWalletConfig(rawConfig: any): WalletConfig {
@@ -267,7 +308,7 @@ export class ConfigService {
         const config: TokensConfig = {};
         for (const rawTokenConfig of rawConfig) {
 
-            const tokenConfig = {...rawTokenConfig};
+            const tokenConfig = { ...rawTokenConfig };
             if (tokenConfig.allowanceBuffer != undefined) {
                 tokenConfig.allowanceBuffer = BigInt(tokenConfig.allowanceBuffer);
             }

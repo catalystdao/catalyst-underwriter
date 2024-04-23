@@ -8,14 +8,15 @@ import { tryErrorToString } from "src/common/utils";
 export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
 
     constructor(
-        readonly retryInterval: number,
-        readonly maxTries: number,
+        private readonly minUnderwriteDuration: number,
+        retryInterval: number,
+        maxTries: number,
         private readonly store: Store,
         private readonly logger: pino.Logger
     ) {
         super(retryInterval, maxTries);
     }
-    
+
     protected async handleOrder(order: ExpireEvalOrder, retryCount: number): Promise<HandleOrderResult<ExpireOrder> | null> {
         // NOTE: the 'activeUnderwriteState' is not unique. After an underwrite fulfills, a new
         // underwrite with the same 'state' can be created. Expiry cancellation of `fulfilled`
@@ -41,45 +42,52 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
             return null;
         }
 
-        if (swapState == undefined) {
+        if (swapState?.ambMessageSendAssetDetails == undefined) {
             throw new Error(`Expire evaluation fail: swap's state not found (toChainId: ${order.toChainId}, toInterface: ${order.toInterface}, underwriteId: ${order.underwriteId})`)
         }
 
-        if (swapState.calldata == undefined) {
-            throw new Error(`Expire evaluation fail: swap's calldata not found (toChainId: ${order.toChainId}, toInterface: ${order.toInterface}, underwriteId: ${order.underwriteId})`)
-        }
-
-        if (swapState.toAsset == undefined) {
+        if (swapState.additionalSendAssetDetails?.toAsset == undefined) {
             throw new Error(`Expire evaluation fail: swap's toAsset not found (toChainId: ${order.toChainId}, toInterface: ${order.toInterface}, underwriteId: ${order.underwriteId})`)
         }
 
-        if (swapState.sendAssetEvent == undefined) {
-            throw new Error(`Expire evaluation fail: swap's SendAsset event not found (toChainId: ${order.toChainId}, toInterface: ${order.toInterface}, underwriteId: ${order.underwriteId})`)
+
+        // Verify the time that has passed since the underwrite was committed (safety net to
+        // prevent expirying recent self-underwritten transactions).
+        const underwriteTimestamp = activeUnderwriteState.swapUnderwrittenEvent!.blockTimestamp;
+        const timeElapsedSinceUnderwrite = Date.now() - underwriteTimestamp * 1000;   //NOTE 'underwriteTimestamp' is in seconds.
+        if (
+            timeElapsedSinceUnderwrite < this.minUnderwriteDuration
+        ) {
+            this.logger.warn(
+                {
+                    toInterface: order.toInterface,
+                    underwriteId: order.underwriteId,
+                    underwriteTimestamp,
+                    minUnderwriteDuration: this.minUnderwriteDuration
+                },
+                `Not enough time elapsed since underwrite to execute expiry. (POSSIBLE UNDERWRITER MISCONFIGURATION).`
+            );
+            return null;
         }
 
-        //TODO simulate expiry?
+
+        // //TODO simulate expiry?
 
         //TODO check if already expired/makes economical sense to expire
         if (true) {
             const result: ExpireOrder = {
-                poolId: order.poolId,
                 toChainId: order.toChainId,
                 toInterface: order.toInterface,
                 underwriteId: order.underwriteId,
                 expireAt: order.expireAt,
-                fromChainId: swapState.fromChainId,
-                fromVault: swapState.fromVault,
-                channelId: swapState.sendAssetEvent.fromChannelId,
-                toVault: swapState.toVault,
-                toAccount: swapState.toAccount,
-                fromAsset: swapState.fromAsset,
-                toAsset: swapState.toAsset,
-                fromAmount: swapState.sendAssetEvent.fromAmount,
-                minOut: swapState.sendAssetEvent.minOut,
-                units: swapState.units,
-                fee: swapState.sendAssetEvent.fee,
-                underwriteIncentiveX16: swapState.sendAssetEvent.underwriteIncentiveX16,
-                calldata: swapState.calldata,
+                channelId: swapState.ambMessageSendAssetDetails.fromChannelId,
+                toVault: swapState.ambMessageSendAssetDetails.toVault,
+                toAccount: swapState.ambMessageSendAssetDetails.toAccount,
+                toAsset: swapState.additionalSendAssetDetails.toAsset,
+                minOut: swapState.ambMessageSendAssetDetails.minOut,
+                units: swapState.ambMessageSendAssetDetails.units,
+                underwriteIncentiveX16: swapState.ambMessageSendAssetDetails.underwriteIncentiveX16,
+                calldata: swapState.ambMessageSendAssetDetails.calldata,
             };
             return { result };
         } else {
@@ -100,7 +108,6 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
     protected async handleFailedOrder(order: ExpireEvalOrder, retryCount: number, error: any): Promise<boolean> {
 
         const errorDescription = {
-            poolId: order.poolId,
             toChainId: order.toChainId,
             toInterface: order.toInterface,
             underwriteId: order.underwriteId,
@@ -118,7 +125,7 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
         return true;
     }
 
-    protected async onOrderCompletion(
+    protected override async onOrderCompletion(
         order: ExpireEvalOrder,
         success: boolean,
         _result: ExpireOrder | null,
@@ -126,7 +133,6 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
     ): Promise<void> {
 
         const orderDescription = {
-            poolId: order.poolId,
             toChainId: order.toChainId,
             toInterface: order.toInterface,
             underwriteId: order.underwriteId,

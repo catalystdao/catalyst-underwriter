@@ -10,7 +10,7 @@ services:
       - ./.env:/usr/catalyst-underwriter/.env
     environment:
       - NODE_ENV=${NODE_ENV}
-      - USE_DOCKER=true
+      - REDIS_HOST=redis
       - RELAYER_HOST=relayer
     container_name: underwriter
     restart: unless-stopped

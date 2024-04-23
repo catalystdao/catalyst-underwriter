@@ -25,10 +25,10 @@ interface DefaultWalletWorkerData {
     confirmationTimeout: number;
     lowBalanceWarning: bigint | undefined;
     balanceUpdateInterval: number;
-    maxFeePerGas?: number | string;
-    maxAllowedPriorityFeePerGas?: number | string;
+    maxFeePerGas?: bigint;
+    maxAllowedPriorityFeePerGas?: bigint;
     maxPriorityFeeAdjustmentFactor?: number;
-    maxAllowedGasPrice?: number | string;
+    maxAllowedGasPrice?: bigint;
     gasPriceAdjustmentFactor?: number;
     priorityAdjustmentFactor?: number;
 }
@@ -46,10 +46,10 @@ export interface WalletWorkerData {
     privateKey: string;
     lowBalanceWarning: bigint | undefined;
     balanceUpdateInterval: number;
-    maxFeePerGas?: number | string;
-    maxAllowedPriorityFeePerGas?: number | string;
+    maxFeePerGas?: bigint;
+    maxAllowedPriorityFeePerGas?: bigint;
     maxPriorityFeeAdjustmentFactor?: number;
-    maxAllowedGasPrice?: number | string;
+    maxAllowedGasPrice?: bigint;
     gasPriceAdjustmentFactor?: number;
     priorityAdjustmentFactor?: number;
     loggerOptions: LoggerOptions;
@@ -82,7 +82,7 @@ export class WalletService implements OnModuleInit {
     private async initializeWorkers(): Promise<void> {
         const defaultWorkerConfig = this.loadDefaultWorkerConfig();
 
-        for (const [chainId, ] of this.configService.chainsConfig) {
+        for (const [chainId,] of this.configService.chainsConfig) {
 
             const workerData = this.loadWorkerConfig(chainId, defaultWorkerConfig);
 
@@ -131,7 +131,7 @@ export class WalletService implements OnModuleInit {
         const maxAllowedGasPrice = globalWalletConfig.maxAllowedGasPrice;
         const gasPriceAdjustmentFactor = globalWalletConfig.gasPriceAdjustmentFactor;
         const priorityAdjustmentFactor = globalWalletConfig.priorityAdjustmentFactor;
-    
+
         return {
             retryInterval,
             processingInterval,
@@ -186,12 +186,12 @@ export class WalletService implements OnModuleInit {
                 defaultConfig.balanceUpdateInterval,
 
             privateKey: this.configService.globalConfig.privateKey,
-            
+
             maxFeePerGas:
                 chainWalletConfig.maxFeePerGas ??
                 defaultConfig.maxFeePerGas,
 
-            maxPriorityFeeAdjustmentFactor: 
+            maxPriorityFeeAdjustmentFactor:
                 chainWalletConfig.maxPriorityFeeAdjustmentFactor ??
                 defaultConfig.maxPriorityFeeAdjustmentFactor,
 

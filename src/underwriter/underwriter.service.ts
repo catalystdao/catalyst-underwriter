@@ -3,7 +3,7 @@ import { join } from 'path';
 import { LoggerOptions } from 'pino';
 import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService } from 'src/config/config.service';
-import { AMBConfig, ChainConfig, PoolConfig, TokensConfig } from 'src/config/config.types';
+import { AMBConfig, ChainConfig, EndpointConfig, TokensConfig } from 'src/config/config.types';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { WalletService } from 'src/wallet/wallet.service';
 import { Wallet } from 'ethers';
@@ -15,10 +15,15 @@ export const DEFAULT_UNDERWRITER_RETRY_INTERVAL = 30000;
 export const DEFAULT_UNDERWRITER_PROCESSING_INTERVAL = 100;
 export const DEFAULT_UNDERWRITER_MAX_TRIES = 3;
 export const DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS = 50;
-export const DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN = 50;
+export const DEFAULT_UNDERWRITER_MIN_RELAY_DEADLINE_DURATION = 24n * 60n * 60n * 1000n; // 1 day
 export const DEFAULT_UNDERWRITER_UNDERWRITE_DELAY = 500;
+export const DEFAULT_UNDERWRITER_MAX_UNDERWRITE_DELAY = 300000;
 export const DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY = 300000;
+export const DEFAULT_UNDERWRITER_UNDERWRITING_COLLATERAL = 0.035;
+export const DEFAULT_UNDERWRITER_ALLOWANCE_BUFFER = 0.05;
 export const DEFAULT_UNDERWRITER_TOKEN_BALANCE_UPDATE_INTERVAL = 50;
+
+const MIN_ALLOWED_MIN_RELAY_DEADLINE_DURATION = 1n * 60n * 60n * 1000n; // 1 hour
 
 interface DefaultUnderwriterWorkerData {
     enabled: boolean;
@@ -26,9 +31,12 @@ interface DefaultUnderwriterWorkerData {
     processingInterval: number;
     maxTries: number;
     maxPendingTransactions: number;
-    underwriteBlocksMargin: number;
+    minRelayDeadlineDuration: bigint;
     underwriteDelay: number;
+    maxUnderwriteDelay: number;
     maxSubmissionDelay: number;
+    underwritingCollateral: number;
+    allowanceBuffer: number;
     maxUnderwriteAllowed: bigint | undefined;
     minUnderwriteReward: bigint | undefined;
     lowTokenBalanceWarning: bigint | undefined;
@@ -41,16 +49,20 @@ export interface UnderwriterWorkerData {
     chainId: string,
     chainName: string,
     tokens: TokensConfig,
-    pools: PoolConfig[],
+    endpointConfigs: EndpointConfig[],
     ambs: Record<string, AMBConfig>,
     rpc: string,
     retryInterval: number;
     processingInterval: number;
     maxTries: number;
     maxPendingTransactions: number;
-    underwriteBlocksMargin: number;
+    minRelayDeadlineDuration: bigint;
+    minMaxGasDelivery: bigint;
     underwriteDelay: number;
+    maxUnderwriteDelay: number;
     maxSubmissionDelay: number;
+    underwritingCollateral: number;
+    allowanceBuffer: number;
     walletPublicKey: string;
     walletPort: MessagePort;
     loggerOptions: LoggerOptions;
@@ -88,12 +100,21 @@ export class UnderwriterService implements OnModuleInit {
     private async initializeWorkers(): Promise<void> {
         const defaultWorkerConfig = this.loadDefaultWorkerConfig();
 
-        const pools = this.loadPools();
         const ambs = Object.fromEntries(this.configService.ambsConfig.entries());
 
-        for (const [chainId, ] of this.configService.chainsConfig) {
+        for (const [chainId, chainConfig] of this.configService.chainsConfig) {
 
-            const workerData = await this.loadWorkerConfig(chainId, pools, ambs, defaultWorkerConfig);
+            const workerData = await this.loadWorkerConfig(
+                chainId,
+                chainConfig,
+                ambs,
+                defaultWorkerConfig
+            );
+
+            if (workerData == undefined) {
+                this.loggerService.warn('Skipping underwriter for chain (no endpoints found).');
+                continue;
+            }
 
             const worker = new Worker(join(__dirname, 'underwriter.worker.js'), {
                 workerData,
@@ -126,24 +147,36 @@ export class UnderwriterService implements OnModuleInit {
         const processingInterval = globalUnderwriterConfig.processingInterval ?? DEFAULT_UNDERWRITER_PROCESSING_INTERVAL;
         const maxTries = globalUnderwriterConfig.maxTries ?? DEFAULT_UNDERWRITER_MAX_TRIES;
         const maxPendingTransactions = globalUnderwriterConfig.maxPendingTransactions ?? DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS;
-        const underwriteBlocksMargin = globalUnderwriterConfig.underwriteBlocksMargin ?? DEFAULT_UNDERWRITER_UNDERWRITE_BLOCKS_MARGIN;
+        const minRelayDeadlineDuration = globalUnderwriterConfig.minRelayDeadlineDuration ?? DEFAULT_UNDERWRITER_MIN_RELAY_DEADLINE_DURATION;
         const underwriteDelay = globalUnderwriterConfig.underwriteDelay ?? DEFAULT_UNDERWRITER_UNDERWRITE_DELAY;
+        const maxUnderwriteDelay = globalUnderwriterConfig.maxUnderwriteDelay ?? DEFAULT_UNDERWRITER_MAX_UNDERWRITE_DELAY;
         const maxSubmissionDelay = globalUnderwriterConfig.maxSubmissionDelay ?? DEFAULT_UNDERWRITER_MAX_SUBMISSION_DELAY;
+        const underwritingCollateral = globalUnderwriterConfig.underwritingCollateral ?? DEFAULT_UNDERWRITER_UNDERWRITING_COLLATERAL;
+        const allowanceBuffer = globalUnderwriterConfig.allowanceBuffer ?? DEFAULT_UNDERWRITER_ALLOWANCE_BUFFER;
         const maxUnderwriteAllowed = globalUnderwriterConfig.maxUnderwriteAllowed;
         const minUnderwriteReward = globalUnderwriterConfig.minUnderwriteReward;
         const lowTokenBalanceWarning = globalUnderwriterConfig.lowTokenBalanceWarning;
         const tokenBalanceUpdateInterval = globalUnderwriterConfig.tokenBalanceUpdateInterval ?? DEFAULT_UNDERWRITER_TOKEN_BALANCE_UPDATE_INTERVAL;
         const walletPublicKey = (new Wallet(this.configService.globalConfig.privateKey)).address;
-    
+
+        if (minRelayDeadlineDuration < MIN_ALLOWED_MIN_RELAY_DEADLINE_DURATION) {
+            throw new Error(
+                `Invalid 'minRelayDeadlineDuration' global configuration. Value set is less than allowed (set: ${minRelayDeadlineDuration}, minimum: ${MIN_ALLOWED_MIN_RELAY_DEADLINE_DURATION}).`
+            );
+        }
+
         return {
             enabled,
             retryInterval,
             processingInterval,
             maxTries,
             maxPendingTransactions,
-            underwriteBlocksMargin,
+            minRelayDeadlineDuration,
             underwriteDelay,
+            maxUnderwriteDelay,
             maxSubmissionDelay,
+            underwritingCollateral,
+            allowanceBuffer,
             maxUnderwriteAllowed,
             minUnderwriteReward,
             lowTokenBalanceWarning,
@@ -154,28 +187,32 @@ export class UnderwriterService implements OnModuleInit {
 
     private async loadWorkerConfig(
         chainId: string,
-        pools: PoolConfig[],
+        chainConfig: ChainConfig,
         ambs: Record<string, AMBConfig>,
         defaultConfig: DefaultUnderwriterWorkerData
-    ): Promise<UnderwriterWorkerData> {
+    ): Promise<UnderwriterWorkerData | undefined> {
 
-        const chainConfig = this.configService.chainsConfig.get(chainId);
-        if (chainConfig == undefined) {
-            throw new Error(`Unable to load config for chain ${chainId}`);
+        const chainEndpointConfigs = this.configService.endpointsConfig.get(chainId);
+        if (chainEndpointConfigs == undefined) {
+            this.loggerService.warn('No endpoints specified. Skipping chain.');
+            return undefined;
         }
 
-        // Only pass pools that contain a vault on the desired chainId
-        const filteredPools = pools.filter(pool => {
-            return pool.vaults.some((vault) => vault.chainId == chainId)
-        });
-
         const chainUnderwriterConfig = chainConfig.underwriter;
+
+        const minRelayDeadlineDuration = chainUnderwriterConfig.minRelayDeadlineDuration ?? defaultConfig.minRelayDeadlineDuration;
+        if (minRelayDeadlineDuration < MIN_ALLOWED_MIN_RELAY_DEADLINE_DURATION) {
+            throw new Error(
+                `Invalid 'minRelayDeadlineDuration' chain configuration. Value set is less than allowed (set: ${minRelayDeadlineDuration}, minimum: ${MIN_ALLOWED_MIN_RELAY_DEADLINE_DURATION}).`
+            );
+        }
+
         return {
             enabled: defaultConfig.enabled && chainUnderwriterConfig.enabled != false,
             chainId,
             chainName: chainConfig.name,
             tokens: this.loadTokensConfig(chainConfig, defaultConfig),
-            pools: filteredPools,
+            endpointConfigs: chainEndpointConfigs,
             ambs,
             rpc: chainConfig.rpc,
 
@@ -187,15 +224,23 @@ export class UnderwriterService implements OnModuleInit {
             maxPendingTransactions:
                 chainUnderwriterConfig.maxPendingTransactions
                 ?? defaultConfig.maxPendingTransactions,
-            underwriteBlocksMargin:
-                chainUnderwriterConfig.underwriteBlocksMargin
-                ?? defaultConfig.underwriteBlocksMargin,
+            minRelayDeadlineDuration,
+            minMaxGasDelivery: chainUnderwriterConfig.minMaxGasDelivery,
             underwriteDelay:
                 chainUnderwriterConfig.underwriteDelay
                 ?? defaultConfig.underwriteDelay,
+            maxUnderwriteDelay:
+                chainUnderwriterConfig.maxUnderwriteDelay
+                ?? defaultConfig.maxUnderwriteDelay,
             maxSubmissionDelay:
                 chainUnderwriterConfig.maxSubmissionDelay
                 ?? defaultConfig.maxSubmissionDelay,
+            underwritingCollateral:
+                chainUnderwriterConfig.underwritingCollateral
+                ?? defaultConfig.underwritingCollateral,
+            allowanceBuffer:
+                chainUnderwriterConfig.allowanceBuffer
+                ?? defaultConfig.allowanceBuffer,
 
             walletPublicKey: defaultConfig.walletPublicKey,
             walletPort: await this.walletService.attachToWallet(chainId),
@@ -219,53 +264,24 @@ export class UnderwriterService implements OnModuleInit {
         for (const [tokenAddress, chainTokenConfig] of Object.entries(chainConfig.tokens)) {
             finalConfig[tokenAddress] = { ...chainTokenConfig };
 
-            finalConfig[tokenAddress].maxUnderwriteAllowed ??=
+            finalConfig[tokenAddress]!.maxUnderwriteAllowed ??=
                 chainUnderwriterConfig.maxUnderwriteAllowed
                 ?? defaultConfig.maxUnderwriteAllowed;
 
-            finalConfig[tokenAddress].minUnderwriteReward ??=
+            finalConfig[tokenAddress]!.minUnderwriteReward ??=
                 chainUnderwriterConfig.minUnderwriteReward
                 ?? defaultConfig.minUnderwriteReward;
 
-            finalConfig[tokenAddress].lowTokenBalanceWarning ??=
+            finalConfig[tokenAddress]!.lowTokenBalanceWarning ??=
                 chainUnderwriterConfig.lowTokenBalanceWarning
                 ?? defaultConfig.lowTokenBalanceWarning;
 
-            finalConfig[tokenAddress].tokenBalanceUpdateInterval ??=
+            finalConfig[tokenAddress]!.tokenBalanceUpdateInterval ??=
                 chainUnderwriterConfig.tokenBalanceUpdateInterval
                 ?? defaultConfig.tokenBalanceUpdateInterval;
         }
 
         return finalConfig;
-    }
-
-    private loadPools(): PoolConfig[] {
-
-        const pools: PoolConfig[] = [];
-
-        for (const [, poolConfig] of this.configService.poolsConfig) {
-            pools.push({
-                id: poolConfig.id,
-                name: poolConfig.name,
-                amb: poolConfig.amb,
-                vaults: poolConfig.vaults.map(vault => {
-                    const transformedChannels: Record<string, string> = {}
-                    for (const [channelId, chainId] of Object.entries(vault.channels)) {
-                        transformedChannels[channelId.toLowerCase()] = chainId; // Important for when matching vaults
-                    }
-
-                    return {
-                        name: vault.name,
-                        chainId: vault.chainId,
-                        vaultAddress: vault.vaultAddress.toLowerCase(), // Important for when matching vaults
-                        interfaceAddress: vault.interfaceAddress.toLowerCase(), // Important for when matching vaults
-                        channels: transformedChannels
-                    }
-                })
-            });
-        }
-
-        return pools;
     }
 
     private initiateIntervalStatusLog(): void {

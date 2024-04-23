@@ -1,8 +1,7 @@
 import { JsonRpcProvider } from "ethers";
 import pino, { LoggerOptions } from "pino";
 import { workerData, MessagePort } from 'worker_threads';
-import { wait } from "src/common/utils";
-import { PoolConfig } from "src/config/config.types";
+import { tryErrorToString, wait } from "src/common/utils";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
 import { ActiveUnderwriteDescription, CompletedUnderwriteDescription } from "src/store/store.types";
@@ -12,39 +11,37 @@ import { ExpirerWorkerData } from "./expirer.service";
 import { ExpireOrder, ExpireOrderResult, ExpireEvalOrder } from "./expirer.types";
 import { EvalQueue } from "./queues/eval-queue";
 import { MonitorInterface, MonitorStatus } from "src/monitor/monitor.interface";
+import { Resolver, loadResolver } from "src/resolvers/resolver";
 
 
 class ExpirerWorker {
-    readonly store: Store;
-    readonly logger: pino.Logger;
+    private readonly store: Store;
+    private readonly logger: pino.Logger;
 
-    readonly config: ExpirerWorkerData;
+    private readonly config: ExpirerWorkerData;
 
-    readonly provider: JsonRpcProvider;
+    private readonly provider: JsonRpcProvider;
 
-    readonly chainId: string;
-    readonly chainName: string;
+    private readonly chainId: string;
+    private readonly chainName: string;
 
-    readonly pools: PoolConfig[];
+    private readonly resolver: Resolver;
 
-    private currentStatus: MonitorStatus | null;
-    private effectiveBlockNumber: number | undefined;   // Patch for arbitrum //TODO implement a better fix
+    private currentStatus: MonitorStatus | null = null;
+    private transactionBlockNumber: number | undefined;   // For chains like Arbitrum which use l1 and l2 block numbers
 
-    readonly underwriterPublicKey: string;
-    readonly wallet: WalletInterface;
+    private readonly underwriterPublicKey: string;
+    private readonly wallet: WalletInterface;
 
-    readonly newOrdersQueue: ExpireEvalOrder[] = [];
-    readonly evalQueue: EvalQueue;
-    readonly expirerQueue: ExpireQueue;
-
+    private readonly newOrdersQueue: ExpireEvalOrder[] = [];
+    private readonly evalQueue: EvalQueue;
+    private readonly expirerQueue: ExpireQueue;
 
     constructor() {
         this.config = workerData as ExpirerWorkerData;
 
         this.chainId = this.config.chainId;
         this.chainName = this.config.chainName;
-
-        this.pools = this.config.pools;
 
         this.store = new Store();
         this.logger = this.initializeLogger(
@@ -53,11 +50,17 @@ class ExpirerWorker {
         );
         this.provider = this.initializeProvider(this.config.rpc);
 
+        this.resolver = this.loadResolver(
+            this.config.resolver,
+            this.provider,
+            this.logger
+        );
+
         this.underwriterPublicKey = this.config.underwriterPublicKey.toLowerCase();
         this.wallet = new WalletInterface(this.config.walletPort);
 
         [this.evalQueue, this.expirerQueue] = this.initializeQueues(
-            this.pools,
+            this.config.minUnderwriteDuration,
             this.config.retryInterval,
             this.config.maxTries,
             this.wallet,
@@ -94,8 +97,16 @@ class ExpirerWorker {
         )
     }
 
+    private loadResolver(
+        resolver: string | null,
+        provider: JsonRpcProvider,
+        logger: pino.Logger
+    ): Resolver {
+        return loadResolver(resolver, provider, logger);
+    }
+
     private initializeQueues(
-        pools: PoolConfig[],
+        minUnderwriteDuration: number,
         retryInterval: number,
         maxTries: number,
         wallet: WalletInterface,
@@ -105,6 +116,7 @@ class ExpirerWorker {
     ): [EvalQueue, ExpireQueue] {
 
         const evalQueue = new EvalQueue(
+            minUnderwriteDuration,
             retryInterval,
             maxTries,
             store,
@@ -112,7 +124,6 @@ class ExpirerWorker {
         )
 
         const expirerQueue = new ExpireQueue(
-            pools,
             retryInterval,
             maxTries,
             wallet,
@@ -127,7 +138,7 @@ class ExpirerWorker {
         const monitor = new MonitorInterface(port);
 
         monitor.addListener((status) => {
-            this.effectiveBlockNumber = undefined;   // Patch for arbitrum //TODO implement a better fix
+            this.transactionBlockNumber = undefined;
             this.currentStatus = status;
         });
 
@@ -157,6 +168,11 @@ class ExpirerWorker {
         this.logger.info(
             `Expirer worker started.`
         );
+
+        // Wait for the 'monitor' to get initialized
+        while (this.currentStatus == undefined) {
+            await wait(this.config.retryInterval);
+        }
 
         await this.expirerQueue.init();
 
@@ -224,14 +240,16 @@ class ExpirerWorker {
     private async listenForOrders(): Promise<void> {
         this.logger.info(`Listening for SwapUnderwritten events`);
 
-        await this.store.on(Store.onSwapUnderwrittenChannel, (underwriteDescription: ActiveUnderwriteDescription) => {
+        await this.store.on(Store.onSwapUnderwrittenChannel, (event: any) => {
+
+            //TODO verify event format
+            const underwriteDescription = event as ActiveUnderwriteDescription;
 
             if (underwriteDescription.toChainId != this.chainId) {
                 return;
             }
 
             this.addExpireOrder(
-                underwriteDescription.poolId,
                 underwriteDescription.toChainId,
                 underwriteDescription.toInterface,
                 underwriteDescription.underwriter,
@@ -241,14 +259,16 @@ class ExpirerWorker {
 
         });
 
-        await this.store.on(Store.onSwapUnderwriteCompleteChannel, (underwriteDescription: CompletedUnderwriteDescription) => {
+        await this.store.on(Store.onSwapUnderwriteCompleteChannel, (event: any) => {
+
+            //TODO verify event format
+            const underwriteDescription = event as CompletedUnderwriteDescription;
 
             if (underwriteDescription.toChainId != this.chainId) {
                 return;
             }
 
             this.removeExpireOrder(
-                underwriteDescription.poolId,
                 underwriteDescription.toInterface,
                 underwriteDescription.underwriteId,
             );
@@ -257,39 +277,48 @@ class ExpirerWorker {
 
     }
 
-    private async getCurrentBlockNumber(): Promise<number> {
-        let blockNumber = this.currentStatus?.blockNumber;
+    private async getCurrentTransactionBlockNumber(): Promise<number> {
+        if (this.transactionBlockNumber != undefined) {
+            return this.transactionBlockNumber;
+        }
 
+        const blockNumber = this.currentStatus?.blockNumber;
         if (blockNumber == undefined) {
-            return -1;
+            throw new Error('Unable to query transaction block number: monitor block number is undefined.')
         }
 
-        //TODO implement a better (generic) block number fix
-        if (this.chainId == '421614') { // Arbitrum sepolia
-            if (this.effectiveBlockNumber == undefined) {
-                try {
-                    const blockData = await this.provider.send(
-                        "eth_getBlockByNumber",
-                        ["0x"+blockNumber.toString(16), false]
-                    );
-                    this.effectiveBlockNumber = parseInt(blockData.l1BlockNumber, 16);
-                } catch (error) {
-                    //TODO how to handle the failure? Add retry?
-                }
+        let transactionBlockNumber: number | undefined;
+        while (transactionBlockNumber == undefined) {
+            try {
+                transactionBlockNumber = await this.resolver.getTransactionBlockNumber(blockNumber);
             }
-            
-            blockNumber = this.effectiveBlockNumber;
+            catch (error) {
+                this.logger.warn(
+                    {
+                        blockNumber,
+                        error: tryErrorToString(error),
+                    },
+                    `Failed to query the transaction block number. Worker stalled until succesful query.`
+                );
+                await wait(this.config.retryInterval);
+            }
         }
-        return blockNumber ?? -1;
+
+        this.transactionBlockNumber = transactionBlockNumber;
+        return this.transactionBlockNumber;
     }
 
     private async processNewOrdersQueue(): Promise<ExpireEvalOrder[]> {
+        if (this.newOrdersQueue.length == 0) {
+            return [];
+        }
+
         const capacity = this.getExpirerCapacity();
-        const currentBlockNumber = await this.getCurrentBlockNumber();
+        const currentBlockNumber = await this.getCurrentTransactionBlockNumber();
 
         let i;
         for (i = 0; i < this.newOrdersQueue.length; i++) {
-            const nextNewOrder = this.newOrdersQueue[i];
+            const nextNewOrder = this.newOrdersQueue[i]!;
 
             if (nextNewOrder.expireAt > currentBlockNumber || i + 1 > capacity) {
                 break;
@@ -309,7 +338,6 @@ class ExpirerWorker {
     }
 
     private addExpireOrder(
-        poolId: string,
         toChainId: string,
         toInterface: string,
         underwriter: string,
@@ -317,7 +345,7 @@ class ExpirerWorker {
         expiry: number,
     ) {
         this.logger.debug(
-            { poolId, toInterface, underwriteId },
+            { toInterface, underwriteId },
             `Expire underwrite order received.`
         );
 
@@ -326,7 +354,6 @@ class ExpirerWorker {
             : expiry;
 
         const newOrder: ExpireEvalOrder = {
-            poolId,
             toChainId,
             toInterface,
             underwriteId,
@@ -346,15 +373,14 @@ class ExpirerWorker {
     }
 
     private removeExpireOrder(
-        poolId: string,
         toInterface: string,
         underwriteId: string,
     ) {
         this.logger.debug(
-            { poolId, toInterface, underwriteId },
+            { toInterface, underwriteId },
             `Expire underwrite order removal received.`
         );
-        
+
         const removalIndex = this.newOrdersQueue.findIndex(order => {
             return order.toInterface == toInterface && order.underwriteId == underwriteId;
         });

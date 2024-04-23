@@ -10,10 +10,10 @@ export const DEFAULT_PRIORITY_ADJUSTMENT_FACTOR = 1.1;
 export const MAX_GAS_PRICE_ADJUSTMENT_FACTOR = 5;
 
 export class TransactionHelper {
-    private transactionNonce: number;
+    private transactionNonce: number = -1;
     private feeData: FeeData | undefined;
 
-    private priorityAdjustmentFactor: bigint;
+    private priorityAdjustmentFactor: bigint = 0n;
 
     // Config for legacy transactions
     private gasPriceAdjustmentFactor: bigint | undefined;
@@ -25,12 +25,12 @@ export class TransactionHelper {
     private maxAllowedPriorityFeePerGas: bigint | undefined;
 
     // Balance config
-    private walletBalance: bigint;
+    private walletBalance: bigint = 0n;
     private transactionsSinceLastBalanceUpdate: number = 0;
     private isBalanceLow: boolean = false;
 
     private lowBalanceWarning: bigint | undefined;
-    private balanceUpdateInterval: number;
+    private balanceUpdateInterval: number = -1;
 
     constructor(
         gasFeeConfig: GasFeeConfig,
@@ -47,14 +47,13 @@ export class TransactionHelper {
     private loadGasFeeConfig(config: GasFeeConfig): void {
         const {
             gasPriceAdjustmentFactor,
-            maxAllowedGasPrice,
-            maxFeePerGas,
             maxPriorityFeeAdjustmentFactor,
-            maxAllowedPriorityFeePerGas,
             priorityAdjustmentFactor,
         } = config;
 
         // Config for legacy transactions
+        this.maxAllowedGasPrice = config.maxAllowedGasPrice;
+
         if (gasPriceAdjustmentFactor != undefined) {
             if (gasPriceAdjustmentFactor > MAX_GAS_PRICE_ADJUSTMENT_FACTOR) {
                 throw new Error(
@@ -67,11 +66,10 @@ export class TransactionHelper {
             );
         }
 
-        if (maxAllowedGasPrice != undefined) {
-            this.maxAllowedGasPrice = BigInt(maxAllowedGasPrice);
-        }
-
         // Config for EIP 1559 transactions
+        this.maxFeePerGas = config.maxFeePerGas;
+        this.maxAllowedPriorityFeePerGas = config.maxAllowedPriorityFeePerGas;
+
         if (maxPriorityFeeAdjustmentFactor != undefined) {
             if (maxPriorityFeeAdjustmentFactor > MAX_GAS_PRICE_ADJUSTMENT_FACTOR) {
                 throw new Error(
@@ -84,21 +82,12 @@ export class TransactionHelper {
             );
         }
 
-        if (maxFeePerGas != undefined) {
-            this.maxFeePerGas = BigInt(maxFeePerGas);
-        }
-
-        if (maxAllowedPriorityFeePerGas != undefined) {
-            this.maxAllowedPriorityFeePerGas = BigInt(
-                maxAllowedPriorityFeePerGas,
-            );
-        }
 
         // Priority config
         if (priorityAdjustmentFactor != undefined) {
             if (
                 priorityAdjustmentFactor > MAX_GAS_PRICE_ADJUSTMENT_FACTOR ||
-        priorityAdjustmentFactor < 1
+                priorityAdjustmentFactor < 1
             ) {
                 throw new Error(
                     `Failed to load gas fee configuration. 'priorityAdjustmentFactor' is larger than the allowed (${MAX_GAS_PRICE_ADJUSTMENT_FACTOR}) or less than 1.`,
@@ -162,14 +151,14 @@ export class TransactionHelper {
 
     async registerBalanceUse(amount: bigint): Promise<void> {
         this.transactionsSinceLastBalanceUpdate++;
-  
+
         const newWalletBalance = this.walletBalance - amount;
         if (newWalletBalance < 0n) {
             this.walletBalance = 0n;
         } else {
             this.walletBalance = newWalletBalance;
         }
-  
+
         if (
             this.lowBalanceWarning != undefined &&
             !this.isBalanceLow && // Only trigger update if the current saved state is 'balance not low' (i.e. crossing the boundary)
@@ -178,11 +167,11 @@ export class TransactionHelper {
             await this.updateWalletBalance();
         }
     }
-  
+
     async registerBalanceRefund(amount: bigint): Promise<void> {
         this.walletBalance = this.walletBalance + amount;
     }
-  
+
     async runBalanceCheck(): Promise<void> {
         if (
             this.isBalanceLow ||
@@ -191,7 +180,7 @@ export class TransactionHelper {
             await this.updateWalletBalance();
         }
     }
-  
+
     async updateWalletBalance(): Promise<void> {
         let i = 0;
         let walletBalance;
@@ -208,10 +197,10 @@ export class TransactionHelper {
                 // Continue trying
             }
         }
-  
+
         this.walletBalance = walletBalance;
         this.transactionsSinceLastBalanceUpdate = 0;
-  
+
         if (this.lowBalanceWarning != undefined) {
             const isBalanceLow = this.walletBalance < this.lowBalanceWarning;
             if (isBalanceLow != this.isBalanceLow) {

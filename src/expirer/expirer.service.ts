@@ -3,7 +3,6 @@ import { join } from 'path';
 import { LoggerOptions } from 'pino';
 import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService } from "src/config/config.service";
-import { PoolConfig } from "src/config/config.types";
 import { LoggerService, STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { WalletService } from "src/wallet/wallet.service";
 import { DEFAULT_UNDERWRITER_RETRY_INTERVAL, DEFAULT_UNDERWRITER_PROCESSING_INTERVAL, DEFAULT_UNDERWRITER_MAX_TRIES, DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS } from "src/underwriter/underwriter.service";
@@ -15,6 +14,9 @@ export const DEFAULT_EXPIRER_PROCESSING_INTERVAL = DEFAULT_UNDERWRITER_PROCESSIN
 export const DEFAULT_EXPIRER_MAX_TRIES = DEFAULT_UNDERWRITER_MAX_TRIES;
 export const DEFAULT_EXPIRER_MAX_PENDING_TRANSACTIONS = DEFAULT_UNDERWRITER_MAX_PENDING_TRANSACTIONS;
 export const DEFAULT_EXPIRER_EXPIRE_BLOCK_MARGIN = 500;
+export const DEFAULT_EXPIRER_MIN_UNDERWRITE_DURATION = 2 * 60 * 60 * 1000;
+
+const MIN_ALLOWED_MIN_UNDERWRITE_DURATION = 30 * 60 * 1000;
 
 interface DefaultExpirerWorkerData {
     enabled: boolean;
@@ -23,19 +25,21 @@ interface DefaultExpirerWorkerData {
     maxTries: number;
     maxPendingTransactions: number;
     expireBlocksMargin: number;
+    minUnderwriteDuration: number;
 }
 
 export interface ExpirerWorkerData {
     enabled: boolean;
     chainId: string;
     chainName: string;
-    pools: PoolConfig[];
     rpc: string;
+    resolver: string | null;
     retryInterval: number;
     processingInterval: number;
     maxTries: number;
     maxPendingTransactions: number;
     expireBlocksMargin: number;
+    minUnderwriteDuration: number;
     underwriterPublicKey: string;
     monitorPort: MessagePort;
     walletPort: MessagePort;
@@ -64,11 +68,17 @@ export class ExpirerService implements OnModuleInit {
     private async initializeWorkers(): Promise<void> {
         const defaultWorkerConfig = this.loadDefaultWorkerConfig();
 
-        const pools = this.loadPools();
+        for (const [chainId,] of this.configService.chainsConfig) {
 
-        for (const [chainId, ] of this.configService.chainsConfig) {
+            const workerData = await this.loadWorkerConfig(chainId, defaultWorkerConfig);
 
-            const workerData = await this.loadWorkerConfig(chainId, pools, defaultWorkerConfig);
+            if (workerData == null) {
+                this.loggerService.error(
+                    { chainId },
+                    'Unable to load worker config. Skipping worker for chain.'
+                );
+                continue;
+            }
 
             if (!workerData.enabled) {
                 this.loggerService.warn(
@@ -122,44 +132,55 @@ export class ExpirerService implements OnModuleInit {
             ?? DEFAULT_EXPIRER_MAX_PENDING_TRANSACTIONS;
         const expireBlocksMargin = globalExpirerConfig.expireBlocksMargin
             ?? DEFAULT_EXPIRER_EXPIRE_BLOCK_MARGIN;
-    
+        const minUnderwriteDuration = globalExpirerConfig.minUnderwriteDuration
+            ?? DEFAULT_EXPIRER_MIN_UNDERWRITE_DURATION;
+
         return {
             enabled,
             retryInterval,
             processingInterval,
             maxTries,
             maxPendingTransactions,
-            expireBlocksMargin
+            expireBlocksMargin,
+            minUnderwriteDuration
         }
     }
 
     private async loadWorkerConfig(
         chainId: string,
-        pools: PoolConfig[],
         defaultConfig: DefaultExpirerWorkerData
-    ): Promise<ExpirerWorkerData> {
+    ): Promise<ExpirerWorkerData | null> {
 
         const chainConfig = this.configService.chainsConfig.get(chainId);
         if (chainConfig == undefined) {
             throw new Error(`Unable to load config for chain ${chainId}`);
         }
 
-        //TODO do we need this?
-        // Only pass pools that contain a vault on the desired chainId
-        const filteredPools = pools.filter(pool => {
-            return pool.vaults.some((vault) => vault.chainId == chainId)
-        });
-
         const chainExpirerConfig = chainConfig.expirer;
         const chainUnderwriterConfig = chainConfig.underwriter;
+
+        const minUnderwriteDuration = chainExpirerConfig.minUnderwriteDuration
+            ?? defaultConfig.minUnderwriteDuration;
+        if (minUnderwriteDuration < MIN_ALLOWED_MIN_UNDERWRITE_DURATION) {
+            this.loggerService.error(
+                {
+                    chainId,
+                    minUnderwriteDuration,
+                    minAllowedMinUnderwriteDuration: MIN_ALLOWED_MIN_UNDERWRITE_DURATION
+                },
+                `Specified 'minUnderwriteDuration' is too small. Skipping expirer worker.`
+            );
+            return null;
+        }
+
         return {
             enabled: defaultConfig.enabled
                 && chainExpirerConfig.enabled != false,
 
             chainId,
             chainName: chainConfig.name,
-            pools: filteredPools,
             rpc: chainConfig.rpc,
+            resolver: chainConfig.resolver,
 
             retryInterval: chainExpirerConfig.retryInterval
                 ?? chainUnderwriterConfig.retryInterval
@@ -175,41 +196,13 @@ export class ExpirerService implements OnModuleInit {
                 ?? defaultConfig.maxPendingTransactions,
             expireBlocksMargin: chainExpirerConfig.expireBlocksMargin
                 ?? defaultConfig.expireBlocksMargin,
+            minUnderwriteDuration,
 
             underwriterPublicKey: this.walletService.publicKey,
             monitorPort: await this.monitorService.attachToMonitor(chainId),
             walletPort: await this.walletService.attachToWallet(chainId),
             loggerOptions: this.loggerService.loggerOptions
         };
-    }
-
-    private loadPools(): PoolConfig[] {
-
-        const pools: PoolConfig[] = [];
-
-        for (const [, poolConfig] of this.configService.poolsConfig) {
-            pools.push({
-                id: poolConfig.id,
-                name: poolConfig.name,
-                amb: poolConfig.amb,
-                vaults: poolConfig.vaults.map(vault => {
-                    const transformedChannels: Record<string, string> = {}
-                    for (const [channelId, chainId] of Object.entries(vault.channels)) {
-                        transformedChannels[channelId.toLowerCase()] = chainId; // Important for when matching vaults
-                    }
-
-                    return {
-                        name: vault.name,
-                        chainId: vault.chainId,
-                        vaultAddress: vault.vaultAddress.toLowerCase(), // Important for when matching vaults
-                        interfaceAddress: vault.interfaceAddress.toLowerCase(), // Important for when matching vaults
-                        channels: transformedChannels
-                    }
-                })
-            });
-        }
-
-        return pools;
     }
 
     private initiateIntervalStatusLog(): void {

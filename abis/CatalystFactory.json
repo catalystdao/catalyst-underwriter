@@ -1,0 +1,361 @@
+[
+    {
+        "type": "constructor",
+        "inputs": [
+            {
+                "name": "defaultOwner",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "payable"
+    },
+    {
+        "type": "function",
+        "name": "_defaultGovernanceFee",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint64",
+                "internalType": "uint64"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "_governanceFeeDestination",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "cancelOwnershipHandover",
+        "inputs": [],
+        "outputs": [],
+        "stateMutability": "payable"
+    },
+    {
+        "type": "function",
+        "name": "completeOwnershipHandover",
+        "inputs": [
+            {
+                "name": "pendingOwner",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "payable"
+    },
+    {
+        "type": "function",
+        "name": "deployVault",
+        "inputs": [
+            {
+                "name": "vaultTemplate",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "assets",
+                "type": "address[]",
+                "internalType": "address[]"
+            },
+            {
+                "name": "init_balances",
+                "type": "uint256[]",
+                "internalType": "uint256[]"
+            },
+            {
+                "name": "weights",
+                "type": "uint256[]",
+                "internalType": "uint256[]"
+            },
+            {
+                "name": "amp",
+                "type": "uint64",
+                "internalType": "uint64"
+            },
+            {
+                "name": "vaultFee",
+                "type": "uint64",
+                "internalType": "uint64"
+            },
+            {
+                "name": "name",
+                "type": "string",
+                "internalType": "string"
+            },
+            {
+                "name": "symbol",
+                "type": "string",
+                "internalType": "string"
+            },
+            {
+                "name": "chainInterface",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "vault",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "isCreatedByFactory",
+        "inputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "owner",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "result",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "ownershipHandoverExpiresAt",
+        "inputs": [
+            {
+                "name": "pendingOwner",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "result",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "renounceOwnership",
+        "inputs": [],
+        "outputs": [],
+        "stateMutability": "payable"
+    },
+    {
+        "type": "function",
+        "name": "requestOwnershipHandover",
+        "inputs": [],
+        "outputs": [],
+        "stateMutability": "payable"
+    },
+    {
+        "type": "function",
+        "name": "setDefaultGovernanceFee",
+        "inputs": [
+            {
+                "name": "fee",
+                "type": "uint64",
+                "internalType": "uint64"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "setGovernanceFeeDestination",
+        "inputs": [
+            {
+                "name": "feeDestination",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "transferOwnership",
+        "inputs": [
+            {
+                "name": "newOwner",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "payable"
+    },
+    {
+        "type": "event",
+        "name": "OwnershipHandoverCanceled",
+        "inputs": [
+            {
+                "name": "pendingOwner",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "OwnershipHandoverRequested",
+        "inputs": [
+            {
+                "name": "pendingOwner",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "OwnershipTransferred",
+        "inputs": [
+            {
+                "name": "oldOwner",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "newOwner",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SetDefaultGovernanceFee",
+        "inputs": [
+            {
+                "name": "fee",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "SetGovernanceFeeDestination",
+        "inputs": [
+            {
+                "name": "newFeeDestination",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "VaultDeployed",
+        "inputs": [
+            {
+                "name": "vaultTemplate",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "chainInterface",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "deployer",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "vaultAddress",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "assets",
+                "type": "address[]",
+                "indexed": false,
+                "internalType": "address[]"
+            },
+            {
+                "name": "k",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "error",
+        "name": "AlreadyInitialized",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "NewOwnerIsZeroAddress",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "NoHandoverRequest",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "Unauthorized",
+        "inputs": []
+    }
+]

@@ -12,7 +12,6 @@ export enum SwapStatus {
 }
 
 export interface SwapDescription {
-    poolId: string;
     fromChainId: string;
     toChainId: string;
     fromVault: string;
@@ -21,47 +20,64 @@ export interface SwapDescription {
 
 export interface SwapState {
 
-    // Trusted fields (provided by the listener)
-    poolId: string;
+    // Trusted fields (these define the entry)
     fromChainId: string;
     fromVault: string;
-
-    // Common swap fields (derived from events)
-    status: SwapStatus;
-    toChainId: string;
     swapId: string;
-    toVault: string;
-    toAccount: string;
-    fromAsset: string;
-    swapAmount: bigint;
-    units: bigint;
 
-    toAsset?: string;
-    calldata?: string;
-
-    underwriteId?: string;
-    underwriteTxhash?: string;
+    // Derived from event-specific details
+    status: SwapStatus;
 
     // Event-specific details
-    sendAssetEvent?: SendAssetEventDetails;
-    receiveAssetEvent?: ReceiveAssetEventDetails;
+    ambMessageSendAssetDetails?: AMBMessageSendAssetDetails;
+    additionalSendAssetDetails?: AdditionalSendAssetDetails;
+    sendAssetCompletionDetails?: ReceiveAssetEventDetails | FulfillUnderwriteEventDetails;
 }
 
-export interface SendAssetEventDetails extends TransactionDescription {
+// ! The following must be populated using AMB message data, **NOT** using SendAsset events, as
+// ! these could be malicious.
+export interface AMBMessageSendAssetDetails extends TransactionDescription {
+    // Relayer AMB message data
+    amb: string;
+    toChainId: string;
+    messageIdentifier: string;
+    transactionBlockNumber: number; // Might be different from the 'blockNumber' (e.g. arbitrum)
+
+    // Decoded GeneralisedIncentives data
+    toIncentivesAddress: string;
+    toApplication: string;
+    deadline: bigint;
+    maxGasDelivery: bigint;
+
+    // Derived swap data
     fromChannelId: string;
+
+    // Decoded swap data (from AMB message)
+    fromVault: string; // ! It must be verified that this field matches the 'fromVault' of the 'SwapState'.
+    toVault: string;
+    toAccount: string;
+    units: bigint;
     toAssetIndex: bigint;
-    fromAmount: bigint;
-    fee: bigint;
     minOut: bigint;
+    swapAmount: bigint;
+    fromAsset: string;
+    blockNumberMod: bigint;
     underwriteIncentiveX16: bigint;
-    observedAtBlockNumber: number;
+    calldata: string;
+
+    // Additional data
+    blockTimestamp: number;
+}
+
+export interface AdditionalSendAssetDetails {
+    toAsset: string;
+    expectedUnderwriteId: string;
 }
 
 export interface ReceiveAssetEventDetails extends TransactionDescription {
-    toChannelId: string;
-    toAsset: string;
-    toAmount: bigint;
-    sourceBlockNumberMod: number;
+}
+
+export interface SwapUnderwrittenEvent extends TransactionDescription {
 }
 
 
@@ -73,14 +89,12 @@ export enum UnderwriteStatus {
 }
 
 export interface ExpectedUnderwriteDescription {
-    poolId: string;
     toChainId: string;
     toInterface: string;
     underwriteId: string;
 }
 
 export interface ActiveUnderwriteDescription {
-    poolId: string;
     toChainId: string;
     toInterface: string;
     underwriter: string;
@@ -89,7 +103,6 @@ export interface ActiveUnderwriteDescription {
 }
 
 export interface CompletedUnderwriteDescription {
-    poolId: string;
     toChainId: string;
     toInterface: string;
     underwriteId: string;
@@ -114,8 +127,6 @@ export interface UnderwriteState {
 }
 
 export interface SwapUnderwrittenEventDetails extends TransactionDescription {
-    poolId: string; // The 'poolId' is registered here as it is not possible to derive it from the
-                    // other events' data.
     underwriter: string;
     expiry: number;
     targetVault: string;
@@ -123,6 +134,7 @@ export interface SwapUnderwrittenEventDetails extends TransactionDescription {
     units: bigint;
     toAccount: string;
     outAmount: bigint;
+    blockTimestamp: number;
 };
 
 export interface FulfillUnderwriteEventDetails extends TransactionDescription {};

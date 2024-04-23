@@ -1,155 +1,248 @@
 import { Global, Injectable, OnModuleInit } from '@nestjs/common';
-import { join } from 'path';
-import { LoggerOptions } from 'pino';
-import { Worker, MessagePort } from 'worker_threads';
+import { MessagePort, MessageChannel } from 'worker_threads';
 import { ConfigService } from 'src/config/config.service';
-import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
-import { MonitorGetPortMessage, MonitorGetPortResponse } from './monitor.types';
+import { LoggerService } from 'src/logger/logger.service';
+import WebSocket from "ws";
 import { tryErrorToString } from 'src/common/utils';
+import pino, { LoggerOptions } from 'pino';
+import { MonitorStatusMessage } from './monitor.types';
+import Ajv from "ajv"
+import { AnyValidateFunction } from "ajv/dist/core"
 
-export const DEFAULT_MONITOR_INTERVAL = 5000;
+export const DEFAULT_MONITOR_RETRY_INTERVAL = 2000;
 export const DEFAULT_MONITOR_BLOCK_DELAY = 0;
 
-
-interface DefaultMonitorWorkerData {
-    interval: number,
-    blockDelay: number,
+interface MonitorConfig {
+    retryInterval: number;
 }
 
-export interface MonitorWorkerData {
-    chainId: string,
-    chainName: string,
-    rpc: string,
-    blockDelay: number,
-    interval: number,
-    loggerOptions: LoggerOptions
+interface MonitorChainConfig {
+    blockDelay: number;
+    ports: MessagePort[];
+}
+
+// TODO use the ajv instance used by the config service.
+const BYTES_32_HEX_EXPR = '^0x[0-9a-fA-F]{64}$';  // '0x' + 32 bytes (64 chars)
+const MONITOR_EVENT_SCHEMA = {
+    $id: "monitor-event-schema",
+    type: "object",
+    properties: {
+        chainId: {
+            type: "string",
+            minLength: 1,
+        },
+        blockNumber: {
+            type: "number",
+            exclusiveMinimum: 0,
+        },
+        blockHash: {
+            type: "string",
+            pattern: BYTES_32_HEX_EXPR
+        },
+        timestamp: {
+            type: "number",
+            exclusiveMinimum: 0,
+        },
+    },
+    required: ["chainId", "blockNumber", "blockHash", "timestamp"],
+    additionalProperties: false,
+}
+
+interface MonitorEvent {
+    chainId: string;
+    blockNumber: number;
+    blockHash: string;
+    timestamp: number;
 }
 
 @Global()
 @Injectable()
 export class MonitorService implements OnModuleInit {
-    private workers: Record<string, Worker | null> = {};
-    private requestPortMessageId = 0;
+
+    private readonly logger: pino.Logger;
+
+    private readonly config: MonitorConfig;
+    private readonly chainConfig: Map<string, MonitorChainConfig>;
+
+    private readonly monitorEventValidator: AnyValidateFunction;
 
     constructor(
         private readonly configService: ConfigService,
-        private readonly loggerService: LoggerService,
-    ) { }
+        loggerService: LoggerService,
+    ) {
+        this.logger = this.initializeLogger(loggerService.loggerOptions);
+
+        this.config = this.loadConfig();
+        this.chainConfig = this.loadChainConfig();
+
+        this.monitorEventValidator = this.loadMonitorEventValidator();
+        this.startListeningToRelayerMonitor();
+    }
+
+    private initializeLogger(loggerOptions: LoggerOptions): pino.Logger {
+        return pino(loggerOptions).child({
+            worker: 'monitor',
+        });
+    }
+
+    private loadConfig(): MonitorConfig {
+        const monitorGlobalConfig = this.configService.globalConfig.monitor;
+        return {
+            retryInterval: monitorGlobalConfig.retryInterval
+                ?? DEFAULT_MONITOR_RETRY_INTERVAL,
+        };
+    }
+
+    private loadChainConfig(): Map<string, MonitorChainConfig> {
+
+        const loadedChainConfig = new Map<string, MonitorChainConfig>();
+
+        const monitorGlobalConfig = this.configService.globalConfig.monitor;
+        for (const [chainId, chainConfig] of this.configService.chainsConfig) {
+            const monitorChainConfig = chainConfig.monitor;
+
+            loadedChainConfig.set(
+                chainId,
+                {
+                    blockDelay: monitorChainConfig.blockDelay
+                        ?? monitorGlobalConfig.blockDelay
+                        ?? DEFAULT_MONITOR_BLOCK_DELAY,
+                    ports: []
+                }
+            )
+        }
+
+        return loadedChainConfig;
+    }
+
+    private loadMonitorEventValidator(): AnyValidateFunction<unknown> {
+        const ajv = new Ajv({ strict: true });
+        ajv.addSchema(MONITOR_EVENT_SCHEMA);
+
+        const verifier = ajv.getSchema('monitor-event-schema');
+        if (verifier == undefined) {
+            throw new Error('Unable to load the \'monitor-event\' schema.');
+        }
+
+        return verifier;
+    }
 
     onModuleInit() {
-        this.loggerService.info(`Starting Monitor on all chains...`);
-
-        this.initializeWorkers();
-
-        this.initiateIntervalStatusLog();
+        this.logger.info(`Starting Monitor...`);
     }
 
-    private initializeWorkers(): void {
-        const defaultWorkerConfig = this.loadDefaultWorkerConfig();
 
-        for (const [chainId, ] of this.configService.chainsConfig) {
+    attachToMonitor(chainId: string): MessagePort {
+        const chainConfig = this.chainConfig.get(chainId);
 
-            const workerData = this.loadWorkerConfig(chainId, defaultWorkerConfig);
-
-            const worker = new Worker(join(__dirname, 'monitor.worker.js'), {
-                workerData
-            });
-            this.workers[chainId] = worker;
-
-            worker.on('error', (error) =>
-                this.loggerService.fatal(
-                    { error: tryErrorToString(error), chainId },
-                    `Error on monitor worker.`,
-                ),
-            );
-
-            worker.on('exit', (exitCode) => {
-                this.workers[chainId] = null;
-                this.loggerService.fatal(
-                    { exitCode, chainId },
-                    `Monitor worker exited.`,
-                );
-            });
-        }
-    }
-
-    private loadDefaultWorkerConfig(): DefaultMonitorWorkerData {
-        const globalConfig = this.configService.globalConfig;
-        const globalMonitorConfig = globalConfig.monitor;
-
-        const blockDelay = globalConfig.blockDelay ?? DEFAULT_MONITOR_BLOCK_DELAY;
-        const interval = globalMonitorConfig.interval ?? DEFAULT_MONITOR_INTERVAL;
-
-        return {
-            interval,
-            blockDelay,
-        }
-    }
-
-    private loadWorkerConfig(
-        chainId: string,
-        defaultConfig: DefaultMonitorWorkerData
-    ): MonitorWorkerData {
-
-        const chainConfig = this.configService.chainsConfig.get(chainId);
         if (chainConfig == undefined) {
-            throw new Error(`Unable to load config for chain ${chainId}`);
+            throw new Error(`Monitor does not support chain ${chainId}`);
         }
 
-        const chainMonitorConfig = chainConfig.monitor;
-        return {
-            chainId,
-            chainName: chainConfig.name,
-            rpc: chainConfig.rpc,
-            blockDelay: chainConfig.blockDelay ?? defaultConfig.blockDelay,
-            interval: chainMonitorConfig.interval ?? defaultConfig.interval,
-            loggerOptions: this.loggerService.loggerOptions
-        };
+        const { port1, port2 } = new MessageChannel();
+        chainConfig.ports.push(port1);
+
+        return port2;
     }
 
-    private initiateIntervalStatusLog(): void {
-        const logStatus = () => {
-            const activeWorkers = [];
-            const inactiveWorkers = [];
-            for (const chainId of Object.keys(this.workers)) {
-                if (this.workers[chainId] != null) activeWorkers.push(chainId);
-                else inactiveWorkers.push(chainId);
-            }
-            const status = {
-                activeWorkers,
-                inactiveWorkers,
-            };
-            this.loggerService.info(status, 'Monitor workers status.');
-        };
-        setInterval(logStatus, STATUS_LOG_INTERVAL);
-    }
+    private startListeningToRelayerMonitor(): void {
+        this.logger.info(`Start listening to the relayer for new monitor events.`);
 
+        const wsUrl = `http://${process.env['RELAYER_HOST']}:${process.env['RELAYER_PORT']}/`;
+        const ws = new WebSocket(wsUrl);
 
-    private getNextRequestPortMessageId(): number {
-        return this.requestPortMessageId++;
-    }
-
-    async attachToMonitor(chainId: string): Promise<MessagePort> {
-        const worker = this.workers[chainId];
-
-        if (worker == undefined) {
-            throw new Error(`Monitor does not exist for chain ${chainId}`);
-        }
-
-        const messageId = this.getNextRequestPortMessageId();
-        const portPromise = new Promise<MessagePort>((resolve) => {
-            const listener = (data: MonitorGetPortResponse) => {
-                if (data.messageId == messageId) {
-                    worker.off("message", listener);
-                    resolve(data.port);
+        ws.on("open", () => {
+            ws.send(
+                JSON.stringify({ event: "monitor" }),
+                (error) => {
+                    if (error != null) {
+                        this.logger.error("Failed to subscribe to 'monitor' events.");
+                    }
                 }
-            };
-            worker.on("message", listener);
-
-            const portMessage: MonitorGetPortMessage = { messageId };
-            worker.postMessage(portMessage);
+            );
         });
 
-        return portPromise;
+        ws.on("error", (error) => {
+            this.logger.warn(
+                {
+                    wsUrl,
+                    error: tryErrorToString(error)
+                },
+                'Error on websocket connection.'
+            );
+        });
+
+        ws.on("close", (exitCode) => {
+            this.logger.warn(
+                {
+                    wsUrl,
+                    exitCode,
+                    retryInterval: this.config.retryInterval
+                },
+                'Websocket connection with the relayer closed. Will attempt reconnection.'
+            );
+
+            setTimeout(() => this.startListeningToRelayerMonitor(), this.config.retryInterval);
+        });
+
+        ws.on("message", (data) => {
+            const parsedMessage = JSON.parse(data.toString());
+
+            if (parsedMessage.event == "monitor") {
+                const monitorEvent = parsedMessage.data;
+                if (monitorEvent == undefined) {
+                    this.logger.debug(
+                        { parsedMessage },
+                        "No data present on 'monitor' event."
+                    );
+                    return;
+                }
+
+                const isEventValid = this.monitorEventValidator(monitorEvent);
+                if (!isEventValid) {
+                    this.logger.debug(
+                        { monitorEvent },
+                        "Skipping monitor event: object schema invalid."
+                    );
+                    return;
+                }
+
+
+                this.handleMonitorEvent(monitorEvent);
+            } else {
+                this.logger.warn(
+                    { message: data },
+                    "Unknown message type received on websocket connection.",
+                )
+            }
+        });
+    }
+
+    private handleMonitorEvent(event: MonitorEvent): void {
+
+        const eventChainId = event.chainId;
+
+        const chainConfig = this.chainConfig.get(eventChainId);
+        if (chainConfig == undefined) {
+            this.logger.debug(
+                { chainId: eventChainId },
+                `Skipping monitor event: chain not supported.`
+            );
+            return;
+        }
+
+        this.logger.debug(
+            { chainId: event.chainId, blockNumber: event.blockNumber },
+            "Monitor event received.",
+        );
+
+        const status: MonitorStatusMessage = {
+            blockNumber: Math.max(0, event.blockNumber - chainConfig.blockDelay)
+        };
+
+        for (const port of chainConfig.ports) {
+            port.postMessage(status);
+        }
+
     }
 }

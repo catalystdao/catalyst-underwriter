@@ -14,7 +14,7 @@ async function logLoadedOptions(
             globalConfig: configService.globalConfig,
             ambsConfig: Object.fromEntries(configService.ambsConfig),
             chainsConfig: Object.fromEntries(configService.chainsConfig),
-            poolsConfig: Object.fromEntries(configService.poolsConfig)
+            endpointsConfig: Object.fromEntries(configService.endpointsConfig)
         },
         `Underwriter initialized.`,
     );

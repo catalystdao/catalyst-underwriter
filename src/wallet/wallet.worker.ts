@@ -4,7 +4,6 @@ import pino, { LoggerOptions } from "pino";
 import { workerData, parentPort, MessageChannel, MessagePort } from 'worker_threads';
 import { wait } from "src/common/utils";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
-import { Store } from "src/store/store.lib";
 import { TransactionHelper } from "./transaction-helper";
 import { ConfirmQueue } from "./queues/confirm-queue";
 import { WalletWorkerData } from "./wallet.service";
@@ -13,27 +12,26 @@ import { SubmitQueue } from "./queues/submit-queue";
 
 
 class WalletWorker {
-    readonly store: Store;
-    readonly logger: pino.Logger;
+    private readonly logger: pino.Logger;
 
-    readonly config: WalletWorkerData;
+    private readonly config: WalletWorkerData;
 
-    readonly provider: JsonRpcProvider;
-    readonly signer: Wallet;
+    private readonly provider: JsonRpcProvider;
+    private readonly signer: Wallet;
 
-    readonly chainId: string;
-    readonly chainName: string;
+    private readonly chainId: string;
+    private readonly chainName: string;
 
-    readonly transactionHelper: TransactionHelper;
+    private readonly transactionHelper: TransactionHelper;
 
-    readonly submitQueue: SubmitQueue;
-    readonly confirmQueue: ConfirmQueue;
-    readonly newRequestsQueue: WalletTransactionRequest[] = [];
+    private readonly submitQueue: SubmitQueue;
+    private readonly confirmQueue: ConfirmQueue;
+    private readonly newRequestsQueue: WalletTransactionRequest[] = [];
 
     private isStalled = false;
 
     private portsCount = 0;
-    readonly ports: Record<number, MessagePort> = {};
+    private readonly ports: Record<number, MessagePort> = {};
 
 
     constructor() {
@@ -111,7 +109,7 @@ class WalletWorker {
         signer: Wallet,
         logger: pino.Logger,
     ): [SubmitQueue, ConfirmQueue] {
-        
+
         const submitQueue = new SubmitQueue(
             retryInterval,
             maxTries,
@@ -369,16 +367,16 @@ class WalletWorker {
                     txRequest: transaction.txRequest,
                     metadata: transaction.metadata,
                     options: transaction.options,
-                    requeueCount: transaction.requeueCount+1,
+                    requeueCount: transaction.requeueCount + 1,
                 };
-                
+
                 await this.submitQueue.addOrders(requeueRequest);
             } else {
                 this.logger.debug(
                     logDescription,
                     `Unsuccessful transaction processing: transaction rejected.`,
                 );
-    
+
                 this.sendResult(transaction, transaction.tx, undefined, undefined, transaction.confirmationError);
             }
         }
@@ -405,7 +403,7 @@ class WalletWorker {
                 // NOTE: cannot use the 'transactionHelper' for querying of the transaction nonce, as the
                 // helper takes into account the 'pending' transactions.
                 const latestNonce = await this.signer.getNonce('latest');
-    
+
                 if (latestNonce > cancelTxNonce) {
                     return null;
                 }
@@ -483,6 +481,7 @@ class WalletWorker {
         const port = this.ports[request.portId];
         if (port == undefined) {
             this.logger.error({ request }, 'Failed to send transaction result: invalid portId.')
+            return;
         }
 
         const response: WalletTransactionRequestResponse = {

@@ -2,14 +2,11 @@
 global:
   privateKey: ""      # The privateKey of the account that will be submitting the underwrites
   logLevel: "debug"
-  blockDelay: 5       # Delay with which to process the chain blocks. Use this to prevent handling
-                      # blocks that eventually reorg.
-                      # TODO If the 'monitor' service is moved to the Relayer, this config must
-                      # TODO be implemented on the 'listener' directly.
 
-  # TODO the monitor should be moved to the 'Relayer'
   monitor:
-    interval: 5000    # Interval at which to update the chains status fromt the RPCs
+    blockDelay: 5               # Delay with which to process the chain blocks (on top of the relayer's
+                                # blockDelay). Use this to prevent handling blocks that eventually reorg.
+    retryInterval: 5000         # Time to wait before retrying connection with the relayer's monitor
 
   listener:
     processingInterval: 100     # Throttle for the Listener main 'run' loop
@@ -22,17 +19,26 @@ global:
     processingInterval: 100     # Throttle for the Underwriter main 'run' loop
     maxTries: 3                 # Maximum tries for an underwrite
     maxPendingTransactions: 50  # Maximum number of orders within the 'underwrite' pipeline
-    underwriteBlocksMargin: 50  # Number of blocks after a swap's execution before which it is
-                                # allowed to be underwritten.
+    minRelayDeadlineDuration:   # Minimum time specified on the message relay incentive 'deadline'
+      86400000                  # (prevent underwriting a packet with too short of a deadline.)
     underwriteDelay: 500        # Time to wait before start processing an underwrite (used to allow
                                 # the relayer to process any relevant related data).
+    maxUnderwriteDelay: 300000  # Maximum time before which to evaluate the underwrite (since the
+                                # orignal swap is executed.)
     maxSubmissionDelay: 300000  # Maximum time for the wallet to submit the 'underwrite' transaction.
+
+    allowanceBuffer: 1.05       # Extra buffer allowed on top of the calculated required funds for
+                                # performing an underwrite.
 
     maxUnderwriteAllowed: "10000000000000000000"  # Maximum tokens to risk on a single underwrite
     minUnderwriteReward: "10000000000"           # Minimum acceptable token reward for an underwrite
     lowTokenBalanceWarning: "1000000000000000000" # Token balance below which a 'low balance' warning is emitted.
     tokenBalanceUpdateInterval: 50                # Number of transactions after which to update the 
-                                                  # Underwriter token balance from the rpc. 
+                                                  # Underwriter token balance from the rpc.
+
+    # ! The following setting is here for illustrative purposes, but it MUST ALWAYS be applied on
+    # ! a per-chain basis as it is CRITICAL to prevent the underwriter from being stolen from.
+    # minMaxGasDelivery: 100000
 
   expirer:
     enabled: true               # Defaults to 'true' if the key is missing. Disabling the expirer. (Not recommended!)
@@ -86,6 +92,9 @@ chains:
     name: "Sepolia"
     rpc: "https://eth-sepolia-public.unifra.io"
 
+    underwriter:
+      minMaxGasDelivery: 100000 #TODO set value
+
     # The tokens that are to be undewritten
     tokens:
       - name: "Wrapped gas"
@@ -102,54 +111,77 @@ chains:
         tokenBalanceUpdateInterval: 50
 
     # Overrides
-    blockDelay: 2
+    monitor:
+      blockDelay: 2
   
 
   - chainId: 421614
     name: 'Arbitrum Sepolia'
     rpc: 'https://sepolia-rollup.arbitrum.io/rpc' # NOTE: This rpc errors easily with a 'requests rate too high' error
-    blockDelay: 12
+    resolver: 'arbitrum'                          # Special logic is required for Arbitrum because of how it handles block numbers
+    underwriter:
+      minMaxGasDelivery: 100000 #TODO set value
     tokens:
       - name: 'WETH'
         address: '0xC8bF2D5c0D6bEC807c21EF4cef2f1fd3bf16947e'
         allowanceBuffer: '10000000000000000000'
     monitor:
-      interval: 2000
+      blockDelay: 12
 
   - chainId: 11155420
     name: 'OP Sepolia'
     rpc: 'https://sepolia.optimism.io'
+    underwriter:
+      minMaxGasDelivery: 100000 #TODO set value
     tokens:
       - name: 'WETH'
         address: '0x1BDD24840e119DC2602dCC587Dd182812427A5Cc'
         allowanceBuffer: '10000000000000000000'
-    monitor:
-      interval: 2000
 
-# Pools to underwrite configuration
-pools:
-  - id: 0
-    name: 'WormholeSepoliaOptimismArbitrum'
+
+endpoints:
+
+  - name: 'Sepolia Tiger Testnet'
     amb: 'wormhole'
-    vaults:
-      - name: 'Sepolia Tiger Testnet Vault'
-        chainId: 11155111
-        vaultAddress: '0xbd529ff730dae029fa85b38d98d6046721215fa4'
-        interfaceAddress: '0x169e7e77e463ffe86b30afd1605a09a632bea5b0'
-        channels:
-          '0x0000000000000000000000000000000000000000000000000000000000002713': 421614
-          '0x0000000000000000000000000000000000000000000000000000000000002715': 11155420
-      - name: 'Arbitrum Sepolia Tiger Testnet Vault'
-        chainId: 421614
-        vaultAddress: '0xbd529ff730dae029fa85b38d98d6046721215fa4'
-        interfaceAddress: '0xf779d8e1b07f1e3df141a81c4f1f7d65c0a38611'
-        channels:
-          '0x0000000000000000000000000000000000000000000000000000000000002712': 11155111
-          '0x0000000000000000000000000000000000000000000000000000000000002715': 11155420
-      - name: 'Optimism Sepolia Tiger Testnet Vault'
-        chainId: 11155420
-        vaultAddress: '0xbd529ff730dae029fa85b38d98d6046721215fa4'
-        interfaceAddress: '0x2603e874d589373a0c4766808b93e3d4b63164c8'
-        channels:
-          '0x0000000000000000000000000000000000000000000000000000000000002712': 11155111
-          '0x0000000000000000000000000000000000000000000000000000000000002713': 421614
+    chainId: 11155111
+    factoryAddress: "0x343A85b1e0383A50D65adB5ed88B06cCF4187606"
+    interfaceAddress: "0x169e7e77e463ffe86b30afd1605a09a632bea5b0"
+    incentivesAddress: "0x45C140Dd2526E4bfD1c2A5Bb0Aa6aA1DB00b1744"
+    channelsOnDestination:
+      421614: '0x0000000000000000000000000000000000000000000000000000000000002712'
+      11155420: '0x0000000000000000000000000000000000000000000000000000000000002712'
+    vaultTemplates:
+      - name: "Volatile"
+        address: "0x11A13784007510006c83978D1d0C82385df3A663"
+      - name: "Amplified"
+        address: "0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d"
+
+  - name: 'Arbitrum Sepolia Tiger Testnet'
+    amb: 'wormhole'
+    chainId: 421614
+    factoryAddress: "0x343A85b1e0383A50D65adB5ed88B06cCF4187606"
+    interfaceAddress: "0xf779d8e1b07f1e3df141a81c4f1f7d65c0a38611"
+    incentivesAddress: "0xdF25f1BdE09Cee5ac1e6ef8dFA7113addBd58B28"
+    channelsOnDestination:
+      11155111: '0x0000000000000000000000000000000000000000000000000000000000002713'
+      11155420: '0x0000000000000000000000000000000000000000000000000000000000002713'
+    vaultTemplates:
+      - name: "Volatile"
+        address: "0x11A13784007510006c83978D1d0C82385df3A663"
+      - name: "Amplified"
+        address: "0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d"
+
+  - name: 'Optimism Sepolia Tiger Testnet'
+    amb: 'wormhole'
+    chainId: 11155420
+    factoryAddress: "0x343A85b1e0383A50D65adB5ed88B06cCF4187606"
+    interfaceAddress: "0x2603e874d589373a0c4766808b93e3d4b63164c8"
+    incentivesAddress: "0xbDFD9163d8Cee1368698B023369f9A5Fd319A40F"
+    channelsOnDestination:
+      11155111: '0x0000000000000000000000000000000000000000000000000000000000002715'
+      421614: '0x0000000000000000000000000000000000000000000000000000000000002715'
+    vaultTemplates:
+      - name: "Volatile"
+        address: "0x11A13784007510006c83978D1d0C82385df3A663"
+      - name: "Amplified"
+        address: "0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d"

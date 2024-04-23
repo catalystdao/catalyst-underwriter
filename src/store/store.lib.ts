@@ -7,8 +7,7 @@ import { SwapState, SwapDescription, SwapStatus, UnderwriteState, UnderwriteStat
 };
 
 const DEFAULT_REDIS_PORT = 6379;
-const REDIS_PORT = process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : DEFAULT_REDIS_PORT;
-const DB_INDEX = 5; //TODO make customizable via config
+const DEFAULT_REDIS_DB_INDEX = 5;
 
 //---------- STORE LAYOUT ----------//
 // The redis store is used for 2 things:
@@ -29,13 +28,15 @@ const DB_INDEX = 5; //TODO make customizable via config
 
 export class Store {
     readonly redis: Redis;
+    readonly redisHost: string | undefined;
+    readonly redisPort: number;
+    readonly redisDBIndex: number;
+
     // When a redis connection is used to listen for subscriptions, it cannot be
     // used for anything except to modify the subscription set which is being listened
     // to. As a result, we need a dedicated connection if we ever decide to listen to
     // subscriptions.
     redisSubscriptions: Redis | undefined;
-
-    readonly host: string | undefined;
 
     static readonly swapPrefix: string = 'swap';
     static readonly expectedUnderwriteToSwapDescriptionPrefix: string = 'expectedUnderwriteToSwap';
@@ -43,17 +44,32 @@ export class Store {
     static readonly activeUnderwritePrefix: string = 'activeUnderwrite';
     static readonly completedUnderwritePrefix: string = 'completedUnderwrite';
 
-    static readonly underwriterChannelPrefix: string = 'underwriter'; 
+    static readonly underwriterChannelPrefix: string = 'underwriter';
     static readonly onSendAssetChannel: string = 'onSendAsset';
     static readonly onSwapUnderwrittenChannel: string = 'onSwapUnderwritten';
     static readonly onSwapUnderwriteCompleteChannel: string = 'onSwapUnderwriteComplete';
 
     constructor() {
-        this.host = process.env.USE_DOCKER ? 'redis' : undefined;
-        this.redis = new Redis(REDIS_PORT, {
-            db: DB_INDEX,
-            host: this.host,
+        this.redisHost = this.loadRedisHost();
+        this.redisPort = this.loadRedisPort();
+        this.redisDBIndex = this.loadRedisDBIndex();
+
+        this.redis = new Redis(this.redisPort, {
+            db: this.redisDBIndex,
+            host: this.redisHost,
         });
+    }
+
+    private loadRedisHost(): string | undefined {
+        return process.env['REDIS_HOST'];
+    }
+
+    private loadRedisPort(): number {
+        return process.env['REDIS_PORT'] ? parseInt(process.env['REDIS_PORT']) : DEFAULT_REDIS_PORT;
+    }
+
+    private loadRedisDBIndex(): number {
+        return process.env['REDIS_DB_INDEX'] ? parseInt(process.env['REDIS_DB_INDEX']) : DEFAULT_REDIS_DB_INDEX;
     }
 
     async quit(): Promise<void> {
@@ -89,10 +105,10 @@ export class Store {
      */
     getOrOpenSubscription(): Redis {
         if (!this.redisSubscriptions) {
-            this.redisSubscriptions = new Redis(REDIS_PORT, {
-                db: DB_INDEX,
-                host: this.host,
-            }); 
+            this.redisSubscriptions = new Redis(this.redisPort, {
+                db: this.redisDBIndex,
+                host: this.redisHost,
+            });
         }
         return this.redisSubscriptions;
     }
@@ -164,22 +180,24 @@ export class Store {
         }
 
         const swapState = JSON.parse(query);
-        swapState.swapAmount = BigInt(swapState.swapAmount);
-        swapState.units = BigInt(swapState.units);
 
-        if (swapState.sendAssetEvent) {
-            const event = swapState.sendAssetEvent;
-            event.toAssetIndex = BigInt(event.toAssetIndex);
-            event.fromAmount = BigInt(event.fromAmount);
-            event.fee = BigInt(event.fee);
-            event.minOut = BigInt(event.minOut);
-            event.underwriteIncentiveX16 = BigInt(event.underwriteIncentiveX16);
+        if (swapState.ambMessageSendAssetDetails) {
+            const details = swapState.ambMessageSendAssetDetails;
+            details.deadline = BigInt(details.deadline);
+            details.maxGasDelivery = BigInt(details.maxGasDelivery);
+            details.units = BigInt(details.units);
+            details.toAssetIndex = BigInt(details.toAssetIndex);
+            details.minOut = BigInt(details.minOut);
+            details.swapAmount = BigInt(details.swapAmount);
+            details.blockNumberMod = BigInt(details.blockNumberMod);
+            details.underwriteIncentiveX16 = BigInt(details.underwriteIncentiveX16);
         }
-        
-        if (swapState.receiveAssetEvent) {
-            const event = swapState.receiveAssetEvent;
-            event.toAmount = BigInt(event.toAmount);
-            
+
+        if (swapState.sendAssetCompletionDetails) {
+            // TODO
+            // const event = swapState.receiveAssetEvent;
+            // event.toAmount = BigInt(event.toAmount);
+
         }
 
         return swapState as SwapState;
@@ -192,21 +210,21 @@ export class Store {
             state.fromVault,
             state.swapId,
         );
-        
+
         const currentState = await this.getSwapStateByKey(key);
         const overridingState = currentState != null;
         const newState = overridingState ? currentState : state;
 
         if (overridingState) {
             //TODO contrast the saved 'common' state with the incoming data? (e.g. fromVault, fromAsset, etc...)
-            newState.sendAssetEvent = state.sendAssetEvent
-                ?? currentState.sendAssetEvent;
-            newState.receiveAssetEvent = state.receiveAssetEvent
-                ?? currentState.receiveAssetEvent;
+            newState.ambMessageSendAssetDetails = state.ambMessageSendAssetDetails
+                ?? currentState.ambMessageSendAssetDetails;
+            newState.sendAssetCompletionDetails = state.sendAssetCompletionDetails
+                ?? currentState.sendAssetCompletionDetails;
         }
 
         // Update the swap 'status'
-        if (newState.receiveAssetEvent) {
+        if (newState.sendAssetCompletionDetails) {
             newState.status = SwapStatus.Completed;
         } else {
             newState.status = SwapStatus.Pending;
@@ -214,11 +232,10 @@ export class Store {
 
         await this.set(key, JSON.stringify(newState));
 
-        if (state.sendAssetEvent) {
+        if (state.ambMessageSendAssetDetails) {
             const swapDescription: SwapDescription = {
-                poolId: state.poolId,
                 fromChainId: state.fromChainId,
-                toChainId: state.toChainId,
+                toChainId: state.ambMessageSendAssetDetails.toChainId,
                 fromVault: state.fromVault,
                 swapId: state.swapId,
             }
@@ -231,7 +248,7 @@ export class Store {
         fromVault: string,
         swapId: string,
         toAsset: string,
-        calldata: string
+        expectedUnderwriteId: string,
     ): Promise<void> {
 
         const key = Store.getSwapStateKey(
@@ -239,15 +256,17 @@ export class Store {
             fromVault,
             swapId,
         );
-        
+
         const state = await this.getSwapStateByKey(key);
 
         if (state == null) {
             throw new Error(`Unable to store additional swap data: swap state not found (fromChainId: ${fromChainId}, fromVault: ${fromVault}, swapId: ${swapId}.`);
         }
 
-        state.toAsset = toAsset;
-        state.calldata = calldata;
+        state.additionalSendAssetDetails = {
+            toAsset,
+            expectedUnderwriteId,
+        };
 
         await this.set(key, JSON.stringify(state));
     }
@@ -464,7 +483,7 @@ export class Store {
         const newState = overridingState ? currentState : state;
 
         if (overridingState) {
-            //TODO contrast the saved 'common' state with the incoming data? (e.g. poolId, etc...)
+            //TODO contrast the saved 'common' state with the incoming data?
             newState.swapUnderwrittenEvent = state.swapUnderwrittenEvent
                 ?? currentState.swapUnderwrittenEvent;
             newState.fulfillUnderwriteEvent = state.fulfillUnderwriteEvent
@@ -496,7 +515,6 @@ export class Store {
         if (newState.status >= UnderwriteStatus.Fulfilled) {
 
             const underwriteDescription: CompletedUnderwriteDescription = {
-                poolId: newState.swapUnderwrittenEvent!.poolId,
                 toChainId: newState.toChainId,
                 toInterface: newState.toInterface,
                 underwriter: newState.swapUnderwrittenEvent!.underwriter,
@@ -529,7 +547,6 @@ export class Store {
 
         if (state.swapUnderwrittenEvent) {
             const underwriteDescription: ActiveUnderwriteDescription = {
-                poolId: state.swapUnderwrittenEvent.poolId,
                 toChainId: state.toChainId,
                 toInterface: state.toInterface,
                 underwriter: state.swapUnderwrittenEvent.underwriter,
@@ -548,7 +565,7 @@ export class Store {
             state.underwriteId,
             state.swapUnderwrittenEvent!.txHash
         );
-        
+
         //TODO log warning if key already used? (could happen on some edge cases)
         // const savedState = await this.getUnderwriteStateByKey(key);
 

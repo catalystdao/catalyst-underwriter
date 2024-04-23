@@ -13,17 +13,19 @@ export interface GlobalConfig {
 
 
 export interface MonitorGlobalConfig {
-    interval?: number;
+    blockDelay?: number;
+    retryInterval?: number;
 }
 
-export interface MonitorConfig extends MonitorGlobalConfig {}
+export interface MonitorConfig extends MonitorGlobalConfig {
+}
 
 
 export interface ListenerGlobalConfig {
     retryInterval?: number;
     processingInterval?: number;
     maxBlocks?: number;
-    startingBlock?: number;
+    startingBlock?: number; //TODO should this be here? (i.e. it shouldn't be in 'global')
 }
 
 export interface ListenerConfig extends ListenerGlobalConfig {}
@@ -35,16 +37,21 @@ export interface UnderwriterGlobalConfig {
     processingInterval?: number;
     maxTries?: number;
     maxPendingTransactions?: number;
-    underwriteBlocksMargin?: number;
+    minRelayDeadlineDuration?: bigint;
     underwriteDelay?: number;
+    maxUnderwriteDelay?: number;
     maxSubmissionDelay?: number;
+    underwritingCollateral?: number;
+    allowanceBuffer?: number;
     maxUnderwriteAllowed?: bigint;
     minUnderwriteReward?: bigint;
     lowTokenBalanceWarning?: bigint;
     tokenBalanceUpdateInterval?: number;
 }
 
-export interface UnderwriterConfig extends UnderwriterGlobalConfig {}
+export interface UnderwriterConfig extends UnderwriterGlobalConfig {
+    minMaxGasDelivery: bigint;
+}
 
 
 export interface ExpirerGlobalConfig {
@@ -54,6 +61,7 @@ export interface ExpirerGlobalConfig {
     maxTries?: number;
     maxPendingTransactions?: number;
     expireBlocksMargin?: number;
+    minUnderwriteDuration?: number;
 }
 
 export interface ExpirerConfig extends ExpirerGlobalConfig {}
@@ -68,10 +76,10 @@ export interface WalletGlobalConfig {
     confirmationTimeout?: number;
     lowGasBalanceWarning?: bigint;
     gasBalanceUpdateInterval?: number;
-    maxFeePerGas?: number | string;
-    maxAllowedPriorityFeePerGas?: number | string;
+    maxFeePerGas?: bigint;
+    maxAllowedPriorityFeePerGas?: bigint;
     maxPriorityFeeAdjustmentFactor?: number;
-    maxAllowedGasPrice?: number | string;
+    maxAllowedGasPrice?: bigint;
     gasPriceAdjustmentFactor?: number;
     priorityAdjustmentFactor?: number;
 }
@@ -92,6 +100,7 @@ export interface ChainConfig {
     chainId: string;
     name: string;
     rpc: string;
+    resolver: string | null;
     blockDelay?: number;
     tokens: TokensConfig,
     monitor: MonitorConfig;
@@ -113,15 +122,18 @@ export interface TokenConfig {
 export type TokensConfig = Record<string, TokenConfig>;
 
 
-export interface PoolConfig {
-    id: string;
+export interface EndpointConfig {
     name: string;
     amb: string;
-    vaults: {
-        name: string;
-        chainId: string;
-        vaultAddress: string;
-        interfaceAddress: string;
-        channels: Record<string, string>;
-    }[];
+    chainId: string;
+    factoryAddress: string;
+    interfaceAddress: string;
+    incentivesAddress: string;
+    channelsOnDestination: Record<string, string>;
+    vaultTemplates: VaultTemplateConfig[];
+}
+
+export interface VaultTemplateConfig {
+    name: string;
+    address: string;
 }

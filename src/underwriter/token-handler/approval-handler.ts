@@ -86,7 +86,7 @@ export class ApprovalHandler {
                 );
                 continue;
             }
-            
+
             const assetAllowanceBuffer = tokenConfig.allowanceBuffer;
 
             // Determine if the asset allowance has to be updated according to the following
@@ -130,7 +130,7 @@ export class ApprovalHandler {
                         requiredAllowance,
                     );
                     approvalPromises.push(approvalPromise);
-        
+
                 } catch {
                     // TODO is this required?
                 }
@@ -140,7 +140,7 @@ export class ApprovalHandler {
 
         await Promise.allSettled(approvalPromises);
     }
-    
+
     private async setAllowance(
         assetAddress: string,
         oldSetAllowance: bigint,
@@ -150,7 +150,7 @@ export class ApprovalHandler {
         const tokenContract = Token__factory.connect(assetAddress);
         const txData = tokenContract.interface.encodeFunctionData("approve", [
             this.interfaceAddress,
-            newSetAllowance,   
+            newSetAllowance,
         ])
         const txRequest: TransactionRequest = {
             to: assetAddress,
@@ -192,7 +192,7 @@ export class ApprovalHandler {
         if (result.submissionError || result.confirmationError) {
             //TODO do anything else if approve tx fails?
             this.logger.error(logDescription, 'Error on approval transaction.');
-            
+
             // Since the approval has not been successful, decrease the 'set' allowance register.
             this.registerSetAllowanceDecrease(
                 assetAddress,
