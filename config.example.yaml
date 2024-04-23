@@ -9,14 +9,12 @@ global:
     retryInterval: 5000         # Time to wait before retrying connection with the relayer's monitor
 
   listener:
-    processingInterval: 100     # Throttle for the Listener main 'run' loop
     maxBlocks: 1000             # Maximum number of blocks to query in a single call
 
   underwriter:
     enabled: true               # Defaults to 'true' if the key is missing. Disabling the underwriter
                                 # can be used to only handle past underwrites' expiries.
     retryInterval: 30000        # Time to wait before retrying an underwrite
-    processingInterval: 100     # Throttle for the Underwriter main 'run' loop
     maxTries: 3                 # Maximum tries for an underwrite
     maxPendingTransactions: 50  # Maximum number of orders within the 'underwrite' pipeline
     minRelayDeadlineDuration:   # Minimum time specified on the message relay incentive 'deadline'
@@ -44,7 +42,6 @@ global:
     enabled: true               # Defaults to 'true' if the key is missing. Disabling the expirer. (Not recommended!)
     # ! The following properties default to the values of the 'underwriter' if missing
     retryInterval: 30000        # Time to wait before retrying an expiry
-    processingInterval: 100     # Throttle for the Expirer main 'run' loop
     maxTries: 3                 # Maximum tries for an expiry
     maxPendingTransactions: 50  # Maximum number of orders within the 'expire' pipeline
     expireBlocksMargin: 500     # Number of blocks before the expiry deadline at which to expire
@@ -52,7 +49,6 @@ global:
 
   wallet:
     retryInterval: 30000        # Time to wait before retrying a failed transaction
-    processingInterval: 100     # Throttle for the Wallet main 'run' loop
     maxTries: 3                 # Maximum tries for a transaction
     maxPendingTransactions: 50  # Maximum number of transactions within the 'submit' pipeline
     confirmations: 1            # Number of confirmations to wait before accepting a transaction as 'completed'.
