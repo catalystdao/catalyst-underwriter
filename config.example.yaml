@@ -25,7 +25,7 @@ global:
                                 # orignal swap is executed.)
     maxSubmissionDelay: 300000  # Maximum time for the wallet to submit the 'underwrite' transaction.
 
-    allowanceBuffer: 1.05       # Extra buffer allowed on top of the calculated required funds for
+    allowanceBuffer: 0.05       # Extra buffer allowed on top of the calculated required funds for
                                 # performing an underwrite.
 
     maxUnderwriteAllowed: "10000000000000000000"  # Maximum tokens to risk on a single underwrite
