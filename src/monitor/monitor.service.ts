@@ -10,7 +10,7 @@ import Ajv from "ajv"
 import { AnyValidateFunction } from "ajv/dist/core"
 
 export const DEFAULT_MONITOR_RETRY_INTERVAL = 2000;
-export const DEFAULT_MONITOR_BLOCK_DELAY = 0;
+export const DEFAULT_MONITOR_BLOCK_DELAY = 2;
 
 interface MonitorConfig {
     retryInterval: number;
