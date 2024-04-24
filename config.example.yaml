@@ -91,6 +91,8 @@ ambs:
     enabled: true # TODO not implemented. Defaults to 'true' if the key is missing
     relayPrioritisation: true # Defaults to 'true' if the key is missing
 
+  - name: polymer
+
 # Chain configuration
 chains:
   - chainId: 11155111
