@@ -1,115 +1,125 @@
 # Global Underwriter configuration
 global:
-  privateKey: ""      # The privateKey of the account that will be submitting the underwrites
-  logLevel: "info"
+  privateKey: '' # The privateKey of the account that will be submitting the underwrites
+  logLevel: 'info'
 
   monitor:
-    blockDelay: 2               # Delay with which to process the chain blocks (on top of the relayer's
-                                # blockDelay). Use this to prevent handling blocks that eventually reorg.
-    retryInterval: 5000         # Time to wait before retrying connection with the relayer's monitor
+    blockDelay:
+      2 # Delay with which to process the chain blocks (on top of the relayer's
+      # blockDelay). Use this to prevent handling blocks that eventually reorg.
+    retryInterval: 5000 # Time to wait before retrying connection with the relayer's monitor
 
   listener:
-    maxBlocks: 1000             # Maximum number of blocks to query in a single call
+    maxBlocks: 1000 # Maximum number of blocks to query in a single call
 
   underwriter:
-    enabled: true               # Defaults to 'true' if the key is missing. Disabling the underwriter
-                                # can be used to only handle past underwrites' expiries.
-    retryInterval: 30000        # Time to wait before retrying an underwrite
-    maxTries: 3                 # Maximum tries for an underwrite
-    maxPendingTransactions: 50  # Maximum number of orders within the 'underwrite' pipeline
-    minRelayDeadlineDuration:   # Minimum time specified on the message relay incentive 'deadline'
-      86400000                  # (prevent underwriting a packet with too short of a deadline.)
-    underwriteDelay: 500        # Time to wait before start processing an underwrite (used to allow
-                                # the relayer to process any relevant related data).
-    maxUnderwriteDelay: 300000  # Maximum time before which to evaluate the underwrite (since the
-                                # orignal swap is executed.)
-    maxSubmissionDelay: 300000  # Maximum time for the wallet to submit the 'underwrite' transaction.
+    enabled:
+      true # Defaults to 'true' if the key is missing. Disabling the underwriter
+      # can be used to only handle past underwrites' expiries.
+    retryInterval: 30000 # Time to wait before retrying an underwrite
+    maxTries: 3 # Maximum tries for an underwrite
+    maxPendingTransactions: 50 # Maximum number of orders within the 'underwrite' pipeline
+    minRelayDeadlineDuration: # Minimum time specified on the message relay incentive 'deadline'
+      86400000 # (prevent underwriting a packet with too short of a deadline.)
+    underwriteDelay:
+      500 # Time to wait before start processing an underwrite (used to allow
+      # the relayer to process any relevant related data).
+    maxUnderwriteDelay:
+      300000 # Maximum time before which to evaluate the underwrite (since the
+      # orignal swap is executed.)
+    maxSubmissionDelay: 300000 # Maximum time for the wallet to submit the 'underwrite' transaction.
 
-    allowanceBuffer: 0.05       # Extra buffer allowed on top of the calculated required funds for
-                                # performing an underwrite.
+    allowanceBuffer:
+      0.05 # Extra buffer allowed on top of the calculated required funds for
+      # performing an underwrite.
 
-    maxUnderwriteAllowed: "10000000000000000000"  # Maximum tokens to risk on a single underwrite
-    minUnderwriteReward: "10000000000"           # Minimum acceptable token reward for an underwrite
-    lowTokenBalanceWarning: "1000000000000000000" # Token balance below which a 'low balance' warning is emitted.
-    tokenBalanceUpdateInterval: 50                # Number of transactions after which to update the 
-                                                  # Underwriter token balance from the rpc.
+    maxUnderwriteAllowed: '10000000000000000000' # Maximum tokens to risk on a single underwrite
+    minUnderwriteReward: '10000000000' # Minimum acceptable token reward for an underwrite
+    lowTokenBalanceWarning: '1000000000000000000' # Token balance below which a 'low balance' warning is emitted.
+    tokenBalanceUpdateInterval:
+      50 # Number of transactions after which to update the
+      # Underwriter token balance from the rpc.
 
     # ! The following setting is here for illustrative purposes, but it MUST ALWAYS be applied on
     # ! a per-chain basis as it is CRITICAL to prevent the underwriter from being stolen from.
     # minMaxGasDelivery: 100000
 
   expirer:
-    enabled: true               # Defaults to 'true' if the key is missing. Disabling the expirer. (Not recommended!)
+    enabled: true # Defaults to 'true' if the key is missing. Disabling the expirer. (Not recommended!)
     # ! The following properties default to the values of the 'underwriter' if missing
-    retryInterval: 30000        # Time to wait before retrying an expiry
-    maxTries: 3                 # Maximum tries for an expiry
-    maxPendingTransactions: 50  # Maximum number of orders within the 'expire' pipeline
-    expireBlocksMargin: 500     # Number of blocks before the expiry deadline at which to expire
-                                # an underwrite (only applies to underwrites by this underwriter)
+    retryInterval: 30000 # Time to wait before retrying an expiry
+    maxTries: 3 # Maximum tries for an expiry
+    maxPendingTransactions: 50 # Maximum number of orders within the 'expire' pipeline
+    expireBlocksMargin:
+      500 # Number of blocks before the expiry deadline at which to expire
+      # an underwrite (only applies to underwrites by this underwriter)
 
   wallet:
-    retryInterval: 30000        # Time to wait before retrying a failed transaction
-    maxTries: 3                 # Maximum tries for a transaction
-    maxPendingTransactions: 50  # Maximum number of transactions within the 'submit' pipeline
-    confirmations: 1            # Number of confirmations to wait before accepting a transaction as 'completed'.
-    confirmationTimeout: 90000  # Timeout for a transaction to confirm
+    retryInterval: 30000 # Time to wait before retrying a failed transaction
+    maxTries: 3 # Maximum tries for a transaction
+    maxPendingTransactions: 50 # Maximum number of transactions within the 'submit' pipeline
+    confirmations: 1 # Number of confirmations to wait before accepting a transaction as 'completed'.
+    confirmationTimeout: 90000 # Timeout for a transaction to confirm
 
-    lowGasBalanceWarning: "1000000000000000000"  # Gas balance below which a 'low balance' warning is emitted.
-    gasBalanceUpdateInterval: 50   # Number of transactions after which to update the Underwriter gas balance from the rpc. 
+    lowGasBalanceWarning: '1000000000000000000' # Gas balance below which a 'low balance' warning is emitted.
+    gasBalanceUpdateInterval: 50 # Number of transactions after which to update the Underwriter gas balance from the rpc.
 
     # EIP-1559 Transactions
-    maxFeePerGas: "200000000000"                 # 'maxFeePerGas' set for all transactions (for chains that support eip-1559)
+    maxFeePerGas: '200000000000' # 'maxFeePerGas' set for all transactions (for chains that support eip-1559)
 
-    maxAllowedPriorityFeePerGas: "100000000000"  # Upper bound to the 'maxPriorityFeePerGas' set on transactions (for chains that support eip-1559)
-    maxPriorityFeeAdjustmentFactor: 1.05         # Decimal factor used to adjust the 'maxPriorityFeePerGas' returned by 'getFeeData()'. 
-                                                 # The resulting value is set as the 'maxPriorityFeePerGas' property of the transaction
-                                                 # if it is smaller than the configuration property 'maxAllowedPriorityFeePerGas' (if set).
+    maxAllowedPriorityFeePerGas: '100000000000' # Upper bound to the 'maxPriorityFeePerGas' set on transactions (for chains that support eip-1559)
+    maxPriorityFeeAdjustmentFactor:
+      1.05 # Decimal factor used to adjust the 'maxPriorityFeePerGas' returned by 'getFeeData()'.
+      # The resulting value is set as the 'maxPriorityFeePerGas' property of the transaction
+      # if it is smaller than the configuration property 'maxAllowedPriorityFeePerGas' (if set).
 
     # Legacy Transactions
-    maxAllowedGasPrice: "200000000000"           # Upper bound to the 'gasPrice' set on transactions (for chains that do not support eip-1559)
-    gasPriceAdjustmentFactor: 1.05               # Decimal factor used to adjust the 'gasPrice' returned by 'getFeeData()'. The resulting 
-                                                 # value is set as the 'gasPrice' property of the transaction if it is smaller than the 
-                                                 # configuration property 'maxAllowedGasPrice' (if set).
+    maxAllowedGasPrice: '200000000000' # Upper bound to the 'gasPrice' set on transactions (for chains that do not support eip-1559)
+    gasPriceAdjustmentFactor:
+      1.05 # Decimal factor used to adjust the 'gasPrice' returned by 'getFeeData()'. The resulting
+      # value is set as the 'gasPrice' property of the transaction if it is smaller than the
+      # configuration property 'maxAllowedGasPrice' (if set).
 
     # All Transactions
-    priorityAdjustmentFactor: 1.2                # Decimal factor used to adjust **all** the gas prices (including 'maxFeePerGas') for 
-                                                 # priority transactions.
-
+    priorityAdjustmentFactor:
+      1.2 # Decimal factor used to adjust **all** the gas prices (including 'maxFeePerGas') for
+      # priority transactions.
 
 # The AMBs configuration
 ambs:
   - name: wormhole
-    enabled: true               # TODO not implemented. Defaults to 'true' if the key is missing
-    relayPrioritisation: true   # Defaults to 'true' if the key is missing
+    enabled: true # TODO not implemented. Defaults to 'true' if the key is missing
+    relayPrioritisation: true # Defaults to 'true' if the key is missing
 
 # Chain configuration
 chains:
   - chainId: 11155111
-    name: "Sepolia"
-    rpc: "https://eth-sepolia-public.unifra.io"
+    name: 'Sepolia'
+    rpc: 'https://eth-sepolia-public.unifra.io'
 
     underwriter:
       minMaxGasDelivery: 100000 #TODO set value
 
     # The tokens that are to be undewritten
     tokens:
-      - name: "Wrapped gas"
-        address: "0xE67ABDA0D43f7AC8f37876bBF00D1DFadbB93aaa"
-        allowanceBuffer: "10000000000000000000"   # Amount by which to 'buffer' the token approvals
-                                                  # to prevent having to approve tokens for every
-                                                  # single underwrite. If not specified an 
-                                                  # 'unlimited' approval is set.
-        
+      - name: 'Wrapped gas'
+        address: '0xE67ABDA0D43f7AC8f37876bBF00D1DFadbB93aaa'
+        allowanceBuffer:
+          '10000000000000000000' # Amount by which to 'buffer' the token approvals
+          # to prevent having to approve tokens for every
+          # single underwrite. If not specified an
+          # 'unlimited' approval is set.
+
         # Overrides
-        maxUnderwriteAllowed: "10000000000000000000"
-        minUnderwriteReward: "100000000000"
-        lowTokenBalanceWarning: "1000000000000000000"
+        maxUnderwriteAllowed: '10000000000000000000'
+        minUnderwriteReward: '100000000000'
+        lowTokenBalanceWarning: '1000000000000000000'
         tokenBalanceUpdateInterval: 50
 
   - chainId: 421614
     name: 'Arbitrum Sepolia'
     rpc: 'https://sepolia-rollup.arbitrum.io/rpc' # NOTE: This rpc errors easily with a 'requests rate too high' error
-    resolver: 'arbitrum'                          # Special logic is required for Arbitrum because of how it handles block numbers
+    resolver: 'arbitrum' # Special logic is required for Arbitrum because of how it handles block numbers
     underwriter:
       minMaxGasDelivery: 100000 #TODO set value
     tokens:
@@ -129,50 +139,86 @@ chains:
         address: '0x1BDD24840e119DC2602dCC587Dd182812427A5Cc'
         allowanceBuffer: '10000000000000000000'
 
+  - chainId: 84532
+    name: 'Base Sepolia'
+    rpc: 'https://sepolia.base.org'
+    underwriter:
+      minMaxGasDelivery: 100000 #TODO set value
+    tokens:
+      - name: 'WETH'
+        address: '0x1BDD24840e119DC2602dCC587Dd182812427A5Cc'
+        allowanceBuffer: '10000000000000000000'
 
 endpoints:
-
   - name: 'Sepolia Tiger Testnet'
     amb: 'wormhole'
     chainId: 11155111
-    factoryAddress: "0x343A85b1e0383A50D65adB5ed88B06cCF4187606"
-    interfaceAddress: "0x169e7e77e463ffe86b30afd1605a09a632bea5b0"
-    incentivesAddress: "0x45C140Dd2526E4bfD1c2A5Bb0Aa6aA1DB00b1744"
+    factoryAddress: '0x343A85b1e0383A50D65adB5ed88B06cCF4187606'
+    interfaceAddress: '0x169e7e77e463ffe86b30afd1605a09a632bea5b0'
+    incentivesAddress: '0x45C140Dd2526E4bfD1c2A5Bb0Aa6aA1DB00b1744'
     channelsOnDestination:
       421614: '0x0000000000000000000000000000000000000000000000000000000000002712'
       11155420: '0x0000000000000000000000000000000000000000000000000000000000002712'
     vaultTemplates:
-      - name: "Volatile"
-        address: "0x11A13784007510006c83978D1d0C82385df3A663"
-      - name: "Amplified"
-        address: "0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d"
+      - name: 'Volatile'
+        address: '0x11A13784007510006c83978D1d0C82385df3A663'
+      - name: 'Amplified'
+        address: '0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d'
 
   - name: 'Arbitrum Sepolia Tiger Testnet'
     amb: 'wormhole'
     chainId: 421614
-    factoryAddress: "0x343A85b1e0383A50D65adB5ed88B06cCF4187606"
-    interfaceAddress: "0xf779d8e1b07f1e3df141a81c4f1f7d65c0a38611"
-    incentivesAddress: "0xdF25f1BdE09Cee5ac1e6ef8dFA7113addBd58B28"
+    factoryAddress: '0x343A85b1e0383A50D65adB5ed88B06cCF4187606'
+    interfaceAddress: '0xf779d8e1b07f1e3df141a81c4f1f7d65c0a38611'
+    incentivesAddress: '0xdF25f1BdE09Cee5ac1e6ef8dFA7113addBd58B28'
     channelsOnDestination:
       11155111: '0x0000000000000000000000000000000000000000000000000000000000002713'
       11155420: '0x0000000000000000000000000000000000000000000000000000000000002713'
     vaultTemplates:
-      - name: "Volatile"
-        address: "0x11A13784007510006c83978D1d0C82385df3A663"
-      - name: "Amplified"
-        address: "0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d"
+      - name: 'Volatile'
+        address: '0x11A13784007510006c83978D1d0C82385df3A663'
+      - name: 'Amplified'
+        address: '0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d'
 
   - name: 'Optimism Sepolia Tiger Testnet'
     amb: 'wormhole'
     chainId: 11155420
-    factoryAddress: "0x343A85b1e0383A50D65adB5ed88B06cCF4187606"
-    interfaceAddress: "0x2603e874d589373a0c4766808b93e3d4b63164c8"
-    incentivesAddress: "0xbDFD9163d8Cee1368698B023369f9A5Fd319A40F"
+    factoryAddress: '0x343A85b1e0383A50D65adB5ed88B06cCF4187606'
+    interfaceAddress: '0x2603e874d589373a0c4766808b93e3d4b63164c8'
+    incentivesAddress: '0xbDFD9163d8Cee1368698B023369f9A5Fd319A40F'
     channelsOnDestination:
       11155111: '0x0000000000000000000000000000000000000000000000000000000000002715'
       421614: '0x0000000000000000000000000000000000000000000000000000000000002715'
     vaultTemplates:
-      - name: "Volatile"
-        address: "0x11A13784007510006c83978D1d0C82385df3A663"
-      - name: "Amplified"
-        address: "0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d"
+      - name: 'Volatile'
+        address: '0x11A13784007510006c83978D1d0C82385df3A663'
+      - name: 'Amplified'
+        address: '0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d'
+
+  - name: 'Polymer Optimism Sepolia Tiger Testnet'
+    amb: 'polymer'
+    chainId: 11155420
+    factoryAddress: '0x343A85b1e0383A50D65adB5ed88B06cCF4187606'
+    interfaceAddress: '0xA47591Ba12DD1c0e59a997A84356228dd9d2a5ED'
+    incentivesAddress: '0x87AE7bC6B565E545bDD51788C43BF9E5cbB72EBD'
+    channelsOnDestination:
+      84532: '0x6368616e6e656c2d343032393900000000000000000000000000000000000000'
+    vaultTemplates:
+      - name: 'Volatile'
+        address: '0x11A13784007510006c83978D1d0C82385df3A663'
+      - name: 'Amplified'
+        address: '0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d'
+
+  - name: 'Polymer Base Sepolia Tiger Testnet'
+    amb: 'polymer'
+    chainId: 84532
+    factoryAddress: '0x343A85b1e0383A50D65adB5ed88B06cCF4187606'
+    interfaceAddress: '0xaE1B33e8570a3485F846f2Fbe1E7D5d9e64978c3'
+    incentivesAddress: '0xE106643739deB1879CcD8E3ffe2736D8B489bC2F'
+    channelsOnDestination:
+      1115420: '0x6368616e6e656c2d343032393800000000000000000000000000000000000000'
+    vaultTemplates:
+      - name: 'Volatile'
+        address: '0x11A13784007510006c83978D1d0C82385df3A663'
+      - name: 'Amplified'
+        address: '0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d'
