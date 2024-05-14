@@ -197,30 +197,30 @@ endpoints:
       - name: 'Amplified'
         address: '0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d'
 
-  - name: 'Polymer Optimism Sepolia Tiger Testnet'
-    amb: 'polymer'
-    chainId: 11155420
-    factoryAddress: '0x343A85b1e0383A50D65adB5ed88B06cCF4187606'
-    interfaceAddress: '0xA47591Ba12DD1c0e59a997A84356228dd9d2a5ED'
-    incentivesAddress: '0x87AE7bC6B565E545bDD51788C43BF9E5cbB72EBD'
-    channelsOnDestination:
-      84532: '0x6368616e6e656c2d343032393900000000000000000000000000000000000000'
-    vaultTemplates:
-      - name: 'Volatile'
-        address: '0x11A13784007510006c83978D1d0C82385df3A663'
-      - name: 'Amplified'
-        address: '0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d'
+#  - name: 'Polymer Optimism Sepolia Tiger Testnet'
+#    amb: 'polymer'
+#    chainId: 11155420
+#    factoryAddress: '0x343A85b1e0383A50D65adB5ed88B06cCF4187606'
+#    interfaceAddress: '0xA47591Ba12DD1c0e59a997A84356228dd9d2a5ED'
+#    incentivesAddress: '0x87AE7bC6B565E545bDD51788C43BF9E5cbB72EBD'
+#    channelsOnDestination:
+#      84532: '0x6368616e6e656c2d343032393900000000000000000000000000000000000000'
+#    vaultTemplates:
+#      - name: 'Volatile'
+#        address: '0x11A13784007510006c83978D1d0C82385df3A663'
+#      - name: 'Amplified'
+#        address: '0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d'
 
-  - name: 'Polymer Base Sepolia Tiger Testnet'
-    amb: 'polymer'
-    chainId: 84532
-    factoryAddress: '0x343A85b1e0383A50D65adB5ed88B06cCF4187606'
-    interfaceAddress: '0xaE1B33e8570a3485F846f2Fbe1E7D5d9e64978c3'
-    incentivesAddress: '0xE106643739deB1879CcD8E3ffe2736D8B489bC2F'
-    channelsOnDestination:
-      11155420: '0x6368616e6e656c2d343032393800000000000000000000000000000000000000'
-    vaultTemplates:
-      - name: 'Volatile'
-        address: '0x11A13784007510006c83978D1d0C82385df3A663'
-      - name: 'Amplified'
-        address: '0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d'
+#  - name: 'Polymer Base Sepolia Tiger Testnet'
+#    amb: 'polymer'
+#    chainId: 84532
+#    factoryAddress: '0x343A85b1e0383A50D65adB5ed88B06cCF4187606'
+#    interfaceAddress: '0xaE1B33e8570a3485F846f2Fbe1E7D5d9e64978c3'
+#    incentivesAddress: '0xE106643739deB1879CcD8E3ffe2736D8B489bC2F'
+#    channelsOnDestination:
+#      11155420: '0x6368616e6e656c2d343032393800000000000000000000000000000000000000'
+#    vaultTemplates:
+#      - name: 'Volatile'
+#        address: '0x11A13784007510006c83978D1d0C82385df3A663'
+#      - name: 'Amplified'
+#        address: '0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d'
