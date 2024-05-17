@@ -118,28 +118,18 @@ chains:
         lowTokenBalanceWarning: '1000000000000000000'
         tokenBalanceUpdateInterval: 50
 
-  - chainId: 421614
-    name: 'Arbitrum Sepolia'
-    rpc: 'https://sepolia-rollup.arbitrum.io/rpc' # NOTE: This rpc errors easily with a 'requests rate too high' error
-    resolver: 'arbitrum' # Special logic is required for Arbitrum because of how it handles block numbers
-    underwriter:
-      minMaxGasDelivery: 100000 #TODO set value
-    tokens:
-      - name: 'WETH'
-        address: '0xC8bF2D5c0D6bEC807c21EF4cef2f1fd3bf16947e'
-        allowanceBuffer: '10000000000000000000'
-    monitor:
-      blockDelay: 12
-
-  - chainId: 11155420
-    name: 'OP Sepolia'
-    rpc: 'https://sepolia.optimism.io'
-    underwriter:
-      minMaxGasDelivery: 100000 #TODO set value
-    tokens:
-      - name: 'WETH'
-        address: '0x1BDD24840e119DC2602dCC587Dd182812427A5Cc'
-        allowanceBuffer: '10000000000000000000'
+#  - chainId: 421614
+#    name: 'Arbitrum Sepolia'
+#    rpc: 'https://sepolia-rollup.arbitrum.io/rpc' # NOTE: This rpc errors easily with a 'requests rate too high' error
+#    resolver: 'arbitrum' # Special logic is required for Arbitrum because of how it handles block numbers
+#    underwriter:
+#      minMaxGasDelivery: 100000 #TODO set value
+#    tokens:
+#      - name: 'WETH'
+#        address: '0xC8bF2D5c0D6bEC807c21EF4cef2f1fd3bf16947e'
+#        allowanceBuffer: '10000000000000000000'
+#    monitor:
+#      blockDelay: 12
 
   - chainId: 84532
     name: 'Base Sepolia'
@@ -151,76 +141,69 @@ chains:
         address: '0x1BDD24840e119DC2602dCC587Dd182812427A5Cc'
         allowanceBuffer: '10000000000000000000'
 
+  - chainId: 11155420
+    name: 'OP Sepolia'
+    rpc: 'https://sepolia.optimism.io'
+    underwriter:
+      minMaxGasDelivery: 100000 #TODO set value
+    tokens:
+      - name: 'WETH'
+        address: '0x1BDD24840e119DC2602dCC587Dd182812427A5Cc'
+        allowanceBuffer: '10000000000000000000'
+
+  - chainId: 168587773
+    name: 'Blast Sepolia'
+    rpc: 'https://sepolia.base.org'
+    underwriter:
+      minMaxGasDelivery: 100000 #TODO set value
+    tokens:
+      - name: 'WETH'
+        address: '0x4300000000000000000000000000000000000004'
+        allowanceBuffer: '10000000000000000000'
+
 endpoints:
-  - name: 'Sepolia Tiger Testnet'
+  - name: 'Sepolia Testnet'
     amb: 'wormhole'
     chainId: 11155111
-    factoryAddress: '0x343A85b1e0383A50D65adB5ed88B06cCF4187606'
-    interfaceAddress: '0x169e7e77e463ffe86b30afd1605a09a632bea5b0'
-    incentivesAddress: '0x45C140Dd2526E4bfD1c2A5Bb0Aa6aA1DB00b1744'
+    factoryAddress: '0x00000000E5E81E25aeaD7fCCb4C9560C6b5b718F'
+    interfaceAddress: '0xEF04d76391C4b6a0c8BB5262f0f2214c261C4AD2'
+    incentivesAddress: '0x294F41D30D058C9e5A71810A6C758E595b7aC170'
     channelsOnDestination:
-      421614: '0x0000000000000000000000000000000000000000000000000000000000002712'
-      11155420: '0x0000000000000000000000000000000000000000000000000000000000002712'
+      84532: '0x0000000000000000000000000000000000000000000000000000000000002712'
+      168587773: '0x0000000000000000000000000000000000000000000000000000000000000026'
     vaultTemplates:
       - name: 'Volatile'
-        address: '0x11A13784007510006c83978D1d0C82385df3A663'
+        address: '0x0000000003b8C9BFeB9351933CFC301Eea92073F'
       - name: 'Amplified'
-        address: '0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d'
+        address: '0x000000004aBe0D620b25b8B06B0712BDcff21899'
 
-  - name: 'Arbitrum Sepolia Tiger Testnet'
+  - name: 'Base Sepolia Testnet'
     amb: 'wormhole'
-    chainId: 421614
-    factoryAddress: '0x343A85b1e0383A50D65adB5ed88B06cCF4187606'
-    interfaceAddress: '0xf779d8e1b07f1e3df141a81c4f1f7d65c0a38611'
-    incentivesAddress: '0xdF25f1BdE09Cee5ac1e6ef8dFA7113addBd58B28'
+    chainId: 168587773
+    factoryAddress: '0x00000000E5E81E25aeaD7fCCb4C9560C6b5b718F'
+    interfaceAddress: '0xC7D9815055Ea739B78E2D10D0055d97010396b78'
+    incentivesAddress: '0x63B4E24DC9814fAcDe241fB4dEFcA04d5fc6d763'
     channelsOnDestination:
-      11155111: '0x0000000000000000000000000000000000000000000000000000000000002713'
-      11155420: '0x0000000000000000000000000000000000000000000000000000000000002713'
+      84532: '0x0000000000000000000000000000000000000000000000000000000000002713'
+      168587773: '0x0000000000000000000000000000000000000000000000000000000000000026'
     vaultTemplates:
       - name: 'Volatile'
-        address: '0x11A13784007510006c83978D1d0C82385df3A663'
+        address: '0x0000000003b8C9BFeB9351933CFC301Eea92073F'
       - name: 'Amplified'
-        address: '0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d'
+        address: '0x000000004aBe0D620b25b8B06B0712BDcff21899'
 
-  - name: 'Optimism Sepolia Tiger Testnet'
+  - name: 'Blast Sepolia Testnet'
     amb: 'wormhole'
-    chainId: 11155420
-    factoryAddress: '0x343A85b1e0383A50D65adB5ed88B06cCF4187606'
-    interfaceAddress: '0x2603e874d589373a0c4766808b93e3d4b63164c8'
-    incentivesAddress: '0xbDFD9163d8Cee1368698B023369f9A5Fd319A40F'
+    chainId: 168587773
+    factoryAddress: '0x00000000E5E81E25aeaD7fCCb4C9560C6b5b718F'
+    interfaceAddress: '0x39629dDb16a11E11fB62Bf46f34F63fF1c42B090'
+    incentivesAddress: '0x9524ACA1fF46fAd177160F0a803189Cb552A3780'
     channelsOnDestination:
       11155111: '0x0000000000000000000000000000000000000000000000000000000000002715'
-      421614: '0x0000000000000000000000000000000000000000000000000000000000002715'
+      84532: '0x0000000000000000000000000000000000000000000000000000000000002712'
     vaultTemplates:
       - name: 'Volatile'
-        address: '0x11A13784007510006c83978D1d0C82385df3A663'
+        address: '0x0000000003b8C9BFeB9351933CFC301Eea92073F'
       - name: 'Amplified'
-        address: '0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d'
-
-#  - name: 'Polymer Optimism Sepolia Tiger Testnet'
-#    amb: 'polymer'
-#    chainId: 11155420
-#    factoryAddress: '0x343A85b1e0383A50D65adB5ed88B06cCF4187606'
-#    interfaceAddress: '0xA47591Ba12DD1c0e59a997A84356228dd9d2a5ED'
-#    incentivesAddress: '0x87AE7bC6B565E545bDD51788C43BF9E5cbB72EBD'
-#    channelsOnDestination:
-#      84532: '0x6368616e6e656c2d343032393900000000000000000000000000000000000000'
-#    vaultTemplates:
-#      - name: 'Volatile'
-#        address: '0x11A13784007510006c83978D1d0C82385df3A663'
-#      - name: 'Amplified'
-#        address: '0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d'
-
-#  - name: 'Polymer Base Sepolia Tiger Testnet'
-#    amb: 'polymer'
-#    chainId: 84532
-#    factoryAddress: '0x343A85b1e0383A50D65adB5ed88B06cCF4187606'
-#    interfaceAddress: '0xaE1B33e8570a3485F846f2Fbe1E7D5d9e64978c3'
-#    incentivesAddress: '0xE106643739deB1879CcD8E3ffe2736D8B489bC2F'
-#    channelsOnDestination:
-#      11155420: '0x6368616e6e656c2d343032393800000000000000000000000000000000000000'
-#    vaultTemplates:
-#      - name: 'Volatile'
-#        address: '0x11A13784007510006c83978D1d0C82385df3A663'
-#      - name: 'Amplified'
-#        address: '0xD8B97cd47EEE69Ef5554aFBDA8F7EDe4D9fd7d8d'
+        address: '0x000000004aBe0D620b25b8B06B0712BDcff21899'
+  
