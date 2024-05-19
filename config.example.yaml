@@ -158,7 +158,7 @@ chains:
       minMaxGasDelivery: 100000 #TODO set value
     tokens:
       - name: 'WETH'
-        address: '0x4300000000000000000000000000000000000004'
+        address: '0x4200000000000000000000000000000000000006'
         allowanceBuffer: '10000000000000000000'
 
 endpoints:
