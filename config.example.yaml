@@ -153,7 +153,7 @@ chains:
 
   - chainId: 168587773
     name: 'Blast Sepolia'
-    rpc: 'https://sepolia.base.org'
+    rpc: 'https://sepolia.blast.io'
     underwriter:
       minMaxGasDelivery: 100000 #TODO set value
     tokens:
