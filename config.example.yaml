@@ -5,7 +5,7 @@ global:
 
   monitor:
     blockDelay:
-      2 # Delay with which to process the chain blocks (on top of the relayer's
+      5 # Delay with which to process the chain blocks (on top of the relayer's
       # blockDelay). Use this to prevent handling blocks that eventually reorg.
     retryInterval: 5000 # Time to wait before retrying connection with the relayer's monitor
 
@@ -34,7 +34,7 @@ global:
       # performing an underwrite.
 
     maxUnderwriteAllowed: '10000000000000000000' # Maximum tokens to risk on a single underwrite
-    minUnderwriteReward: '10000000000' # Minimum acceptable token reward for an underwrite
+    minUnderwriteReward: '100000000000' # Minimum acceptable token reward for an underwrite
     lowTokenBalanceWarning: '1000000000000000000' # Token balance below which a 'low balance' warning is emitted.
     tokenBalanceUpdateInterval:
       50 # Number of transactions after which to update the
@@ -42,7 +42,7 @@ global:
 
     # ! The following setting is here for illustrative purposes, but it MUST ALWAYS be applied on
     # ! a per-chain basis as it is CRITICAL to prevent the underwriter from being stolen from.
-    # minMaxGasDelivery: 100000
+    # minMaxGasDelivery: 200000
 
   expirer:
     enabled: true # Defaults to 'true' if the key is missing. Disabling the expirer. (Not recommended!)
@@ -51,7 +51,7 @@ global:
     maxTries: 3 # Maximum tries for an expiry
     maxPendingTransactions: 50 # Maximum number of orders within the 'expire' pipeline
     expireBlocksMargin:
-      500 # Number of blocks before the expiry deadline at which to expire
+      1000 # Number of blocks before the expiry deadline at which to expire
       # an underwrite (only applies to underwrites by this underwriter)
 
   wallet:
@@ -69,20 +69,20 @@ global:
 
     maxAllowedPriorityFeePerGas: '100000000000' # Upper bound to the 'maxPriorityFeePerGas' set on transactions (for chains that support eip-1559)
     maxPriorityFeeAdjustmentFactor:
-      1.05 # Decimal factor used to adjust the 'maxPriorityFeePerGas' returned by 'getFeeData()'.
+      1.01 # Decimal factor used to adjust the 'maxPriorityFeePerGas' returned by 'getFeeData()'.
       # The resulting value is set as the 'maxPriorityFeePerGas' property of the transaction
       # if it is smaller than the configuration property 'maxAllowedPriorityFeePerGas' (if set).
 
     # Legacy Transactions
     maxAllowedGasPrice: '200000000000' # Upper bound to the 'gasPrice' set on transactions (for chains that do not support eip-1559)
     gasPriceAdjustmentFactor:
-      1.05 # Decimal factor used to adjust the 'gasPrice' returned by 'getFeeData()'. The resulting
+      1.01 # Decimal factor used to adjust the 'gasPrice' returned by 'getFeeData()'. The resulting
       # value is set as the 'gasPrice' property of the transaction if it is smaller than the
       # configuration property 'maxAllowedGasPrice' (if set).
 
     # All Transactions
     priorityAdjustmentFactor:
-      1.2 # Decimal factor used to adjust **all** the gas prices (including 'maxFeePerGas') for
+      1.05 # Decimal factor used to adjust **all** the gas prices (including 'maxFeePerGas') for
       # priority transactions.
 
 # The AMBs configuration
@@ -91,135 +91,91 @@ ambs:
     enabled: true # TODO not implemented. Defaults to 'true' if the key is missing
     relayPrioritisation: true # Defaults to 'true' if the key is missing
 
-  - name: polymer
-
 # Chain configuration
 chains:
-  - chainId: 11155111
-    name: 'Sepolia'
-    rpc: 'https://eth-sepolia-public.unifra.io'
+  - chainId: 10
+    name: 'OP Mainnet'
+    rpc: 'https://mainnet.optimism.io'
 
     underwriter:
-      minMaxGasDelivery: 100000 #TODO set value
+      minMaxGasDelivery: 200000
 
     # The tokens that are to be undewritten
     tokens:
-      - name: 'Wrapped gas'
-        address: '0xE67ABDA0D43f7AC8f37876bBF00D1DFadbB93aaa'
+      - name: 'WETH'
+        address: '0x4200000000000000000000000000000000000006'
         allowanceBuffer:
           '10000000000000000000' # Amount by which to 'buffer' the token approvals
           # to prevent having to approve tokens for every
           # single underwrite. If not specified an
           # 'unlimited' approval is set.
 
-        # Overrides
-        maxUnderwriteAllowed: '10000000000000000000'
-        minUnderwriteReward: '100000000000'
-        lowTokenBalanceWarning: '1000000000000000000'
-        tokenBalanceUpdateInterval: 50
+        # Overrides (uncomment if desired)
+        # maxUnderwriteAllowed: '10000000000000000000'
+        # minUnderwriteReward: '100000000000'
+        # lowTokenBalanceWarning: '1000000000000000000'
+        # tokenBalanceUpdateInterval: 50
 
-#  - chainId: 421614
-#    name: 'Arbitrum Sepolia'
-#    rpc: 'https://sepolia-rollup.arbitrum.io/rpc' # NOTE: This rpc errors easily with a 'requests rate too high' error
-#    resolver: 'arbitrum' # Special logic is required for Arbitrum because of how it handles block numbers
-#    underwriter:
-#      minMaxGasDelivery: 100000 #TODO set value
-#    tokens:
-#      - name: 'WETH'
-#        address: '0xC8bF2D5c0D6bEC807c21EF4cef2f1fd3bf16947e'
-#        allowanceBuffer: '10000000000000000000'
-#    monitor:
-#      blockDelay: 12
-
-  - chainId: 84532
-    name: 'Base Sepolia'
-    rpc: 'https://sepolia.base.org'
+  - chainId: 81457
+    name: 'Blast Mainnet'
+    rpc: 'https://rpc.blast.io'
     underwriter:
-      minMaxGasDelivery: 100000 #TODO set value
+      minMaxGasDelivery: 200000
     tokens:
       - name: 'WETH'
-        address: '0x1BDD24840e119DC2602dCC587Dd182812427A5Cc'
+        address: '0x4300000000000000000000000000000000000004'
         allowanceBuffer: '10000000000000000000'
 
-  - chainId: 11155420
-    name: 'OP Sepolia'
-    rpc: 'https://sepolia.optimism.io'
+  - chainId: 8453
+    name: 'Base Mainnet'
+    rpc: 'https://mainnet.base.org'
     underwriter:
-      minMaxGasDelivery: 100000 #TODO set value
-    tokens:
-      - name: 'WETH'
-        address: '0x1BDD24840e119DC2602dCC587Dd182812427A5Cc'
-        allowanceBuffer: '10000000000000000000'
-
-  - chainId: 168587773
-    name: 'Blast Sepolia'
-    rpc: 'https://sepolia.blast.io'
-    underwriter:
-      minMaxGasDelivery: 100000 #TODO set value
+      minMaxGasDelivery: 200000
     tokens:
       - name: 'WETH'
         address: '0x4200000000000000000000000000000000000006'
         allowanceBuffer: '10000000000000000000'
 
 endpoints:
-  - name: 'Sepolia Testnet'
+  - name: 'OP Mainnet'
     amb: 'wormhole'
-    chainId: 11155111
+    chainId: 10
     factoryAddress: '0x00000000E5E81E25aeaD7fCCb4C9560C6b5b718F'
-    interfaceAddress: '0xEF04d76391C4b6a0c8BB5262f0f2214c261C4AD2'
-    incentivesAddress: '0x294F41D30D058C9e5A71810A6C758E595b7aC170'
+    interfaceAddress: '0x23bC307c20941164025624455bdda22B754468b2'
+    incentivesAddress: '0x8C8727276725b7Da11fDA6e2646B2d2448E5B3c5'
     channelsOnDestination:
-      84532: '0x0000000000000000000000000000000000000000000000000000000000002712'
-      11155420: '0x0000000000000000000000000000000000000000000000000000000000002712'
-      168587773: '0x0000000000000000000000000000000000000000000000000000000000002712'
+      81457: '0x0000000000000000000000000000000000000000000000000000000000000018'
+      8453: '0x0000000000000000000000000000000000000000000000000000000000000018'
     vaultTemplates:
       - name: 'Volatile'
         address: '0x0000000003b8C9BFeB9351933CFC301Eea92073F'
       - name: 'Amplified'
         address: '0x000000004aBe0D620b25b8B06B0712BDcff21899'
 
-  - name: 'Optimism Sepolia Testnet'
+  - name: 'Blast Mainnet'
     amb: 'wormhole'
-    chainId: 11155420
+    chainId: 81457
     factoryAddress: '0x00000000E5E81E25aeaD7fCCb4C9560C6b5b718F'
-    interfaceAddress: '0xdB321B1E304eA155B1977768904De998818F986E'
-    incentivesAddress: '0x198cDD55d90277726f3222D5A8111AdB8b0af9ee'
+    interfaceAddress: '0x2AC500c5f53D0219B1691B785aa857A0fbb2035D'
+    incentivesAddress: '0x3C5C5436BCa59042cBC835276E51428781366d85'
     channelsOnDestination:
-      84532: '0x0000000000000000000000000000000000000000000000000000000000002715'
-      11155111: '0x0000000000000000000000000000000000000000000000000000000000002715'
-      168587773: '0x0000000000000000000000000000000000000000000000000000000000002715'
+      10: '0x0000000000000000000000000000000000000000000000000000000000000024'
+      8453: '0x0000000000000000000000000000000000000000000000000000000000000024'
     vaultTemplates:
       - name: 'Volatile'
         address: '0x0000000003b8C9BFeB9351933CFC301Eea92073F'
       - name: 'Amplified'
         address: '0x000000004aBe0D620b25b8B06B0712BDcff21899'
 
-  - name: 'Base Sepolia Testnet'
+  - name: 'Base Mainnet'
     amb: 'wormhole'
-    chainId: 84532
+    chainId: 8453
     factoryAddress: '0x00000000E5E81E25aeaD7fCCb4C9560C6b5b718F'
-    interfaceAddress: '0xC7D9815055Ea739B78E2D10D0055d97010396b78'
-    incentivesAddress: '0x63B4E24DC9814fAcDe241fB4dEFcA04d5fc6d763'
+    interfaceAddress: '0x2AC500c5f53D0219B1691B785aa857A0fbb2035D'
+    incentivesAddress: '0x3C5C5436BCa59042cBC835276E51428781366d85'
     channelsOnDestination:
-      11155111: '0x0000000000000000000000000000000000000000000000000000000000002714'
-      11155420: '0x0000000000000000000000000000000000000000000000000000000000002714'
-      168587773: '0x0000000000000000000000000000000000000000000000000000000000002714'
-    vaultTemplates:
-      - name: 'Volatile'
-        address: '0x0000000003b8C9BFeB9351933CFC301Eea92073F'
-      - name: 'Amplified'
-        address: '0x000000004aBe0D620b25b8B06B0712BDcff21899'
-
-  - name: 'Blast Sepolia Testnet'
-    amb: 'wormhole'
-    chainId: 168587773
-    factoryAddress: '0x00000000E5E81E25aeaD7fCCb4C9560C6b5b718F'
-    interfaceAddress: '0x39629dDb16a11E11fB62Bf46f34F63fF1c42B090'
-    incentivesAddress: '0x9524ACA1fF46fAd177160F0a803189Cb552A3780'
-    channelsOnDestination:
-      11155111: '0x0000000000000000000000000000000000000000000000000000000000000026'
-      11155420: '0x0000000000000000000000000000000000000000000000000000000000000026'
-      84532: '0x0000000000000000000000000000000000000000000000000000000000000026'
+      10: '0x000000000000000000000000000000000000000000000000000000000000001E'
+      81457: '0x000000000000000000000000000000000000000000000000000000000000001E'
     vaultTemplates:
       - name: 'Volatile'
         address: '0x0000000003b8C9BFeB9351933CFC301Eea92073F'
