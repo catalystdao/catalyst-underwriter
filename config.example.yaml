@@ -42,7 +42,7 @@ global:
 
     # ! The following setting is here for illustrative purposes, but it MUST ALWAYS be applied on
     # ! a per-chain basis as it is CRITICAL to prevent the underwriter from being stolen from.
-    # minMaxGasDelivery: 100000
+    # minMaxGasDelivery: 200000
 
   expirer:
     enabled: true # Defaults to 'true' if the key is missing. Disabling the expirer. (Not recommended!)
@@ -69,20 +69,20 @@ global:
 
     maxAllowedPriorityFeePerGas: '100000000000' # Upper bound to the 'maxPriorityFeePerGas' set on transactions (for chains that support eip-1559)
     maxPriorityFeeAdjustmentFactor:
-      1.05 # Decimal factor used to adjust the 'maxPriorityFeePerGas' returned by 'getFeeData()'.
+      1.01 # Decimal factor used to adjust the 'maxPriorityFeePerGas' returned by 'getFeeData()'.
       # The resulting value is set as the 'maxPriorityFeePerGas' property of the transaction
       # if it is smaller than the configuration property 'maxAllowedPriorityFeePerGas' (if set).
 
     # Legacy Transactions
     maxAllowedGasPrice: '200000000000' # Upper bound to the 'gasPrice' set on transactions (for chains that do not support eip-1559)
     gasPriceAdjustmentFactor:
-      1.05 # Decimal factor used to adjust the 'gasPrice' returned by 'getFeeData()'. The resulting
+      1.01 # Decimal factor used to adjust the 'gasPrice' returned by 'getFeeData()'. The resulting
       # value is set as the 'gasPrice' property of the transaction if it is smaller than the
       # configuration property 'maxAllowedGasPrice' (if set).
 
     # All Transactions
     priorityAdjustmentFactor:
-      1.2 # Decimal factor used to adjust **all** the gas prices (including 'maxFeePerGas') for
+      1.05 # Decimal factor used to adjust **all** the gas prices (including 'maxFeePerGas') for
       # priority transactions.
 
 # The AMBs configuration
@@ -100,7 +100,7 @@ chains:
     rpc: 'https://eth-sepolia-public.unifra.io'
 
     underwriter:
-      minMaxGasDelivery: 100000 #TODO set value
+      minMaxGasDelivery: 200000
 
     # The tokens that are to be undewritten
     tokens:
@@ -112,11 +112,11 @@ chains:
           # single underwrite. If not specified an
           # 'unlimited' approval is set.
 
-        # Overrides
-        maxUnderwriteAllowed: '10000000000000000000'
-        minUnderwriteReward: '100000000000'
-        lowTokenBalanceWarning: '1000000000000000000'
-        tokenBalanceUpdateInterval: 50
+        # Overrides (uncomment if desired)
+        # maxUnderwriteAllowed: '10000000000000000000'
+        # minUnderwriteReward: '100000000000'
+        # lowTokenBalanceWarning: '1000000000000000000'
+        # tokenBalanceUpdateInterval: 50
 
 #  - chainId: 421614
 #    name: 'Arbitrum Sepolia'
@@ -135,7 +135,7 @@ chains:
     name: 'Base Sepolia'
     rpc: 'https://sepolia.base.org'
     underwriter:
-      minMaxGasDelivery: 100000 #TODO set value
+      minMaxGasDelivery: 200000
     tokens:
       - name: 'WETH'
         address: '0x1BDD24840e119DC2602dCC587Dd182812427A5Cc'
@@ -155,7 +155,7 @@ chains:
     name: 'Blast Sepolia'
     rpc: 'https://sepolia.blast.io'
     underwriter:
-      minMaxGasDelivery: 100000 #TODO set value
+      minMaxGasDelivery: 200000
     tokens:
       - name: 'WETH'
         address: '0x4200000000000000000000000000000000000006'
