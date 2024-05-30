@@ -12,6 +12,11 @@ const POSITIVE_NUMBER_SCHEMA = {
     type: "number",
     minimum: 0,
 }
+const INTEGER_SCHEMA = {
+    $id: "integer-schema",
+    type: "number",
+    multipleOf: 1,
+}
 const POSITIVE_NON_ZERO_INTEGER_SCHEMA = {
     $id: "positive-non-zero-integer-schema",
     type: "number",
@@ -115,7 +120,7 @@ const LISTENER_SCHEMA = {
             minimum: 0,
             maximum: 1_000_000,
         },
-        startingBlock: { $ref: "positive-number-schema" },
+        startingBlock: { $ref: "integer-schema" },
     },
     additionalProperties: false
 }
@@ -322,6 +327,7 @@ const ENDPOINTS_SCHEMA = {
 export function getConfigValidator(): AnyValidateFunction<unknown> {
     const ajv = new Ajv({ strict: true });
     ajv.addSchema(POSITIVE_NUMBER_SCHEMA);
+    ajv.addSchema(INTEGER_SCHEMA);
     ajv.addSchema(POSITIVE_NON_ZERO_INTEGER_SCHEMA);
     ajv.addSchema(NON_EMPTY_STRING_SCHEMA);
     ajv.addSchema(ADDRESS_FIELD_SCHEMA);
