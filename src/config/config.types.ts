@@ -1,7 +1,7 @@
 
 export interface GlobalConfig {
     port: number;
-    privateKey: string;
+    privateKey: Promise<string>;
     logLevel?: string;
     blockDelay?: number;
     monitor: MonitorGlobalConfig;
@@ -9,6 +9,11 @@ export interface GlobalConfig {
     underwriter: UnderwriterGlobalConfig;
     expirer: ExpirerGlobalConfig;
     wallet: WalletGlobalConfig;
+}
+
+
+export type PrivateKeyConfig = string | {
+  loader: string;
 }
 
 

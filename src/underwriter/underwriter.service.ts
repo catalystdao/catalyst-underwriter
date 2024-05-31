@@ -98,7 +98,7 @@ export class UnderwriterService implements OnModuleInit {
     }
 
     private async initializeWorkers(): Promise<void> {
-        const defaultWorkerConfig = this.loadDefaultWorkerConfig();
+        const defaultWorkerConfig = await this.loadDefaultWorkerConfig();
 
         const ambs = Object.fromEntries(this.configService.ambsConfig.entries());
 
@@ -139,7 +139,7 @@ export class UnderwriterService implements OnModuleInit {
         }
     }
 
-    private loadDefaultWorkerConfig(): DefaultUnderwriterWorkerData {
+    private async loadDefaultWorkerConfig(): Promise<DefaultUnderwriterWorkerData> {
         const globalUnderwriterConfig = this.configService.globalConfig.underwriter;
 
         const enabled = globalUnderwriterConfig.enabled != false;
@@ -157,7 +157,7 @@ export class UnderwriterService implements OnModuleInit {
         const minUnderwriteReward = globalUnderwriterConfig.minUnderwriteReward;
         const lowTokenBalanceWarning = globalUnderwriterConfig.lowTokenBalanceWarning;
         const tokenBalanceUpdateInterval = globalUnderwriterConfig.tokenBalanceUpdateInterval ?? DEFAULT_UNDERWRITER_TOKEN_BALANCE_UPDATE_INTERVAL;
-        const walletPublicKey = (new Wallet(this.configService.globalConfig.privateKey)).address;
+        const walletPublicKey = (new Wallet(await this.configService.globalConfig.privateKey)).address;
 
         if (minRelayDeadlineDuration < MIN_ALLOWED_MIN_RELAY_DEADLINE_DURATION) {
             throw new Error(
