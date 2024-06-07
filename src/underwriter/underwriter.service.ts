@@ -243,7 +243,7 @@ export class UnderwriterService implements OnModuleInit {
                 ?? defaultConfig.allowanceBuffer,
 
             walletPublicKey: defaultConfig.walletPublicKey,
-            walletPort: await this.walletService.attachToWallet(chainId),
+            walletPort: await this.walletService.attachToWallet(),
             loggerOptions: this.loggerService.loggerOptions
         };
     }

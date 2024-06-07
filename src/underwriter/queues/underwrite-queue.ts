@@ -69,6 +69,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
         };
 
         const txPromise = this.wallet.submitTransaction(
+            this.chainId,
             txRequest,
             order,
             { deadline: order.submissionDeadline }

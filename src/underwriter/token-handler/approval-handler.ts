@@ -20,6 +20,7 @@ export class ApprovalHandler {
     private setAllowances = new Map<TokenAddress, bigint>();
 
     constructor(
+        private readonly chainId: string,
         private readonly tokensConfig: TokensConfig,
         private readonly interfaceAddress: string,
         private readonly walletPublicKey: string,
@@ -171,6 +172,7 @@ export class ApprovalHandler {
         this.setAllowances.set(assetAddress, newSetAllowance);
 
         const result = await this.wallet.submitTransaction(
+            this.chainId,
             txRequest,
             approvalDescription,
             {
