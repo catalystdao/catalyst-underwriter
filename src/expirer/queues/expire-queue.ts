@@ -8,6 +8,7 @@ import { tryErrorToString } from "src/common/utils";
 export class ExpireQueue extends ProcessingQueue<ExpireOrder, ExpireOrderResult> {
 
     constructor(
+        private readonly chainId: string,
         retryInterval: number,
         maxTries: number,
         private readonly wallet: WalletInterface,
@@ -49,7 +50,7 @@ export class ExpireQueue extends ProcessingQueue<ExpireOrder, ExpireOrderResult>
         );
 
         //TODO add 'priority' option to wallet
-        const txPromise = this.wallet.submitTransaction(txRequest, order)
+        const txPromise = this.wallet.submitTransaction(this.chainId, txRequest, order)
             .then((transactionResult): ExpireOrderResult => {
                 if (transactionResult.submissionError) {
                     throw transactionResult.submissionError;    //TODO wrap in a 'SubmissionError' type?
