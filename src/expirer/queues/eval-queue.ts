@@ -140,7 +140,7 @@ export class EvalQueue extends ProcessingQueue<ExpireEvalOrder, ExpireOrder> {
         };
 
         if (success) {
-            this.logger.debug(
+            this.logger.info(
                 orderDescription,
                 `Successful expire evaluation.`,
             );

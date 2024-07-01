@@ -114,7 +114,7 @@ export class ApprovalHandler {
             }
 
             if (newSetAllowance != undefined) {
-                this.logger.debug(
+                this.logger.info(
                     {
                         interfaceAddress: this.interfaceAddress,
                         assetAddress,
@@ -201,7 +201,7 @@ export class ApprovalHandler {
                 newSetAllowance - oldSetAllowance   // If old > new it effectively means 'increasing' the 'setAllowance'.
             );
         } else {
-            this.logger.debug(logDescription, 'Approval transaction success');
+            this.logger.info(logDescription, 'Approval transaction success');
         }
 
     }

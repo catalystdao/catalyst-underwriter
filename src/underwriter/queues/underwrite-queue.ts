@@ -156,13 +156,13 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
 
         if (success) {
             if (result != null) {
-                this.logger.debug(
+                this.logger.info(
                     orderDescription,
                     `Successful underwrite processing: underwrite submitted.`,
                 );
                 await this.requestRelayPrioritisation(order);
             } else {
-                this.logger.debug(
+                this.logger.info(
                     orderDescription,
                     `Successful underwrite processing: underwrite not submitted.`,
                 );
@@ -189,7 +189,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
         }
 
         if (!ambConfig.relayPrioritisation) {
-            this.logger.debug(
+            this.logger.info(
                 { amb: order.amb, swapTxHash: order.swapTxHash, swapIdentifier: order.swapIdentifier },
                 'Skipping packet relay prioritisation: prioritisation disabled.'
             );
@@ -205,7 +205,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
             destinationChainId: this.chainId,
         };
         try {
-            this.logger.debug(
+            this.logger.info(
                 { ambMessageData, swapTxHash: order.swapTxHash, swapIdentifier: order.swapIdentifier },
                 'Requesting AMB message relay prioritisation.'
             );
