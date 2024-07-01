@@ -198,7 +198,7 @@ export class ExpirerService implements OnModuleInit {
                 ?? defaultConfig.expireBlocksMargin,
             minUnderwriteDuration,
 
-            underwriterPublicKey: this.walletService.publicKey,
+            underwriterPublicKey: await this.walletService.publicKey,
             monitorPort: await this.monitorService.attachToMonitor(chainId),
             walletPort: await this.walletService.attachToWallet(),
             loggerOptions: this.loggerService.loggerOptions
