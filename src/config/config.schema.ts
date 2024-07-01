@@ -247,6 +247,7 @@ const TOKENS_SCHEMA = {
         type: "object",
         properties: {
             name: { $ref: "non-empty-string-schema" },
+            tokenId: { $ref: "non-empty-string-schema" },
             address: { $ref: "address-field-schema" },
             maxUnderwriteAllowed: { $ref: "uint256-field-schema" },
             minUnderwriteReward: { $ref: "uint256-field-schema" },
@@ -254,7 +255,7 @@ const TOKENS_SCHEMA = {
             tokenBalanceUpdateInterval: { $ref: "positive-number-schema" },
             allowanceBuffer: { $ref: "gas-field-schema" }
         },
-        required: ["name", "address"],
+        required: ["name", "address", "tokenId"],
         additionalProperties: false
     },
     minItems: 1

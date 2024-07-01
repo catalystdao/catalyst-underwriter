@@ -112,6 +112,7 @@ export interface ChainConfig {
 
 
 export interface TokenConfig {
+    tokenId: string;
     allowanceBuffer?: bigint;
     maxUnderwriteAllowed?: bigint;
     minUnderwriteReward?: bigint;

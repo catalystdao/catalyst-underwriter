@@ -189,6 +189,25 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             return null;
         }
 
+        const expectedRewardFiatValue = await this.getTokenValue(
+            this.chainId,
+            tokenConfig.tokenId,
+            expectedReward
+        );
+
+        if (expectedRewardFiatValue == 0) {
+            this.logger.warn(
+                {
+                    swapId: order.swapIdentifier,
+                    swapTxHash: order.swapTxHash,
+                    toAsset: order.toAsset,
+                    expectedReward,
+                },
+                "Skipping underwrite: expected reward FIAT value is 0."
+            );
+            return null;
+        }
+
         // Set the maximum allowed gasLimit for the transaction. This will be checked on the
         // 'underwrite' queue with an 'estimateGas' call.
         // ! It is not possible to 'estimateGas' of the underwrite transaction at this point, as
@@ -317,6 +336,36 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
     //     );
 
     // }
+
+    async getTokenValue(
+        chainId: string,
+        tokenId: string,
+        amount: bigint
+    ): Promise<number> {
+
+        if (amount == 0n) {
+            return 0;
+        }
+        
+        const relayerEndpoint = `http://${process.env['RELAYER_HOST']}:${process.env['RELAYER_PORT']}/getPrice?`;
+
+        const res = await fetch(relayerEndpoint + new URLSearchParams({chainId, tokenId, amount: amount.toString()}));
+        const priceResponse = (await res.json());    //TODO type
+
+        if (priceResponse.price == undefined) {
+            this.logger.warn(
+                {
+                    chainId,
+                    tokenId,
+                    amount,
+                },
+                `Failed to query token value.`
+            );
+            return 0;
+        }
+
+        return priceResponse.price;
+    }
 
 
 
