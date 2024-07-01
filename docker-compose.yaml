@@ -1,7 +1,7 @@
 services:
 
   underwriter:
-    image: ghcr.io/catalystdao/catalyst-underwriter:latest
+    image: ghcr.io/catalystdao/catalyst-underwriter:testnet
     build:
       context: .
       dockerfile: dockerfile.underwriter
