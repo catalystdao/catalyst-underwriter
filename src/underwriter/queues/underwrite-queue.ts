@@ -8,6 +8,7 @@ import { WalletInterface } from "src/wallet/wallet.interface";
 import { encodeBytes65Address } from "src/common/decode.payload";
 import fetch from "node-fetch";
 import { tryErrorToString } from "src/common/utils";
+import { Resolver } from "src/resolvers/resolver";
 
 export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, UnderwriteOrderResult> {
 
@@ -16,6 +17,7 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
         private readonly ambs: Record<string, AMBConfig>,
         retryInterval: number,
         maxTries: number,
+        private readonly resolver: Resolver,
         private readonly walletPublicKey: string,
         private readonly wallet: WalletInterface,
         private readonly provider: JsonRpcProvider,
@@ -46,27 +48,28 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
             order.calldata,
         ]);
 
+        const txRequest: TransactionRequest = {
+            to: order.interfaceAddress,
+            from: this.walletPublicKey,
+            data: txData,
+            gasLimit: order.gasLimit,
+        };
+
         if (order.gasLimit == undefined) {
             // Gas estimation and limit check are here as they cannot be performed until the token
             // approval for the order is executed, which must happen after the 'evaluation' step.
-            order.gasLimit = await this.provider.estimateGas({
-                to: order.interfaceAddress,
-                from: this.walletPublicKey,
-                data: txData,
+            const gasEstimateComponents = await this.resolver.estimateGas({
+                ...txRequest,
                 blockTag: 'pending' //TODO is 'pending' widely supported?
             });
 
-            if (order.maxGasLimit != null && order.gasLimit > order.maxGasLimit) {
+            //TODO compensate the 'gasEstimate' with any fixed cost.
+
+            if (gasEstimateComponents.gasEstimate > order.maxGasLimit) {
                 // NOTE: the following error message is matched on the 'handleFailedOrder' handler below.
                 throw new Error('Skipping underwrite, \'gasLimit\' is larger than the set \'maxGasLimit\'.')
             }
         }
-
-        const txRequest: TransactionRequest = {
-            to: order.interfaceAddress,
-            data: txData,
-            gasLimit: order.gasLimit,
-        };
 
         const txPromise = this.wallet.submitTransaction(
             this.chainId,

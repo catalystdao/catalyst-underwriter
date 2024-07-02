@@ -58,6 +58,7 @@ export interface UnderwriterWorkerData {
     endpointConfigs: EndpointConfig[],
     ambs: Record<string, AMBConfig>,
     rpc: string,
+    resolver: string | null;
     retryInterval: number;
     processingInterval: number;
     maxTries: number;
@@ -225,6 +226,7 @@ export class UnderwriterService implements OnModuleInit {
             endpointConfigs: chainEndpointConfigs,
             ambs,
             rpc: chainConfig.rpc,
+            resolver: chainConfig.resolver,
 
             retryInterval: chainUnderwriterConfig.retryInterval ?? defaultConfig.retryInterval,
             processingInterval:

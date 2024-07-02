@@ -13,6 +13,7 @@ import { UnderwriteQueue } from "./queues/underwrite-queue";
 import { TokenHandler } from "./token-handler/token-handler";
 import { WalletInterface } from "src/wallet/wallet.interface";
 import { DiscoverQueue } from "./queues/discover-queue";
+import { Resolver, loadResolver } from "src/resolvers/resolver";
 
 
 class UnderwriterWorker {
@@ -25,6 +26,8 @@ class UnderwriterWorker {
 
     private readonly chainId: string;
     private readonly chainName: string;
+
+    private readonly resolver: Resolver;
 
     private readonly endpoints: EndpointConfig[];
     private readonly tokens: Record<string, UnderwriterTokenConfig>;
@@ -56,6 +59,12 @@ class UnderwriterWorker {
         );
         this.provider = this.initializeProvider(this.config.rpc);
 
+        this.resolver = loadResolver(
+            this.config.resolver,
+            this.provider,
+            this.logger
+        );
+
         this.wallet = new WalletInterface(this.config.walletPort);
 
         this.tokenHandler = new TokenHandler(
@@ -83,6 +92,7 @@ class UnderwriterWorker {
             this.config.minRelayDeadlineDuration,
             this.config.minMaxGasDelivery,
             this.tokenHandler,
+            this.resolver,
             this.config.walletPublicKey,
             this.wallet,
             this.store,
@@ -132,6 +142,7 @@ class UnderwriterWorker {
         minRelayDeadlineDuration: bigint,
         minMaxGasDelivery: bigint,
         tokenHandler: TokenHandler,
+        resolver: Resolver,
         walletPublicKey: string,
         wallet: WalletInterface,
         store: Store,
@@ -171,6 +182,7 @@ class UnderwriterWorker {
             ambs,
             retryInterval,
             maxTries,
+            resolver,
             walletPublicKey,
             wallet,
             provider,
