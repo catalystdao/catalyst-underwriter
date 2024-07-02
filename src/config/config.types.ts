@@ -44,7 +44,9 @@ export interface UnderwriterGlobalConfig {
     underwritingCollateral?: number;
     allowanceBuffer?: number;
     maxUnderwriteAllowed?: bigint;
-    minUnderwriteReward?: bigint;
+    minUnderwriteReward?: number;
+    relativeMinUnderwriteReward?: number;
+    profitabilityFactor?: number;
     lowTokenBalanceWarning?: bigint;
     tokenBalanceUpdateInterval?: number;
 }
@@ -115,7 +117,9 @@ export interface TokenConfig {
     tokenId: string;
     allowanceBuffer?: bigint;
     maxUnderwriteAllowed?: bigint;
-    minUnderwriteReward?: bigint;
+    minUnderwriteReward?: number;
+    relativeMinUnderwriteReward?: number;
+    profitabilityFactor?: number;
     lowTokenBalanceWarning?: bigint;
     tokenBalanceUpdateInterval?: number;
 }

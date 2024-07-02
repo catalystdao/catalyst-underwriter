@@ -1,5 +1,15 @@
 import { TransactionReceipt, TransactionResponse } from "ethers";
 
+export interface UnderwriterTokenConfig {
+    tokenId: string;
+    allowanceBuffer?: bigint;
+    maxUnderwriteAllowed?: bigint;
+    minUnderwriteReward: number;
+    relativeMinUnderwriteReward: number;
+    profitabilityFactor: number;
+    lowTokenBalanceWarning?: bigint;
+    tokenBalanceUpdateInterval?: number;
+}
 
 export interface DiscoverOrder {
     // ! These are unsafe until the DiscoverQueue validates the order

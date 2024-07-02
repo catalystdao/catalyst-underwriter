@@ -1,11 +1,11 @@
 import { tryErrorToString } from 'src/common/utils';
 import pino from "pino";
 import { HandleOrderResult, ProcessingQueue } from "../../processing-queue/processing-queue";
-import { EvalOrder, UnderwriteOrder } from "../underwriter.types";
-import { TokenConfig } from "src/config/config.types";
+import { EvalOrder, UnderwriteOrder, UnderwriterTokenConfig } from "../underwriter.types";
 import { CatalystVaultCommon__factory } from "src/contracts";
-import { JsonRpcProvider } from 'ethers';
+import { JsonRpcProvider, MaxUint256 } from 'ethers';
 import { TokenHandler } from '../token-handler/token-handler';
+import { WalletInterface } from 'src/wallet/wallet.interface';
 
 const DECIMAL_RESOLUTION = 1_000_000;
 const DECIMAL_RESOLUTION_BIGINT = BigInt(DECIMAL_RESOLUTION);
@@ -17,7 +17,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
     constructor(
         private enabled: boolean,
         private readonly chainId: string,
-        private readonly tokens: Record<string, TokenConfig>,
+        private readonly tokens: Record<string, UnderwriterTokenConfig>,
         retryInterval: number,
         maxTries: number,
         underwritingCollateral: number,
@@ -26,6 +26,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         private readonly minRelayDeadlineDuration: bigint,
         private readonly minMaxGasDelivery: bigint,
         private readonly tokenHandler: TokenHandler,
+        private readonly wallet: WalletInterface,
         private readonly provider: JsonRpcProvider,
         private readonly logger: pino.Logger
     ) {
@@ -152,24 +153,6 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             return null;
         }
 
-        const expectedReward = (expectedReturn * order.underwriteIncentiveX16) >> 16n;
-        if (
-            tokenConfig.minUnderwriteReward
-            && expectedReward < tokenConfig.minUnderwriteReward
-        ) {
-            this.logger.info(
-                {
-                    swapId: order.swapIdentifier,
-                    swapTxHash: order.swapTxHash,
-                    toAsset: order.toAsset,
-                    underwriteIncentiveX16: order.underwriteIncentiveX16,
-                    expectedReward,
-                    minUnderwriteReward: tokenConfig.minUnderwriteReward
-                },
-                "Skipping underwrite: expected underwrite reward is less than the 'minUnderwriteReward' configuration."
-            );
-            return null;
-        }
 
         // Verify the underwriter has enough assets to perform the underwrite
         const enoughBalanceToUnderwrite = await this.tokenHandler.hasEnoughBalance(
@@ -189,34 +172,30 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             return null;
         }
 
-        const expectedRewardFiatValue = await this.getTokenValue(
-            this.chainId,
-            tokenConfig.tokenId,
-            expectedReward
-        );
-
-        if (expectedRewardFiatValue == 0) {
-            this.logger.warn(
-                {
-                    swapId: order.swapIdentifier,
-                    swapTxHash: order.swapTxHash,
-                    toAsset: order.toAsset,
-                    expectedReward,
-                },
-                "Skipping underwrite: expected reward FIAT value is 0."
-            );
-            return null;
-        }
-
         // Set the maximum allowed gasLimit for the transaction. This will be checked on the
         // 'underwrite' queue with an 'estimateGas' call.
         // ! It is not possible to 'estimateGas' of the underwrite transaction at this point, as
         // ! before doing it the allowance for underwriting must be set. The allowance for
         // ! underwriting is set **after** the evaluation step, as the allowance amount is not
         // ! known until the evaluation step completes.
-        const maxGasLimit = null;  //TODO
+        const maxGasLimit = await this.calcMaxGasLimit(
+            expectedReturn,
+            order.underwriteIncentiveX16,
+            tokenConfig,
+        );
 
-        //TODO add economical evaluation
+        if (maxGasLimit == 0n) {
+            this.logger.warn(
+                {
+                    swapId: order.swapIdentifier,
+                    swapTxHash: order.swapTxHash,
+                    toAsset: order.toAsset,
+                    underwriteAmount: expectedReturn,   //TODO add eval config values
+                },
+                "Skipping underwrite: calculated maximum gas limit is 0."
+            );
+            return null;
+        }
 
         if (true) {
             await this.tokenHandler.registerBalanceUse(
@@ -337,10 +316,72 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
     // }
 
+    async calcMaxGasLimit(
+        underwriteAmount: bigint,
+        underwriteIncentiveX16: bigint,
+        tokenConfig: UnderwriterTokenConfig,
+    ): Promise<bigint> {
+
+        const underwriteFiatAmount = await this.getTokenValue(
+            this.chainId,
+            tokenConfig.tokenId,
+            underwriteAmount
+        );
+
+        const underwriteIncentiveShare = Number(underwriteIncentiveX16) / 2**16;
+        const rewardFiatAmount = underwriteFiatAmount * underwriteIncentiveShare;
+        const adjustedRewardFiatAmount = rewardFiatAmount / tokenConfig.profitabilityFactor;
+
+        if (Math.floor(adjustedRewardFiatAmount * DECIMAL_RESOLUTION) == 0) {
+            return 0n;
+        }
+
+        const relayFiatCost = 0;    //TODO
+
+        const maxFiatTxCostToBreakEven = adjustedRewardFiatAmount - relayFiatCost; 
+
+        const gasPrice = await this.getGasPrice(this.chainId);
+        const gasFiatPrice = await this.getGasValue(this.chainId, gasPrice);
+
+
+        // TODO is the following logic enought? This logic would allow unrealistically large
+        // TODO `maxGasLimit`s.
+        // Compute the limit based on the 'minUnderwriteReward'
+        const maxGasLimitMinReward = (
+            maxFiatTxCostToBreakEven - tokenConfig.minUnderwriteReward
+        ) / gasFiatPrice;
+
+        // Compute the limit based on the 'relativeMinUnderwriteReward'
+        const maxGasLimitMinRelativeReward = (
+            maxFiatTxCostToBreakEven - tokenConfig.relativeMinUnderwriteReward * underwriteFiatAmount
+        ) / (gasFiatPrice * (1 + tokenConfig.relativeMinUnderwriteReward));
+
+        const maxGasLimit = maxGasLimitMinReward < maxGasLimitMinRelativeReward
+            ? maxGasLimitMinReward
+            : maxGasLimitMinRelativeReward;
+
+        return BigInt(Math.floor(maxGasLimit));
+    }
+
+    async getGasValue(
+        chainId: string,
+        amount: bigint,
+    ): Promise<number> {
+        return this.queryRelayerAssetPrice(chainId, amount);
+    }
+
     async getTokenValue(
         chainId: string,
         tokenId: string,
         amount: bigint
+    ): Promise<number> {
+        return this.queryRelayerAssetPrice(chainId, amount, tokenId);
+    }
+
+    private async queryRelayerAssetPrice(
+        chainId: string,
+        amount: bigint,
+        tokenId?: string,
     ): Promise<number> {
 
         if (amount == 0n) {
@@ -349,7 +390,16 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         
         const relayerEndpoint = `http://${process.env['RELAYER_HOST']}:${process.env['RELAYER_PORT']}/getPrice?`;
 
-        const res = await fetch(relayerEndpoint + new URLSearchParams({chainId, tokenId, amount: amount.toString()}));
+        const queryParameters: Record<string, string> = {
+            chainId,
+            amount: amount.toString(),
+        }
+
+        if (tokenId != undefined) {
+            queryParameters['tokenId'] = tokenId;
+        }
+
+        const res = await fetch(relayerEndpoint + new URLSearchParams(queryParameters));
         const priceResponse = (await res.json());    //TODO type
 
         if (priceResponse.price == undefined) {
@@ -365,6 +415,20 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         }
 
         return priceResponse.price;
+    }
+
+    private async getGasPrice(chainId: string): Promise<bigint> {
+        const feeData = await this.wallet.getFeeData(chainId);
+        // If gas fee data is missing or incomplete, default the gas price to an extremely high
+        // value.
+        // ! Use 'gasPrice' over 'maxFeePerGas', as 'maxFeePerGas' defines the highest gas fee
+        // ! allowed, which does not necessarilly represent the real gas fee at which the
+        // ! transactions are going through.
+        const gasPrice = feeData?.gasPrice
+            ?? feeData?.maxFeePerGas
+            ?? MaxUint256;
+
+        return gasPrice;
     }
 
 

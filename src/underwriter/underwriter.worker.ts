@@ -161,6 +161,7 @@ class UnderwriterWorker {
             minRelayDeadlineDuration,
             minMaxGasDelivery,
             tokenHandler,
+            wallet,
             provider,
             logger
         );

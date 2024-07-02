@@ -151,7 +151,9 @@ const UNDERWRITER_GLOBAL_SCHEMA = {
             maximum: 0.3
         },
         maxUnderwriteAllowed: { $ref: "uint256-field-schema" },
-        minUnderwriteReward: { $ref: "uint256-field-schema" },
+        minUnderwriteReward: { $ref: "positive-number-schema" },
+        relativeMinUnderwriteReward: { $ref: "positive-number-schema" },
+        profitabilityFactor: { $ref: "positive-number-schema" },
         lowTokenBalanceWarning: { $ref: "uint256-field-schema" },
         tokenBalanceUpdateInterval: { $ref: "positive-number-schema" },
     },
@@ -250,7 +252,9 @@ const TOKENS_SCHEMA = {
             tokenId: { $ref: "non-empty-string-schema" },
             address: { $ref: "address-field-schema" },
             maxUnderwriteAllowed: { $ref: "uint256-field-schema" },
-            minUnderwriteReward: { $ref: "uint256-field-schema" },
+            minUnderwriteReward: { $ref: "positive-number-schema" },
+            relativeMinUnderwriteReward: { $ref: "positive-number-schema" },
+            profitabilityFactor: { $ref: "positive-number-schema" },
             lowTokenBalanceWarning: { $ref: "uint256-field-schema" },
             tokenBalanceUpdateInterval: { $ref: "positive-number-schema" },
             allowanceBuffer: { $ref: "gas-field-schema" }
