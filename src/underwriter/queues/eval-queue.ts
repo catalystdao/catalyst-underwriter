@@ -199,33 +199,18 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             return null;
         }
 
-        if (true) {
-            await this.tokenHandler.registerBalanceUse(
-                toAssetAllowance,
-                order.toAsset
-            );
+        await this.tokenHandler.registerBalanceUse(
+            toAssetAllowance,
+            order.toAsset
+        );
 
-            const result: UnderwriteOrder = {
-                ...order,
-                maxGasLimit,
-                gasPrice,
-                toAssetAllowance,
-            }
-            return { result };
-        } else {
-            this.logger.info(
-                {
-                    fromVault: order.fromVault,
-                    fromChainId: order.fromChainId,
-                    swapTxHash: order.swapTxHash,
-                    swapId: order.swapIdentifier,
-                    try: retryCount + 1
-                },
-                `Dropping order on evaluation`
-            );
-
-            return null;
+        const result: UnderwriteOrder = {
+            ...order,
+            maxGasLimit,
+            gasPrice,
+            toAssetAllowance,
         }
+        return { result };
     }
 
     protected async handleFailedOrder(order: EvalOrder, retryCount: number, error: any): Promise<boolean> {
@@ -347,7 +332,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         const gasFiatPrice = await this.getGasValue(this.chainId, gasPrice);
 
 
-        // TODO is the following logic enought? This logic would allow unrealistically large
+        // TODO is the following logic enough? This logic would allow unrealistically large
         // TODO `maxGasLimit`s.
         // Compute the limit based on the 'minUnderwriteReward'
         const maxGasLimitMinReward = (
