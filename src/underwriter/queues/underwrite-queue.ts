@@ -63,12 +63,24 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
                 blockTag: 'pending' //TODO is 'pending' widely supported?
             });
 
-            //TODO compensate the 'gasEstimate' with any fixed cost.
-
-            if (gasEstimateComponents.gasEstimate > order.maxGasLimit) {
-                // NOTE: the following error message is matched on the 'handleFailedOrder' handler below.
-                throw new Error('Skipping underwrite, \'gasLimit\' is larger than the set \'maxGasLimit\'.')
+            // Compensate the `maxGasLimit` with any fixed cost incurred by the transaction.
+            const fixedCostGasEquivalent = gasEstimateComponents.additionalFeeEstimate / order.gasPrice;
+            const effectiveGasLimit = order.maxGasLimit - fixedCostGasEquivalent;
+            if (gasEstimateComponents.gasEstimate > effectiveGasLimit) {
+                this.logger.info(
+                    {
+                        order,
+                        gasEstimate: gasEstimateComponents.gasEstimate,
+                        gasEstimateLimit: effectiveGasLimit,
+                        additionalFee: gasEstimateComponents.additionalFeeEstimate,
+                        fixedCostGasEquivalent,
+                    },
+                    `Skipping underwrite: transaction gas estimate is larger than the maximum calculated allowed limit.`
+                );
+                return null;
             }
+
+            order.gasLimit = gasEstimateComponents.gasEstimate;
         }
 
         const txPromise = this.wallet.submitTransaction(
@@ -117,15 +129,6 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
             try: retryCount + 1
         };
 
-        if (typeof error.message == "string") {
-            if (error.message == 'Skipping underwrite, \'gasLimit\' is larger than the set \'maxGasLimit\'.') {
-                this.logger.warn(
-                    { errorDescription, gasLimit: order.gasLimit, maxGasLimit: order.maxGasLimit },
-                    'Skipping underwrite, \'gasLimit\' is larger than the set \'maxGasLimit\'.'
-                );
-                return false;   // Do not retry
-            }
-        }
         if (order.gasLimit == undefined) {
             // This may happen if the token allowance is not set correctly
             this.logger.warn(errorDescription, 'Gas limit estimation failed. Retrying if possible.')

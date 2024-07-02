@@ -50,6 +50,7 @@ export interface EvalOrder extends DiscoverOrder {
 
 export interface UnderwriteOrder extends EvalOrder {
     maxGasLimit: bigint;
+    gasPrice: bigint;
     gasLimit?: bigint;
     toAssetAllowance: bigint;
 }

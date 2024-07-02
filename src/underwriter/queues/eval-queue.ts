@@ -178,9 +178,11 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         // ! before doing it the allowance for underwriting must be set. The allowance for
         // ! underwriting is set **after** the evaluation step, as the allowance amount is not
         // ! known until the evaluation step completes.
+        const gasPrice = await this.getGasPrice(this.chainId);
         const maxGasLimit = await this.calcMaxGasLimit(
             expectedReturn,
             order.underwriteIncentiveX16,
+            gasPrice,
             tokenConfig,
         );
 
@@ -206,6 +208,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             const result: UnderwriteOrder = {
                 ...order,
                 maxGasLimit,
+                gasPrice,
                 toAssetAllowance,
             }
             return { result };
@@ -319,6 +322,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
     async calcMaxGasLimit(
         underwriteAmount: bigint,
         underwriteIncentiveX16: bigint,
+        gasPrice: bigint,
         tokenConfig: UnderwriterTokenConfig,
     ): Promise<bigint> {
 
@@ -340,7 +344,6 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
         const maxFiatTxCostToBreakEven = adjustedRewardFiatAmount - relayFiatCost; 
 
-        const gasPrice = await this.getGasPrice(this.chainId);
         const gasFiatPrice = await this.getGasValue(this.chainId, gasPrice);
 
 
