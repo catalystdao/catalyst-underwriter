@@ -193,14 +193,14 @@ export class ConfigService {
             if (rawEndpointConfig.relayDeliveryCosts != undefined) {
                 relayDeliveryCosts = {
                     gasUsage: BigInt(rawEndpointConfig.relayDeliveryCosts.gasUsage),
-                    gasObserved: rawEndpointConfig.gasObserved != undefined
-                        ? BigInt(rawEndpointConfig.gasObserved)
+                    gasObserved: rawEndpointConfig.relayDeliveryCosts.gasObserved != undefined
+                        ? BigInt(rawEndpointConfig.relayDeliveryCosts.gasObserved)
                         : undefined,
-                    fee: rawEndpointConfig.fee != undefined
-                        ? BigInt(rawEndpointConfig.fee)
+                    fee: rawEndpointConfig.relayDeliveryCosts.fee != undefined
+                        ? BigInt(rawEndpointConfig.relayDeliveryCosts.fee)
                         : undefined,
-                    value: rawEndpointConfig.value != undefined
-                        ? BigInt(rawEndpointConfig.value)
+                    value: rawEndpointConfig.relayDeliveryCosts.value != undefined
+                        ? BigInt(rawEndpointConfig.relayDeliveryCosts.value)
                         : undefined
                 };
             }
