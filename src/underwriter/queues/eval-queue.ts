@@ -455,10 +455,22 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             value: value.toString(),
         }
 
-        const res = await fetch(relayerEndpoint + new URLSearchParams(queryParameters));
-        const evaluationResponse = (await res.json());    //TODO type
+        try {
+            const res = await fetch(relayerEndpoint + new URLSearchParams(queryParameters));
+            const evaluationResponse = (await res.json());    //TODO type
 
-        return evaluationResponse.securedDeliveryFiatProfit;
+            return evaluationResponse.securedDeliveryFiatProfit;
+        }
+        catch (error) {
+            this.logger.error(
+                {
+                    queryParameters,
+                    error: tryErrorToString(error),
+                },
+                `Failed to query swap relay profit estimate.`
+            );
+            throw new Error(`Failed to query swap relay profit estimate.`);
+        }
     }
 
 
