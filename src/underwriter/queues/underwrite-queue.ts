@@ -66,18 +66,27 @@ export class UnderwriteQueue extends ProcessingQueue<UnderwriteOrder, Underwrite
             // Compensate the `maxGasLimit` with any fixed cost incurred by the transaction.
             const fixedCostGasEquivalent = gasEstimateComponents.additionalFeeEstimate / order.gasPrice;
             const effectiveGasLimit = order.maxGasLimit - fixedCostGasEquivalent;
+
+            const logData = {
+                order,
+                gasEstimate: gasEstimateComponents.gasEstimate,
+                gasEstimateLimit: effectiveGasLimit,
+                additionalFee: gasEstimateComponents.additionalFeeEstimate,
+                fixedCostGasEquivalent,
+            };
+
             if (gasEstimateComponents.gasEstimate > effectiveGasLimit) {
                 this.logger.info(
-                    {
-                        order,
-                        gasEstimate: gasEstimateComponents.gasEstimate,
-                        gasEstimateLimit: effectiveGasLimit,
-                        additionalFee: gasEstimateComponents.additionalFeeEstimate,
-                        fixedCostGasEquivalent,
-                    },
-                    `Skipping underwrite: transaction gas estimate is larger than the maximum calculated allowed limit.`
+                    logData,
+                    `Underwrite evaluation: skipping underwrite, transaction gas estimate is larger than the maximum calculated allowed limit.`
                 );
                 return null;
+            }
+            else {
+                this.logger.info(
+                    logData,
+                    `Underwrite evaluation: execute underwrite.`
+                );
             }
 
             order.gasLimit = gasEstimateComponents.gasEstimate;

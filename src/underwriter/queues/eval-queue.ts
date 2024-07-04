@@ -197,15 +197,19 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             relayFiatProfitEstimate,
         );
 
-        if (maxGasLimit == 0n) {
-            this.logger.warn(
+        if (maxGasLimit <= 0n) {
+            this.logger.info(
                 {
                     swapId: order.swapIdentifier,
                     swapTxHash: order.swapTxHash,
                     toAsset: order.toAsset,
-                    underwriteAmount: expectedReturn,   //TODO add eval config values
+                    underwriteAmount: expectedReturn,
+                    underwriteIncentiveX1: order.underwriteIncentiveX16,
+                    gasPrice,
+                    tokenConfig,
+                    relayFiatProfitEstimate
                 },
-                "Skipping underwrite: calculated maximum gas limit is 0."
+                "Skipping underwrite: calculated maximum gas limit is 0 or negative."
             );
             return null;
         }
