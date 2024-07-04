@@ -1,4 +1,5 @@
 import { TransactionReceipt, TransactionResponse } from "ethers";
+import { VaultTemplateConfig } from "src/config/config.types";
 
 export interface UnderwriterTokenConfig {
     tokenId: string;
@@ -9,6 +10,25 @@ export interface UnderwriterTokenConfig {
     profitabilityFactor: number;
     lowTokenBalanceWarning?: bigint;
     tokenBalanceUpdateInterval?: number;
+}
+
+export interface UnderwriterEndpointConfig {
+    name: string;
+    amb: string;
+    chainId: string;
+    factoryAddress: string;
+    interfaceAddress: string;
+    incentivesAddress: string;
+    channelsOnDestination: Record<string, string>;
+    vaultTemplates: VaultTemplateConfig[];
+    relayDeliveryCosts: UnderwriterRelayDeliveryCostsConfig;
+}
+
+export interface UnderwriterRelayDeliveryCostsConfig {
+    gasUsage: bigint;
+    gasObserved: bigint;
+    fee: bigint;
+    value: bigint;
 }
 
 export interface DiscoverOrder {
@@ -46,6 +66,7 @@ export interface DiscoverOrder {
 
 export interface EvalOrder extends DiscoverOrder {
     toAsset: string;
+    relayDeliveryCosts: UnderwriterRelayDeliveryCostsConfig;
 }
 
 export interface UnderwriteOrder extends EvalOrder {

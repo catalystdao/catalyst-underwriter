@@ -31,6 +31,14 @@ export interface ListenerGlobalConfig {
 export interface ListenerConfig extends ListenerGlobalConfig {}
 
 
+export interface RelayDeliveryCosts {
+    gasUsage: bigint;
+    gasObserved?: bigint;
+    fee?: bigint;
+    value?: bigint;
+}
+
+
 export interface UnderwriterGlobalConfig {
     enabled?: boolean;
     retryInterval?: number;
@@ -49,6 +57,7 @@ export interface UnderwriterGlobalConfig {
     profitabilityFactor?: number;
     lowTokenBalanceWarning?: bigint;
     tokenBalanceUpdateInterval?: number;
+    relayDeliveryCosts?: RelayDeliveryCosts;
 }
 
 export interface UnderwriterConfig extends UnderwriterGlobalConfig {
@@ -136,6 +145,7 @@ export interface EndpointConfig {
     incentivesAddress: string;
     channelsOnDestination: Record<string, string>;
     vaultTemplates: VaultTemplateConfig[];
+    relayDeliveryCosts?: RelayDeliveryCosts;
 }
 
 export interface VaultTemplateConfig {

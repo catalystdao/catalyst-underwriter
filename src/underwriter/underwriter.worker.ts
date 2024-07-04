@@ -3,11 +3,11 @@ import pino, { LoggerOptions } from "pino";
 import { parentPort, workerData } from 'worker_threads';
 import { UnderwriterWorkerCommand, UnderwriterWorkerCommandId, UnderwriterWorkerData } from "./underwriter.service";
 import { tryErrorToString, wait } from "src/common/utils";
-import { AMBConfig, EndpointConfig } from "src/config/config.types";
+import { AMBConfig } from "src/config/config.types";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
 import { SwapDescription } from "src/store/store.types";
-import { DiscoverOrder, NewOrder, UnderwriteOrder, UnderwriteOrderResult, UnderwriterTokenConfig } from "./underwriter.types";
+import { DiscoverOrder, NewOrder, UnderwriteOrder, UnderwriteOrderResult, UnderwriterEndpointConfig, UnderwriterTokenConfig } from "./underwriter.types";
 import { EvalQueue } from "./queues/eval-queue";
 import { UnderwriteQueue } from "./queues/underwrite-queue";
 import { TokenHandler } from "./token-handler/token-handler";
@@ -29,7 +29,7 @@ class UnderwriterWorker {
 
     private readonly resolver: Resolver;
 
-    private readonly endpoints: EndpointConfig[];
+    private readonly endpoints: UnderwriterEndpointConfig[];
     private readonly tokens: Record<string, UnderwriterTokenConfig>;
     private readonly ambs: Record<string, AMBConfig>;
 
@@ -131,7 +131,7 @@ class UnderwriterWorker {
     private initializeQueues(
         enabled: boolean,
         chainId: string,
-        endpointConfigs: EndpointConfig[],
+        endpointConfigs: UnderwriterEndpointConfig[],
         tokens: Record<string, UnderwriterTokenConfig>,
         ambs: Record<string, AMBConfig>,
         retryInterval: number,

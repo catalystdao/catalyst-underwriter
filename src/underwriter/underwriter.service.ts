@@ -3,13 +3,13 @@ import { join } from 'path';
 import { LoggerOptions } from 'pino';
 import { Worker, MessagePort } from 'worker_threads';
 import { ConfigService } from 'src/config/config.service';
-import { AMBConfig, ChainConfig, EndpointConfig } from 'src/config/config.types';
+import { AMBConfig, ChainConfig, RelayDeliveryCosts } from 'src/config/config.types';
 import { LoggerService, STATUS_LOG_INTERVAL } from 'src/logger/logger.service';
 import { WalletService } from 'src/wallet/wallet.service';
 import { Wallet } from 'ethers';
 import { DisableUnderwritingRequest, EnableUnderwritingRequest } from './underwriter.controller';
 import { tryErrorToString } from 'src/common/utils';
-import { UnderwriterTokenConfig } from './underwriter.types';
+import { UnderwriterEndpointConfig, UnderwriterTokenConfig } from './underwriter.types';
 
 
 export const DEFAULT_UNDERWRITER_RETRY_INTERVAL = 30000;
@@ -26,6 +26,7 @@ export const DEFAULT_UNDERWRITER_MIN_UNDERWRITE_REWARD = 0;
 export const DEFAULT_UNDERWRITER_RELATIVE_MIN_UNDERWRITE_REWARD = 0;
 export const DEFAULT_UNDERWRITER_PROFITABILITY_FACTOR = 1;
 export const DEFAULT_UNDERWRITER_TOKEN_BALANCE_UPDATE_INTERVAL = 50;
+export const DEFAULT_UNDERWRITER_RELAY_DELIVERY_GAS_USAGE = 21000n;
 
 const MIN_ALLOWED_MIN_RELAY_DEADLINE_DURATION = 1n * 60n * 60n * 1000n; // 1 hour
 
@@ -48,6 +49,7 @@ interface DefaultUnderwriterWorkerData {
     lowTokenBalanceWarning: bigint | undefined;
     tokenBalanceUpdateInterval: number;
     walletPublicKey: string;
+    relayDeliveryCosts: RelayDeliveryCosts;
 }
 
 export interface UnderwriterWorkerData {
@@ -55,7 +57,7 @@ export interface UnderwriterWorkerData {
     chainId: string,
     chainName: string,
     tokens: Record<string, UnderwriterTokenConfig>,
-    endpointConfigs: EndpointConfig[],
+    endpointConfigs: UnderwriterEndpointConfig[],
     ambs: Record<string, AMBConfig>,
     rpc: string,
     resolver: string | null;
@@ -168,6 +170,10 @@ export class UnderwriterService implements OnModuleInit {
         const tokenBalanceUpdateInterval = globalUnderwriterConfig.tokenBalanceUpdateInterval ?? DEFAULT_UNDERWRITER_TOKEN_BALANCE_UPDATE_INTERVAL;
         const walletPublicKey = (new Wallet(this.configService.globalConfig.privateKey)).address;
 
+        const relayDeliveryCosts: RelayDeliveryCosts = globalUnderwriterConfig.relayDeliveryCosts ?? {
+            gasUsage: DEFAULT_UNDERWRITER_RELAY_DELIVERY_GAS_USAGE
+        };
+
         if (minRelayDeadlineDuration < MIN_ALLOWED_MIN_RELAY_DEADLINE_DURATION) {
             throw new Error(
                 `Invalid 'minRelayDeadlineDuration' global configuration. Value set is less than allowed (set: ${minRelayDeadlineDuration}, minimum: ${MIN_ALLOWED_MIN_RELAY_DEADLINE_DURATION}).`
@@ -193,6 +199,7 @@ export class UnderwriterService implements OnModuleInit {
             lowTokenBalanceWarning,
             tokenBalanceUpdateInterval,
             walletPublicKey,
+            relayDeliveryCosts
         }
     }
 
@@ -209,6 +216,38 @@ export class UnderwriterService implements OnModuleInit {
             return undefined;
         }
 
+        const endpointConfigs: UnderwriterEndpointConfig[] = chainEndpointConfigs.map(endpointConfig => {
+
+            const endpointRelayDeliveryCosts = endpointConfig.relayDeliveryCosts;
+            const chainRelayDeliveryCosts = chainConfig.underwriter.relayDeliveryCosts;
+            const globalRelayDeliveryCosts = defaultConfig.relayDeliveryCosts;
+
+            const costs = endpointRelayDeliveryCosts ?? chainRelayDeliveryCosts ?? globalRelayDeliveryCosts;
+            const gasObserved = costs.gasObserved ?? costs.gasUsage;
+
+            if (gasObserved > costs.gasUsage) {
+                this.loggerService.warn(
+                    {
+                        endpointName: endpointConfig.name,
+                        gasUsage: costs.gasUsage.toString(),
+                        gasObserved: gasObserved.toString(),
+                    },
+                    `Invalid derived relay delivery costs configuration: 'gasObserved' is larger than 'gasUsage'. Skipping chain.`
+                );
+                return undefined;
+            }
+
+            return {
+                ...endpointConfig,
+                relayDeliveryCosts: {
+                    gasUsage: costs.gasUsage,
+                    gasObserved: costs.gasObserved ?? costs.gasUsage,
+                    fee: costs.fee ?? 0n,
+                    value: costs.value ?? 0n,
+                }
+            };
+        }).filter((config): config is UnderwriterEndpointConfig => config != undefined);
+
         const chainUnderwriterConfig = chainConfig.underwriter;
 
         const minRelayDeadlineDuration = chainUnderwriterConfig.minRelayDeadlineDuration ?? defaultConfig.minRelayDeadlineDuration;
@@ -223,7 +262,7 @@ export class UnderwriterService implements OnModuleInit {
             chainId,
             chainName: chainConfig.name,
             tokens: this.loadTokensConfig(chainConfig, defaultConfig),
-            endpointConfigs: chainEndpointConfigs,
+            endpointConfigs,
             ambs,
             rpc: chainConfig.rpc,
             resolver: chainConfig.resolver,

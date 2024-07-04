@@ -178,12 +178,23 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         // ! before doing it the allowance for underwriting must be set. The allowance for
         // ! underwriting is set **after** the evaluation step, as the allowance amount is not
         // ! known until the evaluation step completes.
+
+        const relayFiatProfitEstimate = await this.querySwapRelayProfitEstimate(
+            this.chainId,
+            order.messageIdentifier,
+            order.relayDeliveryCosts.gasUsage,
+            order.relayDeliveryCosts.gasObserved,
+            order.relayDeliveryCosts.fee,
+            order.relayDeliveryCosts.value,
+        );
+
         const gasPrice = await this.getGasPrice(this.chainId);
         const maxGasLimit = await this.calcMaxGasLimit(
             expectedReturn,
             order.underwriteIncentiveX16,
             gasPrice,
             tokenConfig,
+            relayFiatProfitEstimate,
         );
 
         if (maxGasLimit == 0n) {
@@ -309,6 +320,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         underwriteIncentiveX16: bigint,
         gasPrice: bigint,
         tokenConfig: UnderwriterTokenConfig,
+        relayFiatProfitEstimate: number,
     ): Promise<bigint> {
 
         const underwriteFiatAmount = await this.getTokenValue(
@@ -325,9 +337,9 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             return 0n;
         }
 
-        const relayFiatCost = 0;    //TODO
-
-        const maxFiatTxCostToBreakEven = adjustedRewardFiatAmount - relayFiatCost; 
+        // Only take into account the relay profit if it's negative.
+        const relayFiatProfit = Math.min(relayFiatProfitEstimate, 0);
+        const maxFiatTxCostToBreakEven = adjustedRewardFiatAmount + relayFiatProfit; 
 
         const gasFiatPrice = await this.getGasValue(this.chainId, gasPrice);
 
@@ -417,6 +429,32 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             ?? MaxUint256;
 
         return gasPrice;
+    }
+
+    private async querySwapRelayProfitEstimate(
+        chainId: string,
+        messageIdentifier: string,
+        gasEstimate: bigint,
+        observedGasEstimate: bigint,
+        additionalFeeEstimate: bigint,
+        value: bigint,
+    ): Promise<number> {
+
+        const relayerEndpoint = `http://${process.env['RELAYER_HOST']}:${process.env['RELAYER_PORT']}/evaluateDelivery?`;
+
+        const queryParameters: Record<string, string> = {
+            chainId,
+            messageIdentifier,
+            gasEstimate: gasEstimate.toString(),
+            observedGasEstimate: observedGasEstimate.toString(),
+            additionalFeeEstimate: additionalFeeEstimate.toString(),
+            value: value.toString(),
+        }
+
+        const res = await fetch(relayerEndpoint + new URLSearchParams(queryParameters));
+        const evaluationResponse = (await res.json());    //TODO type
+
+        return evaluationResponse.securedDeliveryFiatProfit;
     }
 
 
