@@ -280,7 +280,7 @@ class UnderwriterWorker {
                 txHash: confirmedOrder.txReceipt.hash,
             };
 
-            this.logger.debug(
+            this.logger.info(
                 orderDescription,
                 `Successful underwrite processing: underwrite submitted.`,
             );
@@ -425,7 +425,7 @@ class UnderwriterWorker {
         deadline: bigint,
         maxGasDelivery: bigint,
     ) {
-        this.logger.debug(
+        this.logger.info(
             { fromVault, fromChainId, swapTxHash, swapId: swapIdentifier },
             `Underwrite order received.`
         );

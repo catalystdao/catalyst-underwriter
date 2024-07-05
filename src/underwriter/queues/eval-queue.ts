@@ -272,7 +272,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         };
 
         if (success) {
-            this.logger.debug(
+            this.logger.info(
                 orderDescription,
                 `Successful underwrite evaluation.`,
             );
@@ -479,11 +479,11 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
     // ********************************************************************************************
     enableUnderwrites(): void {
         this.enabled = true;
-        this.logger.debug('Underwriting enabled.');
+        this.logger.info('Underwriting enabled.');
     }
 
     disableUnderwrite(): void {
         this.enabled = false;
-        this.logger.debug('Underwriting disabled.');
+        this.logger.info('Underwriting disabled.');
     }
 }

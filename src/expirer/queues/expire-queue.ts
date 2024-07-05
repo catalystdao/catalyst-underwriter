@@ -113,12 +113,12 @@ export class ExpireQueue extends ProcessingQueue<ExpireOrder, ExpireOrderResult>
 
         if (success) {
             if (result != null) {
-                this.logger.debug(
+                this.logger.info(
                     orderDescription,
                     `Successful expire processing: expire submitted.`,
                 );
             } else {
-                this.logger.debug(
+                this.logger.info(
                     orderDescription,
                     `Successful expire processing: expire not submitted.`,
                 );
