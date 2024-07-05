@@ -335,7 +335,13 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
         const underwriteIncentiveShare = Number(underwriteIncentiveX16) / 2**16;
         const rewardFiatAmount = underwriteFiatAmount * underwriteIncentiveShare;
-        const adjustedRewardFiatAmount = rewardFiatAmount / tokenConfig.profitabilityFactor;
+
+        // Use the 'profitabilityFactor' to bias the profitability calculation: a larger factor
+        // implies a larger profitability guarantee. If set to '0', effectively disable the 
+        // evaluation step.
+        const adjustedRewardFiatAmount = tokenConfig.profitabilityFactor == 0
+            ? Infinity
+            : rewardFiatAmount / tokenConfig.profitabilityFactor;
 
         if (Math.floor(adjustedRewardFiatAmount * DECIMAL_RESOLUTION) == 0) {
             return 0n;
@@ -364,7 +370,9 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             ? maxGasLimitMinReward
             : maxGasLimitMinRelativeReward;
 
-        return BigInt(Math.floor(maxGasLimit));
+        return maxGasLimit == Infinity
+            ? MaxUint256
+            : BigInt(Math.floor(maxGasLimit));
     }
 
     async getGasValue(
