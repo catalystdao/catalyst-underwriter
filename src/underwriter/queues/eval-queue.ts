@@ -21,7 +21,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         retryInterval: number,
         maxTries: number,
         underwritingCollateral: number,
-        allowanceBuffer: number,
+        private readonly allowanceBuffer: number,
         private readonly maxUnderwriteDelay: number,
         private readonly minRelayDeadlineDuration: bigint,
         private readonly minMaxGasDelivery: bigint,
@@ -135,20 +135,84 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         const expectedReturn = await toVaultContract.calcReceiveAsset(order.toAsset, order.units);
         const toAssetAllowance = expectedReturn * this.effectiveAllowanceBuffer / DECIMAL_RESOLUTION_BIGINT;
 
-        // Verify the token balances involed are acceptable
+        // Set the maximum allowed gasLimit for the transaction. This will be checked on the
+        // 'underwrite' queue with an 'estimateGas' call.
+        // ! It is not possible to 'estimateGas' of the underwrite transaction at this point, as
+        // ! before doing it the allowance for underwriting must be set. The allowance for
+        // ! underwriting is set **after** the evaluation step, as the allowance amount is not
+        // ! known until the evaluation step completes.
+
+        const relayFiatProfitEstimate = await this.querySwapRelayProfitEstimate(
+            this.chainId,
+            order.messageIdentifier,
+            order.relayDeliveryCosts.gasUsage,
+            order.relayDeliveryCosts.gasObserved,
+            order.relayDeliveryCosts.fee,
+            order.relayDeliveryCosts.value,
+        );
+
+        const underwriteFiatAmount = await this.getTokenValue(
+            this.chainId,
+            tokenConfig.tokenId,
+            expectedReturn
+        );
+
+        // Verify the underwrite value is allowed
         if (
             tokenConfig.maxUnderwriteAllowed
-            && toAssetAllowance > tokenConfig.maxUnderwriteAllowed
+            && underwriteFiatAmount * (1 + this.allowanceBuffer) > tokenConfig.maxUnderwriteAllowed
         ) {
             this.logger.info(
                 {
                     swapId: order.swapIdentifier,
                     swapTxHash: order.swapTxHash,
                     toAsset: order.toAsset,
-                    toAssetAllowance,
+                    allowanceBuffer: this.allowanceBuffer,
+                    underwriteAmount: underwriteFiatAmount,
                     maxUnderwriteAllowed: tokenConfig.maxUnderwriteAllowed
                 },
-                "Skipping underwrite: underwrite exceed the 'maxUnderwriteAllowed' configuration."
+                "Skipping underwrite: underwrite exceeds the 'maxUnderwriteAllowed' configuration."
+            );
+            return null;
+        }
+
+        const underwriteIncentiveShare = Number(order.underwriteIncentiveX16) / 2**16;
+        const rewardFiatAmount = underwriteFiatAmount * underwriteIncentiveShare;
+
+        const gasPrice = await this.getGasPrice(this.chainId);
+        const maxGasLimit = await this.calcMaxGasLimit(
+            underwriteFiatAmount,
+            rewardFiatAmount,
+            gasPrice,
+            tokenConfig,
+            relayFiatProfitEstimate,
+        );
+
+        this.logger.info(
+            {
+                swapId: order.swapIdentifier,
+                swapTxHash: order.swapTxHash,
+                toAsset: order.toAsset,
+                underwriteAmount: expectedReturn,
+                underwriteFiatAmount,
+                underwriteIncentiveX16: order.underwriteIncentiveX16,
+                rewardFiatAmount,
+                gasPrice,
+                tokenConfig,
+                relayFiatProfitEstimate,
+                maxGasLimit,
+            },
+            "Underwrite evaluation."
+        )
+
+        if (maxGasLimit <= 0n) {
+            this.logger.info(
+                {
+                    swapId: order.swapIdentifier,
+                    swapTxHash: order.swapTxHash,
+                    maxGasLimit                    
+                },
+                "Skipping underwrite: calculated maximum gas limit is 0 or negative."
             );
             return null;
         }
@@ -172,57 +236,6 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             return null;
         }
 
-        // Set the maximum allowed gasLimit for the transaction. This will be checked on the
-        // 'underwrite' queue with an 'estimateGas' call.
-        // ! It is not possible to 'estimateGas' of the underwrite transaction at this point, as
-        // ! before doing it the allowance for underwriting must be set. The allowance for
-        // ! underwriting is set **after** the evaluation step, as the allowance amount is not
-        // ! known until the evaluation step completes.
-
-        const relayFiatProfitEstimate = await this.querySwapRelayProfitEstimate(
-            this.chainId,
-            order.messageIdentifier,
-            order.relayDeliveryCosts.gasUsage,
-            order.relayDeliveryCosts.gasObserved,
-            order.relayDeliveryCosts.fee,
-            order.relayDeliveryCosts.value,
-        );
-
-        const gasPrice = await this.getGasPrice(this.chainId);
-        const maxGasLimit = await this.calcMaxGasLimit(
-            expectedReturn,
-            order.underwriteIncentiveX16,
-            gasPrice,
-            tokenConfig,
-            relayFiatProfitEstimate,
-        );
-
-        this.logger.info(
-            {
-                swapId: order.swapIdentifier,
-                swapTxHash: order.swapTxHash,
-                toAsset: order.toAsset,
-                underwriteAmount: expectedReturn,
-                underwriteIncentiveX16: order.underwriteIncentiveX16,
-                gasPrice,
-                tokenConfig,
-                relayFiatProfitEstimate,
-                maxGasLimit,
-            },
-            "Underwrite max gas limit evaluation."
-        )
-
-        if (maxGasLimit <= 0n) {
-            this.logger.info(
-                {
-                    swapId: order.swapIdentifier,
-                    swapTxHash: order.swapTxHash,
-                    maxGasLimit                    
-                },
-                "Skipping underwrite: calculated maximum gas limit is 0 or negative."
-            );
-            return null;
-        }
 
         await this.tokenHandler.registerBalanceUse(
             toAssetAllowance,
@@ -330,21 +343,12 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
     // }
 
     async calcMaxGasLimit(
-        underwriteAmount: bigint,
-        underwriteIncentiveX16: bigint,
+        underwriteFiatAmount: number,
+        rewardFiatAmount: number,
         gasPrice: bigint,
         tokenConfig: UnderwriterTokenConfig,
         relayFiatProfitEstimate: number,
     ): Promise<bigint> {
-
-        const underwriteFiatAmount = await this.getTokenValue(
-            this.chainId,
-            tokenConfig.tokenId,
-            underwriteAmount
-        );
-
-        const underwriteIncentiveShare = Number(underwriteIncentiveX16) / 2**16;
-        const rewardFiatAmount = underwriteFiatAmount * underwriteIncentiveShare;
 
         // Use the 'profitabilityFactor' to bias the profitability calculation: a larger factor
         // implies a larger profitability guarantee. If set to '0', effectively disable the 

@@ -33,11 +33,14 @@ global:
       0.05 # Extra buffer allowed on top of the calculated required funds for
       # performing an underwrite.
 
-    maxUnderwriteAllowed: '10000000000000000000' # Maximum tokens to risk on a single underwrite
-    minUnderwriteReward: 0.05                    # In the 'pricingDenomination' specified on the Relayer
-    relativeMinUnderwriteReward: 0.1
-    profitabilityFactor: 1.0                     # Profitiability evaluation adjustment factor. A larger
-                                                 # factor implies a larger profitability guarantee.
+    maxUnderwriteAllowed: 500           # Maximum underwrite value (EXCLUDING THE COLLATERAL).
+                                        # In the 'pricingDenomination' specified on the Relayer.
+    minUnderwriteReward: 0.5            # Minimum underwrite reward desired. 
+                                        # In the 'pricingDenomination' specified on the Relayer.
+    relativeMinUnderwriteReward: 0.1    # Minimum relative underwrite reward desired (w.r.t. the
+                                        # underwrite amount plus the tx cost).
+    profitabilityFactor: 1.0            # Profitiability evaluation adjustment factor. A larger
+                                        # factor implies a larger profitability guarantee.
 
     lowTokenBalanceWarning: '1000000000000000000' # Token balance below which a 'low balance' warning is emitted.
     tokenBalanceUpdateInterval:

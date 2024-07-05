@@ -265,9 +265,6 @@ export class ConfigService {
         if (config.minRelayDeadlineDuration != undefined) {
             config.minRelayDeadlineDuration = BigInt(config.minRelayDeadlineDuration);
         }
-        if (config.maxUnderwriteAllowed != undefined) {
-            config.maxUnderwriteAllowed = BigInt(config.maxUnderwriteAllowed);
-        }
         if (config.lowTokenBalanceWarning != undefined) {
             config.lowTokenBalanceWarning = BigInt(config.lowTokenBalanceWarning);
         }
@@ -338,9 +335,6 @@ export class ConfigService {
             const tokenConfig = { ...rawTokenConfig };
             if (tokenConfig.allowanceBuffer != undefined) {
                 tokenConfig.allowanceBuffer = BigInt(tokenConfig.allowanceBuffer);
-            }
-            if (tokenConfig.maxUnderwriteAllowed != undefined) {
-                tokenConfig.maxUnderwriteAllowed = BigInt(tokenConfig.maxUnderwriteAllowed);
             }
             if (tokenConfig.lowTokenBalanceWarning != undefined) {
                 tokenConfig.lowTokenBalanceWarning = BigInt(tokenConfig.lowTokenBalanceWarning);

@@ -51,7 +51,7 @@ export interface UnderwriterGlobalConfig {
     maxSubmissionDelay?: number;
     underwritingCollateral?: number;
     allowanceBuffer?: number;
-    maxUnderwriteAllowed?: bigint;
+    maxUnderwriteAllowed?: number;
     minUnderwriteReward?: number;
     relativeMinUnderwriteReward?: number;
     profitabilityFactor?: number;
@@ -125,7 +125,7 @@ export interface ChainConfig {
 export interface TokenConfig {
     tokenId: string;
     allowanceBuffer?: bigint;
-    maxUnderwriteAllowed?: bigint;
+    maxUnderwriteAllowed?: number;
     minUnderwriteReward?: number;
     relativeMinUnderwriteReward?: number;
     profitabilityFactor?: number;

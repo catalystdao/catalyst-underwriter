@@ -42,7 +42,7 @@ interface DefaultUnderwriterWorkerData {
     maxSubmissionDelay: number;
     underwritingCollateral: number;
     allowanceBuffer: number;
-    maxUnderwriteAllowed: bigint | undefined;
+    maxUnderwriteAllowed: number | undefined;
     minUnderwriteReward: number;
     relativeMinUnderwriteReward: number;
     profitabilityFactor: number;

@@ -4,7 +4,7 @@ import { VaultTemplateConfig } from "src/config/config.types";
 export interface UnderwriterTokenConfig {
     tokenId: string;
     allowanceBuffer?: bigint;
-    maxUnderwriteAllowed?: bigint;
+    maxUnderwriteAllowed?: number;
     minUnderwriteReward: number;
     relativeMinUnderwriteReward: number;
     profitabilityFactor: number;
