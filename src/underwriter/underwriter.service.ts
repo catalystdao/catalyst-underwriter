@@ -165,7 +165,7 @@ export class UnderwriterService implements OnModuleInit {
         const maxUnderwriteAllowed = globalUnderwriterConfig.maxUnderwriteAllowed;
         const minUnderwriteReward = globalUnderwriterConfig.minUnderwriteReward ?? DEFAULT_UNDERWRITER_MIN_UNDERWRITE_REWARD;
         const relativeMinUnderwriteReward = globalUnderwriterConfig.relativeMinUnderwriteReward  ?? DEFAULT_UNDERWRITER_RELATIVE_MIN_UNDERWRITE_REWARD;
-        const profitabilityFactor = globalUnderwriterConfig.relativeMinUnderwriteReward  ?? DEFAULT_UNDERWRITER_PROFITABILITY_FACTOR;
+        const profitabilityFactor = globalUnderwriterConfig.profitabilityFactor ?? DEFAULT_UNDERWRITER_PROFITABILITY_FACTOR;
         const lowTokenBalanceWarning = globalUnderwriterConfig.lowTokenBalanceWarning;
         const tokenBalanceUpdateInterval = globalUnderwriterConfig.tokenBalanceUpdateInterval ?? DEFAULT_UNDERWRITER_TOKEN_BALANCE_UPDATE_INTERVAL;
         const walletPublicKey = (new Wallet(this.configService.globalConfig.privateKey)).address;
