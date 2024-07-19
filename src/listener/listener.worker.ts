@@ -15,8 +15,33 @@ import WebSocket from "ws";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 
 
+//TODO the TransactionDescription and the AMBMessage types should be imported from the relayer repo!
+interface TransactionDescription {
+    transactionHash: string;
+    blockHash: string;
+    blockNumber: number;
+}
+
+interface AMBMessage<T = any> extends TransactionDescription {
+    messageIdentifier: string;
+
+    amb: string;
+    fromChainId: string;
+    toChainId: string;
+    fromIncentivesAddress: string;
+    toIncentivesAddress?: string;    
+
+    incentivesPayload: string;
+    recoveryContext?: string;
+    additionalData?: T;
+
+    transactionBlockNumber?: number;    // The block number as seen by the transaction.
+
+    priority?: boolean;
+};
+
 interface CatalystSwapAMBMessageData {
-    ambMessageMetadata: any,    //TODO type
+    ambMessageMetadata: AMBMessage,
     incentivesMessage: SOURCE_TO_DESTINATION,
     assetSwapPayload: ASSET_SWAP,
     originEndpoint: EndpointConfig
@@ -186,14 +211,14 @@ class ListenerWorker {
             const parsedMessage = JSON.parse(data.toString());
 
             if (parsedMessage.event == "ambMessage") {
-                const ambMessage = parsedMessage.data;
+                const ambMessage: AMBMessage = parsedMessage.data;
                 if (ambMessage == undefined) {
                     this.logger.warn(
                         { parsedMessage },
                         "No data present on 'ambMessage' event."
                     )
                 }
-                if (ambMessage.sourceChain != this.chainId) return;
+                if (ambMessage.fromChainId != this.chainId) return;
 
                 this.logger.info(
                     { messageIdentifier: ambMessage.messageIdentifier },
@@ -499,10 +524,10 @@ class ListenerWorker {
     // ********************************************************************************************
 
     private async processAMBMessage(
-        ambMessage: any,    //TODO type
+        ambMessage: AMBMessage,
     ): Promise<void> {
 
-        const giPayload = parsePayload(ambMessage.payload);
+        const giPayload = parsePayload(ambMessage.incentivesPayload);
         if (giPayload.context != MessageContext.CTX_SOURCE_TO_DESTINATION) return;
 
         // Verify the sending Catalyst interface and GI escrow are trusted
@@ -522,7 +547,7 @@ class ListenerWorker {
         }
 
         // ! Verify the sending escrow matches the expected one for the found interface address
-        if (endpointConfig.incentivesAddress != ambMessage.sourceEscrow.toLowerCase()) {
+        if (endpointConfig.incentivesAddress != ambMessage.fromIncentivesAddress.toLowerCase()) {
             this.logger.info(
                 { sourceApplication },
                 "Skipping AMB message: source escrow (incentives address) does not match the configured endpoint (possible malicious AMB payload)."
@@ -584,7 +609,7 @@ class ListenerWorker {
     }
 
     private async processCatalystSwap(
-        ambMessageMetadata: any,    //TODO type
+        ambMessageMetadata: AMBMessage,
         incentivesMessage: SOURCE_TO_DESTINATION,
         assetSwapPayload: ASSET_SWAP,
         originEndpoint: EndpointConfig
@@ -615,10 +640,10 @@ class ListenerWorker {
             assetSwapPayload.units,
             assetSwapPayload.fromAmount,
             assetSwapPayload.fromAsset,
-            ambMessageMetadata.transactionBlockNumber
+            ambMessageMetadata.transactionBlockNumber!
         );
 
-        const fromChannelId = originEndpoint.channelsOnDestination[ambMessageMetadata.destinationChain];
+        const fromChannelId = originEndpoint.channelsOnDestination[ambMessageMetadata.toChainId];
         if (fromChannelId == undefined) {
             this.logger.info(
                 {
@@ -626,8 +651,8 @@ class ListenerWorker {
                     sourceVault: fromVault,
                     swapId,
                     fromInterfaceAddress: incentivesMessage.sourceApplicationAddress,
-                    fromIncentivesAddress: ambMessageMetadata.sourceEscrow,
-                    toChainId: ambMessageMetadata.destinationChain
+                    fromIncentivesAddress: ambMessageMetadata.fromIncentivesAddress,
+                    toChainId: ambMessageMetadata.toChainId
                 },
                 `'fromChannelId' for the given swap not found. Skipping.`
             );
@@ -643,10 +668,10 @@ class ListenerWorker {
                 txHash: ambMessageMetadata.transactionHash,
                 blockHash: ambMessageMetadata.blockHash,
                 blockNumber: ambMessageMetadata.blockNumber,
-                transactionBlockNumber: ambMessageMetadata.transactionBlockNumber,
+                transactionBlockNumber: ambMessageMetadata.transactionBlockNumber!,
 
                 amb: ambMessageMetadata.amb,
-                toChainId: ambMessageMetadata.destinationChain,
+                toChainId: ambMessageMetadata.toChainId,
                 messageIdentifier: ambMessageMetadata.messageIdentifier,
 
                 toIncentivesAddress: "", // TODO: is this wanted/needed?
