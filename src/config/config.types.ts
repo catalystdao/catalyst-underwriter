@@ -3,7 +3,6 @@ export interface GlobalConfig {
     port: number;
     privateKey: string;
     logLevel?: string;
-    blockDelay?: number;
     monitor: MonitorGlobalConfig;
     listener: ListenerGlobalConfig;
     underwriter: UnderwriterGlobalConfig;
@@ -101,7 +100,6 @@ export interface ChainConfig {
     name: string;
     rpc: string;
     resolver: string | null;
-    blockDelay?: number;
     tokens: TokensConfig,
     monitor: MonitorConfig;
     listener: ListenerConfig;
