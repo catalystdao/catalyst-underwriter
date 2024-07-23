@@ -60,6 +60,7 @@ class ExpirerWorker {
         this.wallet = new WalletInterface(this.config.walletPort);
 
         [this.evalQueue, this.expirerQueue] = this.initializeQueues(
+            this.chainId,
             this.config.minUnderwriteDuration,
             this.config.retryInterval,
             this.config.maxTries,
@@ -106,6 +107,7 @@ class ExpirerWorker {
     }
 
     private initializeQueues(
+        chainId: string,
         minUnderwriteDuration: number,
         retryInterval: number,
         maxTries: number,
@@ -124,6 +126,7 @@ class ExpirerWorker {
         )
 
         const expirerQueue = new ExpireQueue(
+            chainId,
             retryInterval,
             maxTries,
             wallet,
@@ -211,7 +214,7 @@ class ExpirerWorker {
                 txHash: confirmedOrder.txReceipt.hash,
             };
 
-            this.logger.debug(
+            this.logger.info(
                 orderDescription,
                 `Successful expire processing: expire submitted.`,
             );
@@ -230,7 +233,7 @@ class ExpirerWorker {
                 underwriteId: rejectedOrder.underwriteId,
             };
 
-            this.logger.debug(
+            this.logger.info(
                 orderDescription,
                 `Unsuccessful expire processing: expire rejected.`,
             );
@@ -344,7 +347,7 @@ class ExpirerWorker {
         underwriteId: string,
         expiry: number,
     ) {
-        this.logger.debug(
+        this.logger.info(
             { toInterface, underwriteId },
             `Expire underwrite order received.`
         );
@@ -376,7 +379,7 @@ class ExpirerWorker {
         toInterface: string,
         underwriteId: string,
     ) {
-        this.logger.debug(
+        this.logger.info(
             { toInterface, underwriteId },
             `Expire underwrite order removal received.`
         );

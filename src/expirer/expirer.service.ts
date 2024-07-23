@@ -200,7 +200,7 @@ export class ExpirerService implements OnModuleInit {
 
             underwriterPublicKey: await this.walletService.publicKey,
             monitorPort: await this.monitorService.attachToMonitor(chainId),
-            walletPort: await this.walletService.attachToWallet(chainId),
+            walletPort: await this.walletService.attachToWallet(),
             loggerOptions: this.loggerService.loggerOptions
         };
     }

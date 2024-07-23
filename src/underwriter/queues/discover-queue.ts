@@ -129,14 +129,14 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
 
         if (success) {
             if (result != null) {
-                this.logger.debug(
+                this.logger.info(
                     orderDescription,
                     `Successful underwrite discovery: destination vault valid.`,
                 );
 
                 void this.registerSwapDataForTheExpirer(result);
             } else {
-                this.logger.debug(
+                this.logger.info(
                     orderDescription,
                     `Successful underwrite discovery: destination vault invalid.`,
                 );

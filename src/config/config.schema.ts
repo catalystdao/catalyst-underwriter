@@ -287,7 +287,6 @@ const CHAINS_SCHEMA = {
             resolver: { $ref: "non-empty-string-schema" },
             tokens: { $ref: "tokens-schema" },
 
-            blockDelay: { $ref: "positive-number-schema" },
             monitor: { $ref: "monitor-schema" },
             listener: { $ref: "listener-schema" },
             underwriter: { $ref: "underwriter-schema" },
