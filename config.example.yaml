@@ -118,6 +118,7 @@ chains:
     # The tokens that are to be undewritten
     tokens:
       - name: 'Wrapped gas'
+        tokenId: "ethereum"
         address: '0xE67ABDA0D43f7AC8f37876bBF00D1DFadbB93aaa'
         allowanceBuffer:
           '10000000000000000000' # Amount by which to 'buffer' the token approvals
@@ -151,6 +152,7 @@ chains:
       minMaxGasDelivery: 200000
     tokens:
       - name: 'WETH'
+        tokenId: "ethereum"
         address: '0x1BDD24840e119DC2602dCC587Dd182812427A5Cc'
         allowanceBuffer: '10000000000000000000'
 
@@ -171,6 +173,7 @@ chains:
       minMaxGasDelivery: 200000
     tokens:
       - name: 'WETH'
+        tokenId: "ethereum"
         address: '0x4200000000000000000000000000000000000006'
         allowanceBuffer: '10000000000000000000'
 
