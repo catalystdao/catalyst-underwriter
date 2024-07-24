@@ -33,12 +33,25 @@ global:
       0.05 # Extra buffer allowed on top of the calculated required funds for
       # performing an underwrite.
 
-    maxUnderwriteAllowed: '10000000000000000000' # Maximum tokens to risk on a single underwrite
-    minUnderwriteReward: '10000000000' # Minimum acceptable token reward for an underwrite
+    maxUnderwriteAllowed: 500           # Maximum underwrite value (EXCLUDING THE COLLATERAL).
+                                        # In the 'pricingDenomination' specified on the Relayer.
+    minUnderwriteReward: 0.5            # Minimum underwrite reward desired. 
+                                        # In the 'pricingDenomination' specified on the Relayer.
+    relativeMinUnderwriteReward: 0.1    # Minimum relative underwrite reward desired (w.r.t. the
+                                        # underwrite amount plus the tx cost).
+    profitabilityFactor: 1.0            # Profitiability evaluation adjustment factor. A larger
+                                        # factor implies a larger profitability guarantee.
+
     lowTokenBalanceWarning: '1000000000000000000' # Token balance below which a 'low balance' warning is emitted.
     tokenBalanceUpdateInterval:
       50 # Number of transactions after which to update the
       # Underwriter token balance from the rpc.
+
+    relayDeliveryCosts:                  # Average swap delivery costs for underwritten swaps. Used to estimate underwrites profitability
+      gasUsage: '21000'                  # The gas used.
+      # gasObserved: '21000'             # The gas observed by the escrow contract.
+      # fee: '0'                         # The fee taken on transaction submission (relevant for L2 chains.)
+      # value: '0'                       # The value sent to the escrow as payment (e.g. to execute the return 'ack' cross-chain message).
 
     # ! The following setting is here for illustrative purposes, but it MUST ALWAYS be applied on
     # ! a per-chain basis as it is CRITICAL to prevent the underwriter from being stolen from.
@@ -105,6 +118,7 @@ chains:
     # The tokens that are to be undewritten
     tokens:
       - name: 'Wrapped gas'
+        tokenId: "ethereum"
         address: '0xE67ABDA0D43f7AC8f37876bBF00D1DFadbB93aaa'
         allowanceBuffer:
           '10000000000000000000' # Amount by which to 'buffer' the token approvals
@@ -138,6 +152,7 @@ chains:
       minMaxGasDelivery: 200000
     tokens:
       - name: 'WETH'
+        tokenId: "ethereum"
         address: '0x1BDD24840e119DC2602dCC587Dd182812427A5Cc'
         allowanceBuffer: '10000000000000000000'
 
@@ -158,6 +173,7 @@ chains:
       minMaxGasDelivery: 200000
     tokens:
       - name: 'WETH'
+        tokenId: "ethereum"
         address: '0x4200000000000000000000000000000000000006'
         allowanceBuffer: '10000000000000000000'
 
@@ -177,6 +193,12 @@ endpoints:
         address: '0x0000000003b8C9BFeB9351933CFC301Eea92073F'
       - name: 'Amplified'
         address: '0x000000004aBe0D620b25b8B06B0712BDcff21899'
+    # Costs overrides (uncomment to enable)
+    # relayDeliveryCosts:
+    #   gasUsage: '21000'
+    #   gasObserved: '21000'
+    #   fee: '0'
+    #   value: '0'
 
   - name: 'Optimism Sepolia Testnet'
     amb: 'wormhole'
