@@ -224,7 +224,7 @@ export class MonitorService implements OnModuleInit {
 
         const chainConfig = this.chainConfig.get(eventChainId);
         if (chainConfig == undefined) {
-            this.logger.warn(
+            this.logger.debug(
                 { chainId: eventChainId },
                 `Skipping monitor event: chain not supported.`
             );
