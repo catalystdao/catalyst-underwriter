@@ -1,13 +1,18 @@
 
 export interface GlobalConfig {
     port: number;
-    privateKey: string;
+    privateKey: Promise<string>;
     logLevel?: string;
     monitor: MonitorGlobalConfig;
     listener: ListenerGlobalConfig;
     underwriter: UnderwriterGlobalConfig;
     expirer: ExpirerGlobalConfig;
     wallet: WalletGlobalConfig;
+}
+
+
+export type PrivateKeyConfig = string | {
+  loader: string;
 }
 
 
