@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { getConfigValidator } from './config.schema';
 import { GlobalConfig, ChainConfig, AMBConfig, MonitorGlobalConfig, ListenerGlobalConfig, UnderwriterGlobalConfig, ExpirerGlobalConfig, WalletGlobalConfig, MonitorConfig, ListenerConfig, UnderwriterConfig, WalletConfig, ExpirerConfig, TokensConfig, EndpointConfig, VaultTemplateConfig, RelayDeliveryCosts } from './config.types';
 import { loadPrivateKeyLoader } from './privateKeyLoaders/privateKeyLoader';
+import { JsonRpcProvider } from 'ethers';
 
 @Injectable()
 export class ConfigService {
@@ -16,6 +17,8 @@ export class ConfigService {
     readonly chainsConfig: Map<string, ChainConfig>;
     readonly ambsConfig: Map<string, AMBConfig>;
     readonly endpointsConfig: Map<string, EndpointConfig[]>;
+
+    readonly isReady: Promise<void>;
 
     constructor() {
         this.nodeEnv = this.loadNodeEnv();
@@ -30,6 +33,16 @@ export class ConfigService {
         const ambNames = Array.from(this.ambsConfig.keys());
         const chainIds = Array.from(this.chainsConfig.keys());
         this.endpointsConfig = this.loadEndpointsConfig(chainIds, ambNames);
+
+        this.isReady = this.initialize();
+    }
+
+
+    // NOTE: The OnModuleInit hook is not being used as it does not guarantee the order in which it
+    // is executed across services (i.e. there is no guarantee that the config service will be the
+    // first to initialize). The `isReady` promise must be awaited on the underwriter initialization.
+    private async initialize(): Promise<void> {
+        await this.validateChainIds(this.chainsConfig);
     }
 
     private loadNodeEnv(): string {
@@ -259,6 +272,25 @@ export class ConfigService {
 
         // If there is no chain-specific override, return the default value for the property.
         return this.ambsConfig.get(amb)?.globalProperties[key];
+    }
+
+    private async validateChainIds(chainsConfig: Map<string, ChainConfig>): Promise<void> {
+
+        const validationPromises = [];
+        for (const [chainId, config] of chainsConfig) {
+            const provider = new JsonRpcProvider(config.rpc, undefined, { staticNetwork: true });
+            const validationPromise = provider.getNetwork().then(
+                (network) => {
+                    const rpcChainId = network.chainId.toString();
+                    if (rpcChainId !== chainId) {
+                        throw new Error(`Error validating the chain ID of chain ${chainId}: the RPC chain ID is ${rpcChainId}.`)
+                    }
+                }
+            )
+            validationPromises.push(validationPromise);
+        }
+
+        await Promise.all(validationPromises);
     }
 
 
