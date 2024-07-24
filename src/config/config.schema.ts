@@ -140,6 +140,19 @@ const LISTENER_SCHEMA = {
     additionalProperties: false
 }
 
+const RELAY_DELIVERY_COSTS_SCHEMA = {
+    $id: "relay-delivery-costs-schema",
+    type: "object",
+    properties: {
+        gasUsage: { $ref: "gas-field-schema" },
+        gasObserved: { $ref: "gas-field-schema" },
+        fee: { $ref: "uint256-field-schema" },
+        value: { $ref: "uint256-field-schema" },
+    },
+    required: ["gasUsage"],
+    additionalProperties: false
+}
+
 const UNDERWRITER_GLOBAL_SCHEMA = {
     $id: "underwriter-global-schema",
     type: "object",
@@ -165,10 +178,13 @@ const UNDERWRITER_GLOBAL_SCHEMA = {
             exclusiveMinimum: 0,
             maximum: 0.3
         },
-        maxUnderwriteAllowed: { $ref: "uint256-field-schema" },
-        minUnderwriteReward: { $ref: "uint256-field-schema" },
+        maxUnderwriteAllowed: { $ref: "positive-number-schema" },
+        minUnderwriteReward: { $ref: "positive-number-schema" },
+        relativeMinUnderwriteReward: { $ref: "positive-number-schema" },
+        profitabilityFactor: { $ref: "positive-number-schema" },
         lowTokenBalanceWarning: { $ref: "uint256-field-schema" },
         tokenBalanceUpdateInterval: { $ref: "positive-number-schema" },
+        relayDeliveryCosts: { $ref: "relay-delivery-costs-schema" },
     },
     additionalProperties: false
 }
@@ -262,14 +278,17 @@ const TOKENS_SCHEMA = {
         type: "object",
         properties: {
             name: { $ref: "non-empty-string-schema" },
+            tokenId: { $ref: "non-empty-string-schema" },
             address: { $ref: "address-field-schema" },
-            maxUnderwriteAllowed: { $ref: "uint256-field-schema" },
-            minUnderwriteReward: { $ref: "uint256-field-schema" },
+            maxUnderwriteAllowed: { $ref: "positive-number-schema" },
+            minUnderwriteReward: { $ref: "positive-number-schema" },
+            relativeMinUnderwriteReward: { $ref: "positive-number-schema" },
+            profitabilityFactor: { $ref: "positive-number-schema" },
             lowTokenBalanceWarning: { $ref: "uint256-field-schema" },
             tokenBalanceUpdateInterval: { $ref: "positive-number-schema" },
             allowanceBuffer: { $ref: "gas-field-schema" }
         },
-        required: ["name", "address"],
+        required: ["name", "address", "tokenId"],
         additionalProperties: false
     },
     minItems: 1
@@ -330,7 +349,8 @@ const ENDPOINTS_SCHEMA = {
                     additionalProperties: false
                 },
                 minItems: 1
-            }
+            },
+            relayDeliveryCosts: { $ref: "relay-delivery-costs-schema" },
         },
         required: ["name", "amb", "chainId", "factoryAddress", "interfaceAddress", "incentivesAddress", "channelsOnDestination", "vaultTemplates"],
         additionalProperties: false
@@ -355,6 +375,7 @@ export function getConfigValidator(): AnyValidateFunction<unknown> {
     ajv.addSchema(PRIVATE_KEY_SCHEMA);
     ajv.addSchema(MONITOR_SCHEMA);
     ajv.addSchema(LISTENER_SCHEMA);
+    ajv.addSchema(RELAY_DELIVERY_COSTS_SCHEMA);
     ajv.addSchema(UNDERWRITER_GLOBAL_SCHEMA);
     ajv.addSchema(UNDERWRITER_SCHEMA);
     ajv.addSchema(EXPIRER_SCHEMA);

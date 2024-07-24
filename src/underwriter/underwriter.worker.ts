@@ -3,16 +3,17 @@ import pino, { LoggerOptions } from "pino";
 import { parentPort, workerData } from 'worker_threads';
 import { UnderwriterWorkerCommand, UnderwriterWorkerCommandId, UnderwriterWorkerData } from "./underwriter.service";
 import { tryErrorToString, wait } from "src/common/utils";
-import { AMBConfig, EndpointConfig, TokenConfig } from "src/config/config.types";
+import { AMBConfig } from "src/config/config.types";
 import { STATUS_LOG_INTERVAL } from "src/logger/logger.service";
 import { Store } from "src/store/store.lib";
 import { SwapDescription } from "src/store/store.types";
-import { DiscoverOrder, NewOrder, UnderwriteOrder, UnderwriteOrderResult } from "./underwriter.types";
+import { DiscoverOrder, NewOrder, UnderwriteOrder, UnderwriteOrderResult, UnderwriterEndpointConfig, UnderwriterTokenConfig } from "./underwriter.types";
 import { EvalQueue } from "./queues/eval-queue";
 import { UnderwriteQueue } from "./queues/underwrite-queue";
 import { TokenHandler } from "./token-handler/token-handler";
 import { WalletInterface } from "src/wallet/wallet.interface";
 import { DiscoverQueue } from "./queues/discover-queue";
+import { Resolver, loadResolver } from "src/resolvers/resolver";
 
 
 class UnderwriterWorker {
@@ -26,8 +27,10 @@ class UnderwriterWorker {
     private readonly chainId: string;
     private readonly chainName: string;
 
-    private readonly endpoints: EndpointConfig[];
-    private readonly tokens: Record<string, TokenConfig>;
+    private readonly resolver: Resolver;
+
+    private readonly endpoints: UnderwriterEndpointConfig[];
+    private readonly tokens: Record<string, UnderwriterTokenConfig>;
     private readonly ambs: Record<string, AMBConfig>;
 
     private readonly wallet: WalletInterface;
@@ -56,6 +59,12 @@ class UnderwriterWorker {
         );
         this.provider = this.initializeProvider(this.config.rpc);
 
+        this.resolver = loadResolver(
+            this.config.resolver,
+            this.provider,
+            this.logger
+        );
+
         this.wallet = new WalletInterface(this.config.walletPort);
 
         this.tokenHandler = new TokenHandler(
@@ -83,6 +92,7 @@ class UnderwriterWorker {
             this.config.minRelayDeadlineDuration,
             this.config.minMaxGasDelivery,
             this.tokenHandler,
+            this.resolver,
             this.config.walletPublicKey,
             this.wallet,
             this.store,
@@ -121,8 +131,8 @@ class UnderwriterWorker {
     private initializeQueues(
         enabled: boolean,
         chainId: string,
-        endpointConfigs: EndpointConfig[],
-        tokens: Record<string, TokenConfig>,
+        endpointConfigs: UnderwriterEndpointConfig[],
+        tokens: Record<string, UnderwriterTokenConfig>,
         ambs: Record<string, AMBConfig>,
         retryInterval: number,
         maxTries: number,
@@ -132,6 +142,7 @@ class UnderwriterWorker {
         minRelayDeadlineDuration: bigint,
         minMaxGasDelivery: bigint,
         tokenHandler: TokenHandler,
+        resolver: Resolver,
         walletPublicKey: string,
         wallet: WalletInterface,
         store: Store,
@@ -161,6 +172,7 @@ class UnderwriterWorker {
             minRelayDeadlineDuration,
             minMaxGasDelivery,
             tokenHandler,
+            wallet,
             provider,
             logger
         );
@@ -170,6 +182,7 @@ class UnderwriterWorker {
             ambs,
             retryInterval,
             maxTries,
+            resolver,
             walletPublicKey,
             wallet,
             provider,

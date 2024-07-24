@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import * as yaml from 'js-yaml';
 import dotenv from 'dotenv';
 import { getConfigValidator } from './config.schema';
-import { GlobalConfig, ChainConfig, AMBConfig, MonitorGlobalConfig, ListenerGlobalConfig, UnderwriterGlobalConfig, ExpirerGlobalConfig, WalletGlobalConfig, MonitorConfig, ListenerConfig, UnderwriterConfig, WalletConfig, ExpirerConfig, TokensConfig, EndpointConfig, VaultTemplateConfig } from './config.types';
+import { GlobalConfig, ChainConfig, AMBConfig, MonitorGlobalConfig, ListenerGlobalConfig, UnderwriterGlobalConfig, ExpirerGlobalConfig, WalletGlobalConfig, MonitorConfig, ListenerConfig, UnderwriterConfig, WalletConfig, ExpirerConfig, TokensConfig, EndpointConfig, VaultTemplateConfig, RelayDeliveryCosts } from './config.types';
 import { loadPrivateKeyLoader } from './privateKeyLoaders/privateKeyLoader';
 
 @Injectable()
@@ -202,6 +202,22 @@ export class ConfigService {
                 });
             }
 
+            let relayDeliveryCosts: RelayDeliveryCosts | undefined;
+            if (rawEndpointConfig.relayDeliveryCosts != undefined) {
+                relayDeliveryCosts = {
+                    gasUsage: BigInt(rawEndpointConfig.relayDeliveryCosts.gasUsage),
+                    gasObserved: rawEndpointConfig.relayDeliveryCosts.gasObserved != undefined
+                        ? BigInt(rawEndpointConfig.relayDeliveryCosts.gasObserved)
+                        : undefined,
+                    fee: rawEndpointConfig.relayDeliveryCosts.fee != undefined
+                        ? BigInt(rawEndpointConfig.relayDeliveryCosts.fee)
+                        : undefined,
+                    value: rawEndpointConfig.relayDeliveryCosts.value != undefined
+                        ? BigInt(rawEndpointConfig.relayDeliveryCosts.value)
+                        : undefined
+                };
+            }
+
 
             const currentEndpoints = endpointConfig.get(chainId) ?? [];
 
@@ -223,6 +239,7 @@ export class ConfigService {
                 incentivesAddress,
                 channelsOnDestination,
                 vaultTemplates,
+                relayDeliveryCosts,
             });
             endpointConfig.set(chainId, currentEndpoints);
         }
@@ -261,14 +278,21 @@ export class ConfigService {
         if (config.minRelayDeadlineDuration != undefined) {
             config.minRelayDeadlineDuration = BigInt(config.minRelayDeadlineDuration);
         }
-        if (config.maxUnderwriteAllowed != undefined) {
-            config.maxUnderwriteAllowed = BigInt(config.maxUnderwriteAllowed);
-        }
-        if (config.minUnderwriteReward != undefined) {
-            config.minUnderwriteReward = BigInt(config.minUnderwriteReward);
-        }
         if (config.lowTokenBalanceWarning != undefined) {
             config.lowTokenBalanceWarning = BigInt(config.lowTokenBalanceWarning);
+        }
+        if (config.relayDeliveryCosts != undefined) {
+            const costs = config.relayDeliveryCosts;
+            costs.gasUsage = BigInt(costs.gasUsage);
+            if (costs.gasObserved != undefined) {
+                costs.gasObserved = BigInt(costs.gasObserved);
+            }
+            if (costs.fee != undefined) {
+                costs.fee = BigInt(costs.fee);
+            }
+            if (costs.value != undefined) {
+                costs.value = BigInt(costs.value);
+            }
         }
         return config as UnderwriterGlobalConfig;
     }
@@ -324,12 +348,6 @@ export class ConfigService {
             const tokenConfig = { ...rawTokenConfig };
             if (tokenConfig.allowanceBuffer != undefined) {
                 tokenConfig.allowanceBuffer = BigInt(tokenConfig.allowanceBuffer);
-            }
-            if (tokenConfig.maxUnderwriteAllowed != undefined) {
-                tokenConfig.maxUnderwriteAllowed = BigInt(tokenConfig.maxUnderwriteAllowed);
-            }
-            if (tokenConfig.minUnderwriteReward != undefined) {
-                tokenConfig.minUnderwriteReward = BigInt(tokenConfig.minUnderwriteReward);
             }
             if (tokenConfig.lowTokenBalanceWarning != undefined) {
                 tokenConfig.lowTokenBalanceWarning = BigInt(tokenConfig.lowTokenBalanceWarning);

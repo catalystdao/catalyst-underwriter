@@ -35,6 +35,14 @@ export interface ListenerGlobalConfig {
 export interface ListenerConfig extends ListenerGlobalConfig {}
 
 
+export interface RelayDeliveryCosts {
+    gasUsage: bigint;
+    gasObserved?: bigint;
+    fee?: bigint;
+    value?: bigint;
+}
+
+
 export interface UnderwriterGlobalConfig {
     enabled?: boolean;
     retryInterval?: number;
@@ -47,10 +55,13 @@ export interface UnderwriterGlobalConfig {
     maxSubmissionDelay?: number;
     underwritingCollateral?: number;
     allowanceBuffer?: number;
-    maxUnderwriteAllowed?: bigint;
-    minUnderwriteReward?: bigint;
+    maxUnderwriteAllowed?: number;
+    minUnderwriteReward?: number;
+    relativeMinUnderwriteReward?: number;
+    profitabilityFactor?: number;
     lowTokenBalanceWarning?: bigint;
     tokenBalanceUpdateInterval?: number;
+    relayDeliveryCosts?: RelayDeliveryCosts;
 }
 
 export interface UnderwriterConfig extends UnderwriterGlobalConfig {
@@ -115,9 +126,12 @@ export interface ChainConfig {
 
 
 export interface TokenConfig {
+    tokenId: string;
     allowanceBuffer?: bigint;
-    maxUnderwriteAllowed?: bigint;
-    minUnderwriteReward?: bigint;
+    maxUnderwriteAllowed?: number;
+    minUnderwriteReward?: number;
+    relativeMinUnderwriteReward?: number;
+    profitabilityFactor?: number;
     lowTokenBalanceWarning?: bigint;
     tokenBalanceUpdateInterval?: number;
 }
@@ -134,6 +148,7 @@ export interface EndpointConfig {
     incentivesAddress: string;
     channelsOnDestination: Record<string, string>;
     vaultTemplates: VaultTemplateConfig[];
+    relayDeliveryCosts?: RelayDeliveryCosts;
 }
 
 export interface VaultTemplateConfig {
