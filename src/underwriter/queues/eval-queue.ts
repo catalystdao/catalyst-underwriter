@@ -1,11 +1,11 @@
 import { tryErrorToString } from 'src/common/utils';
 import pino from "pino";
 import { HandleOrderResult, ProcessingQueue } from "../../processing-queue/processing-queue";
-import { EvalOrder, UnderwriteOrder } from "../underwriter.types";
-import { TokenConfig } from "src/config/config.types";
+import { EvalOrder, UnderwriteOrder, UnderwriterTokenConfig } from "../underwriter.types";
 import { CatalystVaultCommon__factory } from "src/contracts";
-import { JsonRpcProvider } from 'ethers';
+import { JsonRpcProvider, MaxUint256 } from 'ethers';
 import { TokenHandler } from '../token-handler/token-handler';
+import { WalletInterface } from 'src/wallet/wallet.interface';
 
 const DECIMAL_RESOLUTION = 1_000_000;
 const DECIMAL_RESOLUTION_BIGINT = BigInt(DECIMAL_RESOLUTION);
@@ -17,15 +17,16 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
     constructor(
         private enabled: boolean,
         private readonly chainId: string,
-        private readonly tokens: Record<string, TokenConfig>,
+        private readonly tokens: Record<string, UnderwriterTokenConfig>,
         retryInterval: number,
         maxTries: number,
         underwritingCollateral: number,
-        allowanceBuffer: number,
+        private readonly allowanceBuffer: number,
         private readonly maxUnderwriteDelay: number,
         private readonly minRelayDeadlineDuration: bigint,
         private readonly minMaxGasDelivery: bigint,
         private readonly tokenHandler: TokenHandler,
+        private readonly wallet: WalletInterface,
         private readonly provider: JsonRpcProvider,
         private readonly logger: pino.Logger
     ) {
@@ -134,42 +135,88 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         const expectedReturn = await toVaultContract.calcReceiveAsset(order.toAsset, order.units);
         const toAssetAllowance = expectedReturn * this.effectiveAllowanceBuffer / DECIMAL_RESOLUTION_BIGINT;
 
-        // Verify the token balances involed are acceptable
+        // Set the maximum allowed gasLimit for the transaction. This will be checked on the
+        // 'underwrite' queue with an 'estimateGas' call.
+        // ! It is not possible to 'estimateGas' of the underwrite transaction at this point, as
+        // ! before doing it the allowance for underwriting must be set. The allowance for
+        // ! underwriting is set **after** the evaluation step, as the allowance amount is not
+        // ! known until the evaluation step completes.
+
+        const relayFiatProfitEstimate = await this.querySwapRelayProfitEstimate(
+            this.chainId,
+            order.messageIdentifier,
+            order.relayDeliveryCosts.gasUsage,
+            order.relayDeliveryCosts.gasObserved,
+            order.relayDeliveryCosts.fee,
+            order.relayDeliveryCosts.value,
+        );
+
+        const underwriteFiatAmount = await this.getTokenValue(
+            this.chainId,
+            tokenConfig.tokenId,
+            expectedReturn
+        );
+
+        // Verify the underwrite value is allowed
         if (
             tokenConfig.maxUnderwriteAllowed
-            && toAssetAllowance > tokenConfig.maxUnderwriteAllowed
+            && underwriteFiatAmount * (1 + this.allowanceBuffer) > tokenConfig.maxUnderwriteAllowed
         ) {
             this.logger.info(
                 {
                     swapId: order.swapIdentifier,
                     swapTxHash: order.swapTxHash,
                     toAsset: order.toAsset,
-                    toAssetAllowance,
+                    allowanceBuffer: this.allowanceBuffer,
+                    underwriteAmount: underwriteFiatAmount,
                     maxUnderwriteAllowed: tokenConfig.maxUnderwriteAllowed
                 },
-                "Skipping underwrite: underwrite exceed the 'maxUnderwriteAllowed' configuration."
+                "Skipping underwrite: underwrite exceeds the 'maxUnderwriteAllowed' configuration."
             );
             return null;
         }
 
-        const expectedReward = (expectedReturn * order.underwriteIncentiveX16) >> 16n;
-        if (
-            tokenConfig.minUnderwriteReward
-            && expectedReward < tokenConfig.minUnderwriteReward
-        ) {
+        const underwriteIncentiveShare = Number(order.underwriteIncentiveX16) / 2**16;
+        const rewardFiatAmount = underwriteFiatAmount * underwriteIncentiveShare;
+
+        const gasPrice = await this.getGasPrice(this.chainId);
+        const maxGasLimit = await this.calcMaxGasLimit(
+            underwriteFiatAmount,
+            rewardFiatAmount,
+            gasPrice,
+            tokenConfig,
+            relayFiatProfitEstimate,
+        );
+
+        this.logger.info(
+            {
+                swapId: order.swapIdentifier,
+                swapTxHash: order.swapTxHash,
+                toAsset: order.toAsset,
+                underwriteAmount: expectedReturn,
+                underwriteFiatAmount,
+                underwriteIncentiveX16: order.underwriteIncentiveX16,
+                rewardFiatAmount,
+                gasPrice,
+                tokenConfig,
+                relayFiatProfitEstimate,
+                maxGasLimit,
+            },
+            "Underwrite evaluation."
+        )
+
+        if (maxGasLimit <= 0n) {
             this.logger.info(
                 {
                     swapId: order.swapIdentifier,
                     swapTxHash: order.swapTxHash,
-                    toAsset: order.toAsset,
-                    underwriteIncentiveX16: order.underwriteIncentiveX16,
-                    expectedReward,
-                    minUnderwriteReward: tokenConfig.minUnderwriteReward
+                    maxGasLimit                    
                 },
-                "Skipping underwrite: expected underwrite reward is less than the 'minUnderwriteReward' configuration."
+                "Skipping underwrite: calculated maximum gas limit is 0 or negative."
             );
             return null;
         }
+
 
         // Verify the underwriter has enough assets to perform the underwrite
         const enoughBalanceToUnderwrite = await this.tokenHandler.hasEnoughBalance(
@@ -189,42 +236,19 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
             return null;
         }
 
-        // Set the maximum allowed gasLimit for the transaction. This will be checked on the
-        // 'underwrite' queue with an 'estimateGas' call.
-        // ! It is not possible to 'estimateGas' of the underwrite transaction at this point, as
-        // ! before doing it the allowance for underwriting must be set. The allowance for
-        // ! underwriting is set **after** the evaluation step, as the allowance amount is not
-        // ! known until the evaluation step completes.
-        const maxGasLimit = null;  //TODO
 
-        //TODO add economical evaluation
+        await this.tokenHandler.registerBalanceUse(
+            toAssetAllowance,
+            order.toAsset
+        );
 
-        if (true) {
-            await this.tokenHandler.registerBalanceUse(
-                toAssetAllowance,
-                order.toAsset
-            );
-
-            const result: UnderwriteOrder = {
-                ...order,
-                maxGasLimit,
-                toAssetAllowance,
-            }
-            return { result };
-        } else {
-            this.logger.info(
-                {
-                    fromVault: order.fromVault,
-                    fromChainId: order.fromChainId,
-                    swapTxHash: order.swapTxHash,
-                    swapId: order.swapIdentifier,
-                    try: retryCount + 1
-                },
-                `Dropping order on evaluation`
-            );
-
-            return null;
+        const result: UnderwriteOrder = {
+            ...order,
+            maxGasLimit,
+            gasPrice,
+            toAssetAllowance,
         }
+        return { result };
     }
 
     protected async handleFailedOrder(order: EvalOrder, retryCount: number, error: any): Promise<boolean> {
@@ -271,7 +295,7 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
         };
 
         if (success) {
-            this.logger.debug(
+            this.logger.info(
                 orderDescription,
                 `Successful underwrite evaluation.`,
             );
@@ -318,17 +342,170 @@ export class EvalQueue extends ProcessingQueue<EvalOrder, UnderwriteOrder> {
 
     // }
 
+    async calcMaxGasLimit(
+        underwriteFiatAmount: number,
+        rewardFiatAmount: number,
+        gasPrice: bigint,
+        tokenConfig: UnderwriterTokenConfig,
+        relayFiatProfitEstimate: number,
+    ): Promise<bigint> {
+
+        // Use the 'profitabilityFactor' to bias the profitability calculation: a larger factor
+        // implies a larger profitability guarantee. If set to '0', effectively disable the 
+        // evaluation step.
+        const adjustedRewardFiatAmount = tokenConfig.profitabilityFactor == 0
+            ? Infinity
+            : rewardFiatAmount / tokenConfig.profitabilityFactor;
+
+        if (Math.floor(adjustedRewardFiatAmount * DECIMAL_RESOLUTION) == 0) {
+            return 0n;
+        }
+
+        // Only take into account the relay profit if it's negative.
+        const relayFiatProfit = Math.min(relayFiatProfitEstimate, 0);
+        const maxFiatTxCostToBreakEven = adjustedRewardFiatAmount + relayFiatProfit; 
+
+        const gasFiatPrice = await this.getGasValue(this.chainId, gasPrice);
+
+
+        // TODO is the following logic enough? This logic would allow unrealistically large
+        // TODO `maxGasLimit`s.
+        // Compute the limit based on the 'minUnderwriteReward'
+        const maxGasLimitMinReward = (
+            maxFiatTxCostToBreakEven - tokenConfig.minUnderwriteReward
+        ) / gasFiatPrice;
+
+        // Compute the limit based on the 'relativeMinUnderwriteReward'
+        const maxGasLimitMinRelativeReward = (
+            maxFiatTxCostToBreakEven - tokenConfig.relativeMinUnderwriteReward * underwriteFiatAmount
+        ) / (gasFiatPrice * (1 + tokenConfig.relativeMinUnderwriteReward));
+
+        const maxGasLimit = maxGasLimitMinReward < maxGasLimitMinRelativeReward
+            ? maxGasLimitMinReward
+            : maxGasLimitMinRelativeReward;
+
+        return maxGasLimit == Infinity
+            ? MaxUint256
+            : BigInt(Math.floor(maxGasLimit));
+    }
+
+    async getGasValue(
+        chainId: string,
+        amount: bigint,
+    ): Promise<number> {
+        return this.queryRelayerAssetPrice(chainId, amount);
+    }
+
+    async getTokenValue(
+        chainId: string,
+        tokenId: string,
+        amount: bigint
+    ): Promise<number> {
+        return this.queryRelayerAssetPrice(chainId, amount, tokenId);
+    }
+
+    private async queryRelayerAssetPrice(
+        chainId: string,
+        amount: bigint,
+        tokenId?: string,
+    ): Promise<number> {
+
+        if (amount == 0n) {
+            return 0;
+        }
+        
+        const relayerEndpoint = `http://${process.env['RELAYER_HOST']}:${process.env['RELAYER_PORT']}/getPrice?`;
+
+        const queryParameters: Record<string, string> = {
+            chainId,
+            amount: amount.toString(),
+        }
+
+        if (tokenId != undefined) {
+            queryParameters['tokenId'] = tokenId;
+        }
+
+        const res = await fetch(relayerEndpoint + new URLSearchParams(queryParameters));
+        const priceResponse = (await res.json());    //TODO type
+
+        if (priceResponse.price == undefined) {
+            this.logger.warn(
+                {
+                    chainId,
+                    tokenId,
+                    amount,
+                },
+                `Failed to query token value.`
+            );
+            return 0;
+        }
+
+        return priceResponse.price;
+    }
+
+    private async getGasPrice(chainId: string): Promise<bigint> {
+        const feeData = await this.wallet.getFeeData(chainId);
+        // If gas fee data is missing or incomplete, default the gas price to an extremely high
+        // value.
+        // ! Use 'gasPrice' over 'maxFeePerGas', as 'maxFeePerGas' defines the highest gas fee
+        // ! allowed, which does not necessarilly represent the real gas fee at which the
+        // ! transactions are going through.
+        const gasPrice = feeData?.gasPrice
+            ?? feeData?.maxFeePerGas
+            ?? MaxUint256;
+
+        return gasPrice;
+    }
+
+    private async querySwapRelayProfitEstimate(
+        chainId: string,
+        messageIdentifier: string,
+        gasEstimate: bigint,
+        observedGasEstimate: bigint,
+        additionalFeeEstimate: bigint,
+        value: bigint,
+    ): Promise<number> {
+
+        const relayerEndpoint = `http://${process.env['RELAYER_HOST']}:${process.env['RELAYER_PORT']}/evaluateDelivery?`;
+
+        const queryParameters: Record<string, string> = {
+            chainId,
+            messageIdentifier,
+            gasEstimate: gasEstimate.toString(),
+            observedGasEstimate: observedGasEstimate.toString(),
+            additionalFeeEstimate: additionalFeeEstimate.toString(),
+            value: value.toString(),
+        }
+
+        try {
+            const res = await fetch(relayerEndpoint + new URLSearchParams(queryParameters));
+            const evaluationResponse = (await res.json());    //TODO type
+
+            return evaluationResponse.securedDeliveryFiatProfit;
+        }
+        catch (error) {
+            this.logger.error(
+                {
+                    queryParameters,
+                    error: tryErrorToString(error),
+                },
+                `Failed to query swap relay profit estimate.`
+            );
+            throw new Error(`Failed to query swap relay profit estimate.`);
+        }
+    }
+
 
 
     // Management utils
     // ********************************************************************************************
     enableUnderwrites(): void {
         this.enabled = true;
-        this.logger.debug('Underwriting enabled.');
+        this.logger.info('Underwriting enabled.');
     }
 
     disableUnderwrite(): void {
         this.enabled = false;
-        this.logger.debug('Underwriting disabled.');
+        this.logger.info('Underwriting disabled.');
     }
 }

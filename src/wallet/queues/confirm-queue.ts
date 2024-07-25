@@ -206,7 +206,7 @@ export class ConfirmQueue extends ProcessingQueue<PendingTransaction, ConfirmedT
         };
 
         if (success) {
-            this.logger.debug(orderDescription, `Transaction confirmed.`);
+            this.logger.info(orderDescription, `Transaction confirmed.`);
         } else {
             this.logger.error(orderDescription, `Transaction not confirmed.`);
         }

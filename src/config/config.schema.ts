@@ -4,13 +4,18 @@ import { AnyValidateFunction } from "ajv/dist/core"
 const MIN_PROCESSING_INTERVAL = 1;
 const MAX_PROCESSING_INTERVAL = 500;
 
-const EVM_ADDRESS_EXPR = '^0x[0-9a-fA-F]{40}$';  // '0x' + 20 bytes (40 chars)
-const BYTES_32_HEX_EXPR = '^0x[0-9a-fA-F]{64}$';  // '0x' + 32 bytes (64 chars)
+export const EVM_ADDRESS_EXPR = '^0x[0-9a-fA-F]{40}$';  // '0x' + 20 bytes (40 chars)
+export const BYTES_32_HEX_EXPR = '^0x[0-9a-fA-F]{64}$';  // '0x' + 32 bytes (64 chars)
 
 const POSITIVE_NUMBER_SCHEMA = {
     $id: "positive-number-schema",
     type: "number",
     minimum: 0,
+}
+const INTEGER_SCHEMA = {
+    $id: "integer-schema",
+    type: "number",
+    multipleOf: 1,
 }
 const POSITIVE_NON_ZERO_INTEGER_SCHEMA = {
     $id: "positive-non-zero-integer-schema",
@@ -78,10 +83,7 @@ const GLOBAL_SCHEMA = {
     $id: "global-schema",
     type: "object",
     properties: {
-        privateKey: {
-            type: "string",
-            pattern: BYTES_32_HEX_EXPR,
-        },
+        privateKey: { $ref: "private-key-schema" },
         logLevel: { $ref: "non-empty-string-schema" },
 
         monitor: { $ref: "monitor-schema" },
@@ -90,8 +92,26 @@ const GLOBAL_SCHEMA = {
         expirer: { $ref: "expirer-schema" },
         wallet: { $ref: "wallet-schema" },
     },
-    required: ["privateKey"],
+    required: [],
     additionalProperties: false
+}
+
+const PRIVATE_KEY_SCHEMA = {
+    $id: "private-key-schema",
+    "anyOf": [
+        {
+            type: "string",
+            pattern: BYTES_32_HEX_EXPR,
+        },
+        {
+            type: "object",
+            properties: {
+                loader: { $ref: "non-empty-string-schema" },
+            },
+            required: ["loader"],
+            additionalProperties: true,
+        }
+    ]
 }
 
 const MONITOR_SCHEMA = {
@@ -115,8 +135,21 @@ const LISTENER_SCHEMA = {
             minimum: 0,
             maximum: 1_000_000,
         },
-        startingBlock: { $ref: "positive-number-schema" },
+        startingBlock: { $ref: "integer-schema" },
     },
+    additionalProperties: false
+}
+
+const RELAY_DELIVERY_COSTS_SCHEMA = {
+    $id: "relay-delivery-costs-schema",
+    type: "object",
+    properties: {
+        gasUsage: { $ref: "gas-field-schema" },
+        gasObserved: { $ref: "gas-field-schema" },
+        fee: { $ref: "uint256-field-schema" },
+        value: { $ref: "uint256-field-schema" },
+    },
+    required: ["gasUsage"],
     additionalProperties: false
 }
 
@@ -145,10 +178,13 @@ const UNDERWRITER_GLOBAL_SCHEMA = {
             exclusiveMinimum: 0,
             maximum: 0.3
         },
-        maxUnderwriteAllowed: { $ref: "uint256-field-schema" },
-        minUnderwriteReward: { $ref: "uint256-field-schema" },
+        maxUnderwriteAllowed: { $ref: "positive-number-schema" },
+        minUnderwriteReward: { $ref: "positive-number-schema" },
+        relativeMinUnderwriteReward: { $ref: "positive-number-schema" },
+        profitabilityFactor: { $ref: "positive-number-schema" },
         lowTokenBalanceWarning: { $ref: "uint256-field-schema" },
         tokenBalanceUpdateInterval: { $ref: "positive-number-schema" },
+        relayDeliveryCosts: { $ref: "relay-delivery-costs-schema" },
     },
     additionalProperties: false
 }
@@ -242,14 +278,17 @@ const TOKENS_SCHEMA = {
         type: "object",
         properties: {
             name: { $ref: "non-empty-string-schema" },
+            tokenId: { $ref: "non-empty-string-schema" },
             address: { $ref: "address-field-schema" },
-            maxUnderwriteAllowed: { $ref: "uint256-field-schema" },
-            minUnderwriteReward: { $ref: "uint256-field-schema" },
+            maxUnderwriteAllowed: { $ref: "positive-number-schema" },
+            minUnderwriteReward: { $ref: "positive-number-schema" },
+            relativeMinUnderwriteReward: { $ref: "positive-number-schema" },
+            profitabilityFactor: { $ref: "positive-number-schema" },
             lowTokenBalanceWarning: { $ref: "uint256-field-schema" },
             tokenBalanceUpdateInterval: { $ref: "positive-number-schema" },
             allowanceBuffer: { $ref: "gas-field-schema" }
         },
-        required: ["name", "address"],
+        required: ["name", "address", "tokenId"],
         additionalProperties: false
     },
     minItems: 1
@@ -267,7 +306,6 @@ const CHAINS_SCHEMA = {
             resolver: { $ref: "non-empty-string-schema" },
             tokens: { $ref: "tokens-schema" },
 
-            blockDelay: { $ref: "positive-number-schema" },
             monitor: { $ref: "monitor-schema" },
             listener: { $ref: "listener-schema" },
             underwriter: { $ref: "underwriter-schema" },
@@ -311,7 +349,8 @@ const ENDPOINTS_SCHEMA = {
                     additionalProperties: false
                 },
                 minItems: 1
-            }
+            },
+            relayDeliveryCosts: { $ref: "relay-delivery-costs-schema" },
         },
         required: ["name", "amb", "chainId", "factoryAddress", "interfaceAddress", "incentivesAddress", "channelsOnDestination", "vaultTemplates"],
         additionalProperties: false
@@ -322,6 +361,7 @@ const ENDPOINTS_SCHEMA = {
 export function getConfigValidator(): AnyValidateFunction<unknown> {
     const ajv = new Ajv({ strict: true });
     ajv.addSchema(POSITIVE_NUMBER_SCHEMA);
+    ajv.addSchema(INTEGER_SCHEMA);
     ajv.addSchema(POSITIVE_NON_ZERO_INTEGER_SCHEMA);
     ajv.addSchema(NON_EMPTY_STRING_SCHEMA);
     ajv.addSchema(ADDRESS_FIELD_SCHEMA);
@@ -332,8 +372,10 @@ export function getConfigValidator(): AnyValidateFunction<unknown> {
     ajv.addSchema(PROCESSING_INTERVAL_SCHEMA);
     ajv.addSchema(CONFIG_SCHEMA);
     ajv.addSchema(GLOBAL_SCHEMA);
+    ajv.addSchema(PRIVATE_KEY_SCHEMA);
     ajv.addSchema(MONITOR_SCHEMA);
     ajv.addSchema(LISTENER_SCHEMA);
+    ajv.addSchema(RELAY_DELIVERY_COSTS_SCHEMA);
     ajv.addSchema(UNDERWRITER_GLOBAL_SCHEMA);
     ajv.addSchema(UNDERWRITER_SCHEMA);
     ajv.addSchema(EXPIRER_SCHEMA);

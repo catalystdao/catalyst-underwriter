@@ -1,6 +1,15 @@
 # Global Underwriter configuration
 global:
-  privateKey: '' # The privateKey of the account that will be submitting the underwrites
+  # ! The 'privateKey' of the account that will be submitting the underwrites is by default
+  # ! loaded from the environment variable 'UNDERWRITER_PRIVATE_KEY'. Alternatively, the privateKey
+  # ! may be specified here (not recommended).
+  # privateKey: ''
+  # ! Optionally, custom privateKey loaders may be implemented and specified (NOTE: the 'env' 
+  # ! loader is used if no privateKey configuration is specified):
+  # privateKey:
+  #   loader: 'env'                     # The privateKey loader name (must match the implementation on src/config/privateKeyLoaders/<loader>.ts).
+  #   customLoaderConfig: ''            # Custom loader configs may be specified.
+
   logLevel: 'info'
 
   monitor:
@@ -33,12 +42,25 @@ global:
       0.05 # Extra buffer allowed on top of the calculated required funds for
       # performing an underwrite.
 
-    maxUnderwriteAllowed: '10000000000000000000' # Maximum tokens to risk on a single underwrite
-    minUnderwriteReward: '100000000000' # Minimum acceptable token reward for an underwrite
+    maxUnderwriteAllowed: 500           # Maximum underwrite value (EXCLUDING THE COLLATERAL).
+                                        # In the 'pricingDenomination' specified on the Relayer.
+    minUnderwriteReward: 0.5            # Minimum underwrite reward desired. 
+                                        # In the 'pricingDenomination' specified on the Relayer.
+    relativeMinUnderwriteReward: 0.1    # Minimum relative underwrite reward desired (w.r.t. the
+                                        # underwrite amount plus the tx cost).
+    profitabilityFactor: 1.0            # Profitiability evaluation adjustment factor. A larger
+                                        # factor implies a larger profitability guarantee.
+
     lowTokenBalanceWarning: '1000000000000000000' # Token balance below which a 'low balance' warning is emitted.
     tokenBalanceUpdateInterval:
       50 # Number of transactions after which to update the
       # Underwriter token balance from the rpc.
+
+    relayDeliveryCosts:                  # Average swap delivery costs for underwritten swaps. Used to estimate underwrites profitability
+      gasUsage: '21000'                  # The gas used.
+      # gasObserved: '21000'             # The gas observed by the escrow contract.
+      # fee: '0'                         # The fee taken on transaction submission (relevant for L2 chains.)
+      # value: '0'                       # The value sent to the escrow as payment (e.g. to execute the return 'ack' cross-chain message).
 
     # ! The following setting is here for illustrative purposes, but it MUST ALWAYS be applied on
     # ! a per-chain basis as it is CRITICAL to prevent the underwriter from being stolen from.
@@ -103,6 +125,7 @@ chains:
     # The tokens that are to be undewritten
     tokens:
       - name: 'WETH'
+        tokenId: "ethereum"
         address: '0x4200000000000000000000000000000000000006'
         allowanceBuffer:
           '10000000000000000000' # Amount by which to 'buffer' the token approvals
@@ -123,6 +146,7 @@ chains:
       minMaxGasDelivery: 200000
     tokens:
       - name: 'WETH'
+        tokenId: "ethereum"
         address: '0x4300000000000000000000000000000000000004'
         allowanceBuffer: '10000000000000000000'
 
@@ -133,6 +157,7 @@ chains:
       minMaxGasDelivery: 200000
     tokens:
       - name: 'WETH'
+        tokenId: "ethereum"
         address: '0x4200000000000000000000000000000000000006'
         allowanceBuffer: '10000000000000000000'
 

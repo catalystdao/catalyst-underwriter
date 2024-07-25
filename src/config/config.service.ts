@@ -3,8 +3,9 @@ import { readFileSync } from 'fs';
 import * as yaml from 'js-yaml';
 import dotenv from 'dotenv';
 import { getConfigValidator } from './config.schema';
-import { GlobalConfig, ChainConfig, AMBConfig, MonitorGlobalConfig, ListenerGlobalConfig, UnderwriterGlobalConfig, ExpirerGlobalConfig, WalletGlobalConfig, MonitorConfig, ListenerConfig, UnderwriterConfig, WalletConfig, ExpirerConfig, TokensConfig, EndpointConfig, VaultTemplateConfig } from './config.types';
-
+import { GlobalConfig, ChainConfig, AMBConfig, MonitorGlobalConfig, ListenerGlobalConfig, UnderwriterGlobalConfig, ExpirerGlobalConfig, WalletGlobalConfig, MonitorConfig, ListenerConfig, UnderwriterConfig, WalletConfig, ExpirerConfig, TokensConfig, EndpointConfig, VaultTemplateConfig, RelayDeliveryCosts } from './config.types';
+import { loadPrivateKeyLoader } from './privateKeyLoaders/privateKeyLoader';
+import { JsonRpcProvider } from 'ethers';
 
 @Injectable()
 export class ConfigService {
@@ -16,6 +17,8 @@ export class ConfigService {
     readonly chainsConfig: Map<string, ChainConfig>;
     readonly ambsConfig: Map<string, AMBConfig>;
     readonly endpointsConfig: Map<string, EndpointConfig[]>;
+
+    readonly isReady: Promise<void>;
 
     constructor() {
         this.nodeEnv = this.loadNodeEnv();
@@ -30,6 +33,16 @@ export class ConfigService {
         const ambNames = Array.from(this.ambsConfig.keys());
         const chainIds = Array.from(this.chainsConfig.keys());
         this.endpointsConfig = this.loadEndpointsConfig(chainIds, ambNames);
+
+        this.isReady = this.initialize();
+    }
+
+
+    // NOTE: The OnModuleInit hook is not being used as it does not guarantee the order in which it
+    // is executed across services (i.e. there is no guarantee that the config service will be the
+    // first to initialize). The `isReady` promise must be awaited on the underwriter initialization.
+    private async initialize(): Promise<void> {
+        await this.validateChainIds(this.chainsConfig);
     }
 
     private loadNodeEnv(): string {
@@ -80,6 +93,21 @@ export class ConfigService {
         }
     }
 
+    private async loadPrivateKey(rawPrivateKeyConfig: any): Promise<string> {
+        if (typeof rawPrivateKeyConfig === "string") {
+            //NOTE: Using 'console.warn' as the logger is not available at this point.  //TODO use logger
+            console.warn('WARNING: the privateKey has been loaded from the configuration file. Consider storing the privateKey using an alternative safer method.')
+            return rawPrivateKeyConfig;
+        }
+
+        const privateKeyLoader = loadPrivateKeyLoader(
+            rawPrivateKeyConfig?.['loader'] ?? null,
+            rawPrivateKeyConfig ?? {},
+        );
+
+        return privateKeyLoader.load();
+    }
+
     private loadGlobalConfig(): GlobalConfig {
         const rawGlobalConfig = this.rawConfig['global'];
 
@@ -91,9 +119,8 @@ export class ConfigService {
 
         return {
             port: parseInt(process.env['UNDERWRITER_PORT']),
-            privateKey: rawGlobalConfig.privateKey,
+            privateKey: this.loadPrivateKey(rawGlobalConfig.privateKey),
             logLevel: rawGlobalConfig.logLevel,
-            blockDelay: rawGlobalConfig.blockDelay,
             monitor: this.formatMonitorGlobalConfig(rawGlobalConfig.monitor),
             listener: this.formatListenerGlobalConfig(rawGlobalConfig.listener),
             underwriter: this.formatUnderwriterGlobalConfig(rawGlobalConfig.underwriter),
@@ -112,7 +139,6 @@ export class ConfigService {
                 name: rawChainConfig.name,
                 rpc: rawChainConfig.rpc,
                 resolver: rawChainConfig.resolver ?? null,
-                blockDelay: rawChainConfig.blockDelay,
                 tokens: this.formatTokensConfig(rawChainConfig.tokens),
                 monitor: this.formatMonitorConfig(rawChainConfig.monitor),
                 listener: this.formatListenerConfig(rawChainConfig.listener),
@@ -189,6 +215,22 @@ export class ConfigService {
                 });
             }
 
+            let relayDeliveryCosts: RelayDeliveryCosts | undefined;
+            if (rawEndpointConfig.relayDeliveryCosts != undefined) {
+                relayDeliveryCosts = {
+                    gasUsage: BigInt(rawEndpointConfig.relayDeliveryCosts.gasUsage),
+                    gasObserved: rawEndpointConfig.relayDeliveryCosts.gasObserved != undefined
+                        ? BigInt(rawEndpointConfig.relayDeliveryCosts.gasObserved)
+                        : undefined,
+                    fee: rawEndpointConfig.relayDeliveryCosts.fee != undefined
+                        ? BigInt(rawEndpointConfig.relayDeliveryCosts.fee)
+                        : undefined,
+                    value: rawEndpointConfig.relayDeliveryCosts.value != undefined
+                        ? BigInt(rawEndpointConfig.relayDeliveryCosts.value)
+                        : undefined
+                };
+            }
+
 
             const currentEndpoints = endpointConfig.get(chainId) ?? [];
 
@@ -210,6 +252,7 @@ export class ConfigService {
                 incentivesAddress,
                 channelsOnDestination,
                 vaultTemplates,
+                relayDeliveryCosts,
             });
             endpointConfig.set(chainId, currentEndpoints);
         }
@@ -231,6 +274,25 @@ export class ConfigService {
         return this.ambsConfig.get(amb)?.globalProperties[key];
     }
 
+    private async validateChainIds(chainsConfig: Map<string, ChainConfig>): Promise<void> {
+
+        const validationPromises = [];
+        for (const [chainId, config] of chainsConfig) {
+            const provider = new JsonRpcProvider(config.rpc, undefined, { staticNetwork: true });
+            const validationPromise = provider.getNetwork().then(
+                (network) => {
+                    const rpcChainId = network.chainId.toString();
+                    if (rpcChainId !== chainId) {
+                        throw new Error(`Error validating the chain ID of chain ${chainId}: the RPC chain ID is ${rpcChainId}.`)
+                    }
+                }
+            )
+            validationPromises.push(validationPromise);
+        }
+
+        await Promise.all(validationPromises);
+    }
+
 
     // Formatting helpers
     // ********************************************************************************************
@@ -248,14 +310,21 @@ export class ConfigService {
         if (config.minRelayDeadlineDuration != undefined) {
             config.minRelayDeadlineDuration = BigInt(config.minRelayDeadlineDuration);
         }
-        if (config.maxUnderwriteAllowed != undefined) {
-            config.maxUnderwriteAllowed = BigInt(config.maxUnderwriteAllowed);
-        }
-        if (config.minUnderwriteReward != undefined) {
-            config.minUnderwriteReward = BigInt(config.minUnderwriteReward);
-        }
         if (config.lowTokenBalanceWarning != undefined) {
             config.lowTokenBalanceWarning = BigInt(config.lowTokenBalanceWarning);
+        }
+        if (config.relayDeliveryCosts != undefined) {
+            const costs = config.relayDeliveryCosts;
+            costs.gasUsage = BigInt(costs.gasUsage);
+            if (costs.gasObserved != undefined) {
+                costs.gasObserved = BigInt(costs.gasObserved);
+            }
+            if (costs.fee != undefined) {
+                costs.fee = BigInt(costs.fee);
+            }
+            if (costs.value != undefined) {
+                costs.value = BigInt(costs.value);
+            }
         }
         return config as UnderwriterGlobalConfig;
     }
@@ -311,12 +380,6 @@ export class ConfigService {
             const tokenConfig = { ...rawTokenConfig };
             if (tokenConfig.allowanceBuffer != undefined) {
                 tokenConfig.allowanceBuffer = BigInt(tokenConfig.allowanceBuffer);
-            }
-            if (tokenConfig.maxUnderwriteAllowed != undefined) {
-                tokenConfig.maxUnderwriteAllowed = BigInt(tokenConfig.maxUnderwriteAllowed);
-            }
-            if (tokenConfig.minUnderwriteReward != undefined) {
-                tokenConfig.minUnderwriteReward = BigInt(tokenConfig.minUnderwriteReward);
             }
             if (tokenConfig.lowTokenBalanceWarning != undefined) {
                 tokenConfig.lowTokenBalanceWarning = BigInt(tokenConfig.lowTokenBalanceWarning);
