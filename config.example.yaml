@@ -134,10 +134,10 @@ chains:
           # 'unlimited' approval is set.
 
         # Overrides (uncomment if desired)
-        # maxUnderwriteAllowed: '10000000000000000000'
-        # minUnderwriteReward: '100000000000'
-        # lowTokenBalanceWarning: '1000000000000000000'
-        # tokenBalanceUpdateInterval: 50
+        # maxUnderwriteAllowed: 500
+        # minUnderwriteReward: 0.5
+        # relativeMinUnderwriteReward: 0.1
+        # profitabilityFactor: 1.0
 
   - chainId: 81457
     name: 'Blast Mainnet'
