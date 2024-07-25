@@ -1,8 +1,8 @@
 import { HandleOrderResult, ProcessingQueue } from "src/processing-queue/processing-queue";
-import { DiscoverOrder, EvalOrder } from "../underwriter.types";
+import { DiscoverOrder, EvalOrder, UnderwriterEndpointConfig } from "../underwriter.types";
 import { JsonRpcProvider } from "ethers";
 import pino from "pino";
-import { EndpointConfig, TokenConfig } from "src/config/config.types";
+import { TokenConfig } from "src/config/config.types";
 import { calcUnderwriteIdentifier, tryErrorToString } from "src/common/utils";
 import { CatalystFactory__factory, CatalystVaultCommon__factory } from "src/contracts";
 import { Store } from "src/store/store.lib";
@@ -15,7 +15,7 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
 
     constructor(
         private readonly chainId: string,
-        private readonly endpointConfigs: EndpointConfig[],
+        private readonly endpointConfigs: UnderwriterEndpointConfig[],
         private readonly tokens: Record<string, TokenConfig>,
         retryInterval: number,
         maxTries: number,
@@ -70,7 +70,8 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
 
         const result: EvalOrder = {
             ...order,
-            toAsset
+            toAsset,
+            relayDeliveryCosts: endpoint.relayDeliveryCosts,
         }
 
         return { result };
@@ -129,14 +130,14 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
 
         if (success) {
             if (result != null) {
-                this.logger.debug(
+                this.logger.info(
                     orderDescription,
                     `Successful underwrite discovery: destination vault valid.`,
                 );
 
                 void this.registerSwapDataForTheExpirer(result);
             } else {
-                this.logger.debug(
+                this.logger.info(
                     orderDescription,
                     `Successful underwrite discovery: destination vault invalid.`,
                 );
@@ -149,7 +150,7 @@ export class DiscoverQueue extends ProcessingQueue<DiscoverOrder, EvalOrder> {
         }
     }
 
-    private async isVaultVaild(vaultAddress: string, interfaceAddress: string, endpointConfig: EndpointConfig): Promise<boolean> {
+    private async isVaultVaild(vaultAddress: string, interfaceAddress: string, endpointConfig: UnderwriterEndpointConfig): Promise<boolean> {
 
         const validCache = this.validatedVaults.get(vaultAddress);
         if (validCache != undefined) {

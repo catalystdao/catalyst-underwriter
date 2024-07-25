@@ -126,6 +126,7 @@ export class TokenHandler {
         const normalizedInterfaceAddress = interfaceAddress.toLowerCase();
 
         const handler = new ApprovalHandler(
+            this.chainId,
             this.tokens,
             normalizedInterfaceAddress,
             this.walletPublicKey,

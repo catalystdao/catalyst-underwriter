@@ -1,14 +1,18 @@
 
 export interface GlobalConfig {
     port: number;
-    privateKey: string;
+    privateKey: Promise<string>;
     logLevel?: string;
-    blockDelay?: number;
     monitor: MonitorGlobalConfig;
     listener: ListenerGlobalConfig;
     underwriter: UnderwriterGlobalConfig;
     expirer: ExpirerGlobalConfig;
     wallet: WalletGlobalConfig;
+}
+
+
+export type PrivateKeyConfig = string | {
+  loader: string;
 }
 
 
@@ -31,6 +35,14 @@ export interface ListenerGlobalConfig {
 export interface ListenerConfig extends ListenerGlobalConfig {}
 
 
+export interface RelayDeliveryCosts {
+    gasUsage: bigint;
+    gasObserved?: bigint;
+    fee?: bigint;
+    value?: bigint;
+}
+
+
 export interface UnderwriterGlobalConfig {
     enabled?: boolean;
     retryInterval?: number;
@@ -43,10 +55,13 @@ export interface UnderwriterGlobalConfig {
     maxSubmissionDelay?: number;
     underwritingCollateral?: number;
     allowanceBuffer?: number;
-    maxUnderwriteAllowed?: bigint;
-    minUnderwriteReward?: bigint;
+    maxUnderwriteAllowed?: number;
+    minUnderwriteReward?: number;
+    relativeMinUnderwriteReward?: number;
+    profitabilityFactor?: number;
     lowTokenBalanceWarning?: bigint;
     tokenBalanceUpdateInterval?: number;
+    relayDeliveryCosts?: RelayDeliveryCosts;
 }
 
 export interface UnderwriterConfig extends UnderwriterGlobalConfig {
@@ -101,7 +116,6 @@ export interface ChainConfig {
     name: string;
     rpc: string;
     resolver: string | null;
-    blockDelay?: number;
     tokens: TokensConfig,
     monitor: MonitorConfig;
     listener: ListenerConfig;
@@ -112,9 +126,12 @@ export interface ChainConfig {
 
 
 export interface TokenConfig {
+    tokenId: string;
     allowanceBuffer?: bigint;
-    maxUnderwriteAllowed?: bigint;
-    minUnderwriteReward?: bigint;
+    maxUnderwriteAllowed?: number;
+    minUnderwriteReward?: number;
+    relativeMinUnderwriteReward?: number;
+    profitabilityFactor?: number;
     lowTokenBalanceWarning?: bigint;
     tokenBalanceUpdateInterval?: number;
 }
@@ -131,6 +148,7 @@ export interface EndpointConfig {
     incentivesAddress: string;
     channelsOnDestination: Record<string, string>;
     vaultTemplates: VaultTemplateConfig[];
+    relayDeliveryCosts?: RelayDeliveryCosts;
 }
 
 export interface VaultTemplateConfig {

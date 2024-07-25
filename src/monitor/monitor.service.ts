@@ -191,7 +191,7 @@ export class MonitorService implements OnModuleInit {
             if (parsedMessage.event == "monitor") {
                 const monitorEvent = parsedMessage.data;
                 if (monitorEvent == undefined) {
-                    this.logger.debug(
+                    this.logger.warn(
                         { parsedMessage },
                         "No data present on 'monitor' event."
                     );
@@ -200,7 +200,7 @@ export class MonitorService implements OnModuleInit {
 
                 const isEventValid = this.monitorEventValidator(monitorEvent);
                 if (!isEventValid) {
-                    this.logger.debug(
+                    this.logger.warn(
                         { monitorEvent },
                         "Skipping monitor event: object schema invalid."
                     );
