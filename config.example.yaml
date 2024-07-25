@@ -57,9 +57,9 @@ global:
       # Underwriter token balance from the rpc.
 
     relayDeliveryCosts:                  # Average swap delivery costs for underwritten swaps. Used to estimate underwrites profitability
-      gasUsage: '21000'                  # The gas used.
-      # gasObserved: '21000'             # The gas observed by the escrow contract.
-      # fee: '0'                         # The fee taken on transaction submission (relevant for L2 chains.)
+      gasUsage: '300000'                 # The gas used.
+      # gasObserved: '300000'            # The gas observed by the escrow contract.
+      fee: '200000000000'                # The fee taken on transaction submission (relevant for L2 chains.)
       # value: '0'                       # The value sent to the escrow as payment (e.g. to execute the return 'ack' cross-chain message).
 
     # ! The following setting is here for illustrative purposes, but it MUST ALWAYS be applied on
