@@ -1,6 +1,6 @@
 {
   "name": "catalyst-underwriter",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "The Catalyst Underwriter",
   "main": "dist/index.js",
   "author": "Cata Labs, Inc.",
