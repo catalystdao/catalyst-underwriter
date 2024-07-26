@@ -24,7 +24,7 @@ The `.yaml` configuration file is divided into the following sections:
     - The `privateKey` of the account that will submit the underwrite transactions on all chains must be defined at this point. 
     - Default configuration for the `monitor`, `listener`, `underwriter`, `expirer` and `wallet` can also be specified at this point.
 - `ambs`: The AMBs configuration.
-- `chains`: Defines the configuration for each of the chains to be supported by the relayer.
+- `chains`: Defines the configuration for each of the chains to be supported by the Underwriter.
     - This includes the `chainId` and the `rpc` to be used for the chain.
     - Each chain may override the global services configurations (those defined under the `global` configuration), and `amb` configurations.
 - `endpoints`: The Catalyst endpoints of which swaps to underwrite.
@@ -66,74 +66,70 @@ For further insight into the requirements for running the Underwriter see the `d
 
 ## Underwriter Structure
 
-The Underwriter is devided into 3 main services: the `Listener`, the `Submitter` and the `Expirer`. These services work together to get the Catalyst swap events and submit their corresponding underwrites on the destination chain. The services are run in parallel and communicate using Redis. Wherever it makes sense, chains are allocated seperate workers to ensure a chain fault doesn't propagate and impact the performance on other chains.
+The Underwriter is devided into 5 main services: `Monitor`, `Listener`, `Underwriter`, `Expirer` and `Wallet`. These services work together to get the Catalyst swap events and submit their corresponding underwrites on the destination chain. The services are run in parallel and communicate using Redis. Wherever it makes sense, chains are allocated seperate workers to ensure a chain fault doesn't propagate and impact the performance on other chains.
 
-> 🏗️ The Underwriter is still on a very early development stage. Further services will be added as development progresses.
+### Monitor
+
+The Monitor service keeps track of the latest block information for each supported chain by subscribing to the Relayer's Monitor service via a websocket connection. This way the Underwriter can be kept in sync with the Relayer.
 
 ### Listener
 
-The Listener service is responsible for fetching the on-chain events of the Catalyst swaps/underwrites, in specific:
-- Catalyst Vault events:
-    - `SendAsset`: Signals that a swap has been executed.
+The Listener service is responsible for fetching the information of the Catalyst swaps/underwrites, in specific:
 - Catalyst Chain Interface events:
     - `SwapUnderwritten`: Signals that a swap has been underwritten.
     - `FulfillUnderwrite`: Signals that a swap has arrived, an active underwrite exists for the swap, and the underwrite logic has completed.
     - `ExpireUnderwrite`: Signals that an underwrite has been expired.
+- AMB messages:
+    - The Underwriter listens at the AMB messages processed by the Relayer, and filters any relevant message that may involve an underwritable swap. These are then further processed and stored, to be later handled by the Underwriter service.
 
 The information gathered with these events is sent to the common Redis database for later use by the other services.
 
 ### Underwriter
 
 The Underwriter service gets recently executed swap information from Redis. For every new swap, the underwriter:
-1. Gets the full corresponding AMB message from the Relayer.
+1. Verifies that the swap was executed by a supported set of contracts (token, vault, interface, factory).
 2. Estimates the token amount required for underwriting.
-3. Simulates the transaction to get a gas estimate. (TODO)
-4. Performs the underwrite if the evaluation is successful using the [`underwriteAndCheckConnection`](https://github.com/catalystdao/catalyst/blob/27b4d0a2bca177aff00def8cd745623bfbf7cb6b/evm/src/CatalystChainInterface.sol#L646) method of the CatalystChainInterface contract.
+3. Simulates the transaction to get a gas estimate and evaluates the underwriting profitability taking into account the message relaying costs.
+4. Performs the underwrite if the evaluation is successful using the [`underwriteAndCheckConnection`](https://github.com/catalystdao/catalyst/blob/27b4d0a2bca177aff00def8cd745623bfbf7cb6b/evm/src/CatalystChainInterface.sol#L646) method of the CatalystChainInterface contract via the Wallet service.
 5. Confirms that the underwrite transaction is mined.
 
 To make the Underwriter as resilitent as possible to RPC failures/connection errors, each evaluation, underwrite and confirmation step is tried up to `maxTries` times with a `retryInterval` delay between tries (these default to `3` and `2000` ms, but can be modified on the Underwriter config).
 
-The Underwriter additionally limits the maximum number of transactions within the 'submission' pipeline (i.e. transactions that have been started to be processed and are not completed), and will not accept any further underwrite orders once reached. If a submitted transactions fails to commit within the number of specified tries and timeout, the Underwriter will attempt to cancel the transaction.
-> ⚠️ If the Underwriter fails to cancel a transaction, the Underwriter pipeline will stall and no further orders will be processed until the stuck transaction is resolved.
+The Underwriter additionally limits the maximum number of transactions within the 'submission' pipeline (i.e. transactions that have been started to be processed and are not completed), and will not accept any further underwrite orders once reached.
 
 ### Expirer
 The expirer objective is to resolve any expired underwrites. For underwrites made by this underwriter, the expiry is executed at a configurable `expireBlocksMargin` interval *before* the expiry deadline. Everytime an underwrite is captured by the `listener` service, an `expire` order is scheduled by the expirer. If the underwrite is fulfilled, the `expire` order is discarded, otherwise it is executed at the effective expiry time.
 
-### Further Services
+### Wallet
 
-#### Monitor
-The monitor service is responsible for polling at a configurable interval the most recent block information of each chain, and then it broadcasts this information to the other services of the underwriter.
+The Wallet service is used to submit transactions requested by the other services of the Underwriter (the Underwriter and the Expirer at the time of writing). For every transaction request:
+1. The transaction fee values are dynamically determined according to the following configuration:
+    #### EIP-1559 transactions
+    - The `maxFeePerGas` configuration sets the transaction `maxFeePerGas` property. This defines the maximum fee to be paid per gas for a transaction (including both the base fee and the miner fee). If not set, no `maxFeePerGas` is set on the transaction.
+    - The `maxPriorityFeeAdjustmentFactor` determines the amount by which to modify the queried recommended `maxPriorityFee` from the rpc. If not set, no `maxPriorityFee` is set on the transaction.
+    - The `maxAllowedPriorityFeePerGas` sets the maximum value that `maxPriorityFee` may be set to (after applying the `maxPriorityFeeAdjustmentFactor`).
 
-> 🏗️ In the future this service will be moved to the Relayer, which will be able to also inform on the state of the different providers (e.g. RPCs, chains, AMBs).
+    #### Legacy transaction
+    - The `gasPriceAdjustmentFactor` determines the amount by which to modify the queried recommended `gasPrice` from the rpc. If not set, no `gasPrice` is set on the transaction.
+    - The `maxAllowedGasPrice` sets the maximum value that `gasPrice` may be set to (after applying the `gasPriceAdjustmentFactor`).
 
-#### Wallet
-The wallet service is in charge for submitting the transactions to the RPCs as requested by the other services of the underwriter. For each transaction:
-1. The transaction is submitted with configurable fee parameters (see the 'Automatic transaction pricing' section below for more information). 
-2. The transaction confirmation is awaited. 
-3. If the transaction takes a long time to confirm, the transaction is automatically repriced with higher fee parameters (see the 'Transaction repricing' section below for more information). 
-4. If the transaction continues to not be mined, the wallet will try to cancel the transaction (if cancellation fails, the wallet pipeline stalls until the transaction nonce is processed).
+    > ⚠️ If the above gas configurations are not specified, the transactions will be submitted using the `ethers`/rpc defaults.
+2. The transaction is submitted.
+3. The transaction confirmation is awaited.
+4. If the transaction fails to be mined after a configurable time interval, the transaction is repriced.
+    - If a transaction does not mine in time (`maxTries * (confirmationTimeout + retryInterval)` approximately), the Wallet will attempt to reprice the transaction by resubmitting the transaction with higher gas price values. The gas prices are adjusted according to the `priorityAdjustmentFactor` configuration. If not set, it defaults to `1.1` (i.e +10%).
+5. If the transaction still fails to be mined, the wallet will attempt at cancelling the transaction.
+    > ⚠️ If the Wallet fails to cancel a transaction, the Submitter pipeline will stall and no further orders will be processed until the stuck transaction is resolved.
 
-For each transaction, the wallet may be instructed to:
-- Retry the transaction if it fails because of an 'invalid nonce' error. (Note that this may not be desired, as the resulting transaction will be out of order with respect to the other submitted transactions)
-- Discard the transaction if too much time passes between the time when the transaction is requested to when the transaction is actually submitted (e.g. might happen because of a long mining times or a wallet 'stall').
 
 ## Further features
 
-### Automatic transaction pricing
-The Underwriter has the ability to automatically set the transactions gas pricing.
-#### EIP-1559 transactions
-- The `maxFeePerGas` configuration sets the transaction `maxFeePerGas` property. This defines the maximum fee to be paid per gas for a transaction (including both the base fee and the miner fee). If not set, no `maxFeePerGas` is set on the transaction.
-- The `maxPriorityFeeAdjustmentFactor` determines the amount by which to modify the queried recommended `maxPriorityFee` from the rpc. If not set, no `maxPriorityFee` is set on the transaction.
-- The `maxAllowedPriorityFeePerGas` sets the maximum value that `maxPriorityFee` may be set to (after applying the `maxPriorityFeeAdjustmentFactor`).
+### Resolvers
+To take into consideration the different behaviours and characteristics of different chains, a custom *Resolver* can be specified for each chain. At the time of writing, the Resolvers can:
+- Map the rpc block number to the one observed by the transactions itself (for chains like Arbitrum).
+- Estimate gas parameters for transactions, including estimating the gas usage as observed by the transactions (for chains like Arbitrum) and additional L1 fees (for op-stack chains).
 
-#### Legacy transaction
-- The `gasPriceAdjustmentFactor` determines the amount by which to modify the queried recommended `gasPrice` from the rpc. If not set, no `gasPrice` is set on the transaction.
-- The `maxAllowedGasPrice` sets the maximum value that `gasPrice` may be set to (after applying the `gasPriceAdjustmentFactor`).
-
-> ⚠️ If the above gas configuration is not specified, the transactions will be submitted using the `ethers`/rpc defaults.
-
-#### Transaction repricing
-If a transaction does not mine in time (`maxTries * (confirmationTimeout + retryInterval)` approximately), the Underwriter will attempt to reprice the transaction by resubmitting the transaction with higher gas price values. The gas prices are adjusted according to the `priorityAdjustmentFactor` configuration. If not set, it defaults to `1.1` (i.e +10%).
+> ℹ️ Resolvers have to be specified on the configuration file for each desired chain. See `src/resolvers` for the available resolvers.
 
 ### Low balance warning
 The Underwriter keeps an estimate of the Underwriter account gas/tokens balance for each chain. A warning is emitted to the logs if the gas/tokens balance falls below a configurable threshold (`lowGasBalanceWarning`/`lowTokenBalanceWarning` in Wei).
